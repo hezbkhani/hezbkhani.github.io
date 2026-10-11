@@ -1,7 +1,9 @@
 const TZ='Asia/Tehran',fa='۰۱۲۳۴۵۶۷۸۹',ar='٠١٢٣٤٥٦٧٨٩',cfg=window.APP_CONFIG||{};const groups=[];let selected=null,portions=[],adminToken='';
+// روز قرائت از ساعت ۴:۳۰ صبح به وقت ایران (حدود اذان صبح) تا ۴:۳۰ صبح روز بعد است.
+const DAY_START_MIN=4*60+30,dutyNow=()=>new Date(Date.now()-DAY_START_MIN*60000);
 const toFa=x=>String(x).replace(/\d/g,d=>fa[d]),norm=x=>String(x).replace(/[۰-۹]/g,d=>fa.indexOf(d)).replace(/[٠-٩]/g,d=>ar.indexOf(d)).trim();
-function iranParts(d=new Date()){const p=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);return Object.fromEntries(p.filter(x=>x.type!=='literal').map(x=>[x.type,+x.value]));}
-function orderedDate(d=new Date()){const w=new Intl.DateTimeFormat('fa-IR',{timeZone:TZ,weekday:'long'}).format(d),p=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{timeZone:TZ,year:'numeric',month:'long',day:'numeric'}).formatToParts(d),g=t=>p.find(x=>x.type===t)?.value||'';return `${w}، ${g('day')} ${g('month')} ${g('year')}`;}
+function iranParts(d=dutyNow()){const p=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);return Object.fromEntries(p.filter(x=>x.type!=='literal').map(x=>[x.type,+x.value]));}
+function orderedDate(d=dutyNow()){const w=new Intl.DateTimeFormat('fa-IR',{timeZone:TZ,weekday:'long'}).format(d),p=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{timeZone:TZ,year:'numeric',month:'long',day:'numeric'}).formatToParts(d),g=t=>p.find(x=>x.type===t)?.value||'';return `${w}، ${g('day')} ${g('month')} ${g('year')}`;}
 function isoIran(){const p=iranParts();return `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}`;}
 function parseGroup(t,n){const a=t.replace(/^\uFEFF/,'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean),iso=a.shift();if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)||a.length!==120)throw Error('invalid');const [y,m,d]=iso.split('-').map(Number);return{number:n,name:`گروه ${toFa(n)}`,start:Date.UTC(y,m-1,d),names:a};}
 function taskFor(g,id){const p=iranParts(),days=Math.floor((Date.UTC(p.year,p.month-1,p.day)-g.start)/86400000);return{days,index:(id-1+days)%120};}
