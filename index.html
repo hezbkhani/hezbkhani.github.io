@@ -15,6 +15,41 @@ input,select{color:var(--ink)}
 .badge{padding:3px 6px}.identity-card{padding:6px;margin:6px 0}.search-results,.admin-results{gap:4px;margin-top:5px}.search-item,.report-row{padding:5px}.checkline{gap:5px;margin:5px 0}.admin-filters{gap:5px;margin:5px 0}.admin-summary{padding:5px;margin:5px 0}
 .socials{display:none!important}
 @media(max-width:760px){.panel{padding:7px 8px;margin-bottom:.7cm}.panel h2{font-size:31px}.today{font-size:140%}input,select,button{font-size:135%}.lead,.hint,.meta,.panel label,.checkline,.error,.admin-summary,.report-row,.search-item,.identity-card,.task small,.top{font-size:135%}}
+
+/* Spacing and overflow correction for Iran Nastaliq */
+.panel{
+  padding:24px 28px 30px;
+  overflow:visible;
+}
+.panel h2{
+  margin:0 0 12px;
+  padding-top:4px;
+  line-height:1.75;
+  overflow-wrap:anywhere;
+}
+.lead,.hint,.meta,.panel label,.checkline,.error,.admin-summary,.report-row,.search-item,.identity-card,.task small,.top{
+  line-height:1.9;
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+.lead{margin:0 0 12px}.hint{margin:8px 0}.row{gap:12px;align-items:stretch}.groups{gap:12px}
+input,select,button{
+  min-width:0;
+  line-height:1.65;
+  padding:10px 14px 14px;
+}
+.group,button{padding:10px 14px 14px}
+.result{margin-top:16px;padding-top:16px}.name{margin:8px 0 12px;line-height:1.65}.task{padding:16px 18px}.task strong{display:block;line-height:1.75;padding-top:4px}
+.badge{padding:7px 10px 10px}.identity-card{padding:14px 16px 18px;margin:14px 0}.search-results,.admin-results{gap:10px;margin-top:12px}.search-item,.report-row{padding:12px 14px 16px}
+.checkline{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:12px;margin:16px 0;padding:4px 0}.checkline input{width:24px;height:24px;margin:0;justify-self:center}
+.admin-filters{gap:12px;margin:14px 0}.admin-summary{padding:12px 14px 16px;margin:12px 0}
+@media(max-width:760px){
+  .panel{padding:18px 18px 22px;margin-bottom:.9cm}
+  .panel h2{margin-bottom:9px;line-height:1.7}
+  .lead,.hint,.meta,.panel label,.checkline,.error,.admin-summary,.report-row,.search-item,.identity-card,.task small,.top{line-height:1.8}
+  input,select,button,.group{padding:9px 11px 12px}
+  .checkline{grid-template-columns:28px minmax(0,1fr);gap:9px}
+}
 </style></head><body><main class="shell"><header><h1>حزب‌خوانی قرآن کریم</h1><p class="today" id="todayHead"></p></header>
 <section class="panel"><h2>انتخاب گروه</h2><p class="lead">لطفاً بر اساس تاریخ شروع دوره، گروه خود را انتخاب کنید:</p><nav class="groups" id="groupsNav"></nav><p class="hint" id="groupInfo"></p></section>
 <section class="panel"><h2>شناسه و سهم روزانه</h2><div><label for="pid">شناسه شما</label><div class="row"><input id="pid" inputmode="numeric" placeholder="عددی از ۱ تا ۱۲۰"><button id="showTask" type="button">نمایش سهم امروز</button></div><p class="hint">شناسه همان عدد کنار نام شما در فهرست گروه است.</p><div class="error" id="err"></div></div><section class="result" id="result"></section></section>
