@@ -3,7 +3,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 Deno.serve(async () => {
   const db=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran'}).format(new Date(Date.now()-(4*60+30)*60000-86400000)); // reading day runs 04:30→04:30 Tehran; run at 04:30 to report the day just finished
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran'}).format(new Date(Date.now()-86400000)); // reading day runs Fajr→Fajr (03:01–05:46 Tehran); schedule at 06:00 Tehran to report the day just finished
   const {data,error}=await db.from('daily_reports').select('*').eq('report_date',today).order('group_number').order('participant_id');
   if(error) return new Response(error.message,{status:500});
   const html=`<h2>Daily Quran report ${today}</h2><p>Completed reports: ${data.length}</p>`;
