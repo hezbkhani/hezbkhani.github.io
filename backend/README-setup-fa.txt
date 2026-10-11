@@ -1,0 +1,7 @@
+این نسخه برای ثبت گزارش امن به Supabase نیاز دارد.
+1) پروژه Supabase بسازید و schema.sql را در SQL Editor اجرا کنید.
+2) عبارت REPLACE_WITH_ADMIN_EMAIL را با ایمیل مدیر عوض کنید.
+3) در Supabase Auth حساب مدیر بسازید.
+4) Project URL و anon key را در config.js وارد کنید. فقط anon key عمومی است؛ service role را هرگز در GitHub قرار ندهید.
+5) برای ایمیل، Resend API key و دامنه تاییدشده لازم است. تابع daily-report را deploy و با Supabase Cron برای ساعت 00:00 به وقت ایران زمان‌بندی کنید.
+6) تابع نمونه فعلی فقط گزارش‌های تکمیل‌شده را می‌شمارد. برای فهرست افراد تکمیل‌نشده باید فایل‌های گروه یا جدول اعضا نیز در backend همگام شود.
