@@ -17,6 +17,22 @@ verifyReportId.onclick=verifyReportIdentity;reportId.addEventListener('input',re
 function backendReady(){return cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY;}
 submitReport.onclick=async()=>{if(!verifiedReport||verifiedReport.groupNumber!==selected?.number){reportMessage.textContent='ابتدا شناسه را بررسی و نام را تأیید کنید.';return}if(!readCheck.checked){reportMessage.textContent='برای ثبت، تیک تأیید قرائت را بزنید.';return}if(!backendReady()){reportMessage.textContent='ثبت مرکزی هنوز فعال نشده است. ابتدا تنظیمات Supabase را در config.js وارد کنید.';return}const body={report_date:verifiedReport.reportDate,group_number:verifiedReport.groupNumber,participant_id:verifiedReport.id,participant_name:verifiedReport.name,portion:verifiedReport.portion,completed:true};const r=await fetch(`${cfg.SUPABASE_URL}/rest/v1/daily_reports`,{method:'POST',headers:{apikey:cfg.SUPABASE_ANON_KEY,Authorization:`Bearer ${cfg.SUPABASE_ANON_KEY}`,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(body)});reportMessage.textContent=r.ok?'گزارش امروز ثبت شد.':'ثبت گزارش انجام نشد.';if(r.ok)resetReportVerification();};
 // بخش مدیریت به‌صورت پیش‌فرض پنهان است. میانبر Ctrl+Alt+M آن را فقط نمایش می‌دهد؛ امنیت واقعی همچنان با ورود Supabase و RLS است.
-document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key.toLowerCase()==='m'){e.preventDefault();adminSection.hidden=!adminSection.hidden;if(!adminSection.hidden)adminEmail.focus();}});
+function updateAdminVisibility() {
+  adminSection.hidden = location.hash !== '#admin';
+
+  if (!adminSection.hidden) {
+    adminEmail.focus();
+  }
+}
+
+window.addEventListener('hashchange', updateAdminVisibility);
+updateAdminVisibility();
+
+document.addEventListener('keydown', function (e) {
+  if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'm') {
+    e.preventDefault();
+    location.hash = location.hash === '#admin' ? '' : '#admin';
+  }
+});
 adminLogin.onclick=async()=>{if(!backendReady()){adminMessage.textContent='ابتدا Supabase را تنظیم کنید.';return}const r=await fetch(`${cfg.SUPABASE_URL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:cfg.SUPABASE_ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:adminEmail.value,password:adminPassword.value})}),d=await r.json();adminToken=d.access_token||'';adminMessage.textContent=adminToken?'ورود مدیر انجام شد.':'ورود ناموفق بود.';};
 loadReports.onclick=async()=>{if(!adminToken){adminMessage.textContent='ابتدا وارد حساب مدیر شوید.';return}const r=await fetch(`${cfg.SUPABASE_URL}/rest/v1/daily_reports?report_date=eq.${isoIran()}&order=group_number.asc,participant_id.asc`,{headers:{apikey:cfg.SUPABASE_ANON_KEY,Authorization:`Bearer ${adminToken}`}}),a=await r.json();adminResults.innerHTML=Array.isArray(a)?a.map(x=>`<div class="report-row">گروه ${toFa(x.group_number)} · شناسه ${toFa(x.participant_id)} · ${x.participant_name} · ${x.portion}</div>`).join(''):'';};init();
