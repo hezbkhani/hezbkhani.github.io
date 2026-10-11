@@ -1,5 +1,4 @@
-// Public browser configuration. Never place a Supabase service-role key here.
 window.APP_CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: ''
+  SUPABASE_URL: 'https://wnswskzgfaywpmjhdgnx.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_oMecZYzkE826ignXDc72Bw_mmHBpWmu'
 };
