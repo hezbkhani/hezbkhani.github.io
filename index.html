@@ -50,6 +50,17 @@ input,select,button{
   input,select,button,.group{padding:9px 11px 12px}
   .checkline{grid-template-columns:28px minmax(0,1fr);gap:9px}
 }
+
+/* Text inside light, dynamically displayed result boxes */
+.badge,
+.task, .task small, .task strong,
+.search-item, .search-item strong,
+.identity-card, .identity-card strong, .identity-card span,
+.admin-summary,
+.report-row, .report-row strong, .report-row span {
+  color:#000 !important;
+  text-shadow:none !important;
+}
 </style></head><body><main class="shell"><header><h1>حزب‌خوانی قرآن کریم</h1><p class="today" id="todayHead"></p></header>
 <section class="panel"><h2>انتخاب گروه</h2><p class="lead">لطفاً بر اساس تاریخ شروع دوره، گروه خود را انتخاب کنید:</p><nav class="groups" id="groupsNav"></nav><p class="hint" id="groupInfo"></p></section>
 <section class="panel"><h2>شناسه و سهم روزانه</h2><div><label for="pid">شناسه شما</label><div class="row"><input id="pid" inputmode="numeric" placeholder="عددی از ۱ تا ۱۲۰"><button id="showTask" type="button">نمایش سهم امروز</button></div><p class="hint">شناسه همان عدد کنار نام شما در فهرست گروه است.</p><div class="error" id="err"></div></div><section class="result" id="result"></section></section>
