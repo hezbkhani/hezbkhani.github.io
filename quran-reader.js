@@ -91,6 +91,9 @@ body.qr-lock{overflow:hidden}
 .qr-src{margin:18px 0 0;font-size:12.5px;line-height:1.8;color:var(--muted);text-align:center}
 .qr-state{padding:60px 16px;text-align:center;color:var(--muted)}
 .qr.night .qr-end button,.qr.night .qr-row .ctl .qr-chip.on{color:#10201a}
+.qr-bar .qr-set{font:600 15px Vazirmatn,sans-serif;padding:0 12px;border:1px solid #ffffff66}
+.qr-apply{height:46px;margin-top:4px;background:var(--accent);color:#fff;border:0;font:600 16px Vazirmatn,sans-serif}
+.qr.night .qr-apply{color:#10201a}
 .qr-x{display:none}
 .qr.x .qr-x{display:flex}
 .qr-xi{display:none}
@@ -120,7 +123,7 @@ body.qr-lock{overflow:hidden}
   el.innerHTML = `
 <div class="qr-bar"><button type="button" data-a="close" aria-label="بستن">✕</button>
 <div class="qr-title"><b id="qrTitle"></b><small id="qrSub"></small></div>
-<button type="button" data-a="menu" aria-label="تنظیمات نمایش" aria-expanded="false" style="font:700 17px Vazirmatn,sans-serif">Aa</button>
+<button type="button" class="qr-set" data-a="menu" aria-expanded="false">تنظیمات</button>
 <div class="qr-progress" id="qrProgress"></div></div>
 <div class="qr-menu" id="qrMenu">
 <div class="qr-row"><span>اندازه متن</span><span class="ctl"><button type="button" data-a="smaller" aria-label="کوچک‌تر">−</button><button type="button" data-a="bigger" aria-label="بزرگ‌تر">+</button></span></div>
@@ -131,11 +134,12 @@ body.qr-lock{overflow:hidden}
 <div class="qr-row qr-x"><span>پخش</span><span class="ctl"><button type="button" class="qr-chip" data-a="mode-ar">تلاوت</button><button type="button" class="qr-chip" data-a="mode-both">تلاوت + ترجمه</button><button type="button" class="qr-chip" data-a="mode-fa">ترجمه</button></span></div>
 <div class="qr-row qr-x"><span>قاری</span><select id="qrReciter" aria-label="قاری">${RECITERS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
 <div class="qr-row qr-x"><span>ترجمه گویا</span><select id="qrVoice" aria-label="ترجمه گویا">${VOICES.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
+<button type="button" class="qr-apply" data-a="apply">اعمال تنظیمات</button>
 </div>
 <div class="qr-body" id="qrBody"></div>
 <div class="qr-player" id="qrPlayer"><button type="button" class="qr-play" data-a="play" aria-label="پخش">▶</button>
 <div class="qr-now" id="qrNow"><b>پخش صوت</b>از اولین آیه، یا روی شماره یک آیه بزنید</div>
-<button type="button" data-a="prev" aria-label="آیه قبل">⏭</button><button type="button" data-a="next" aria-label="آیه بعد">⏮</button></div>`;
+<button type="button" data-a="next" aria-label="آیه بعد">⏭</button><button type="button" data-a="prev" aria-label="آیه قبل">⏮</button></div>`;
   document.body.appendChild(el);
   const $ = id => el.querySelector('#' + id);
   const menu = $('qrMenu'), body = $('qrBody');
@@ -265,6 +269,13 @@ body.qr-lock{overflow:hidden}
     if (a === 'close') return close();
     if (a === 'menu') { const s = menu.classList.toggle('show'); b.setAttribute('aria-expanded', s); return; }
     if (a === 'retry') return load();
+    if (a === 'apply') {
+      // تغییرات همان لحظه اعمال می‌شوند؛ این دکمه منو را می‌بندد و اگر صوت در حال پخش است، آیه فعلی را با تنظیمات جدید از نو پخش می‌کند.
+      menu.classList.remove('show');
+      el.querySelector('[data-a="menu"]').setAttribute('aria-expanded', false);
+      if (playing) playAt(pos);
+      return;
+    }
     if (a === 'play') return playing ? pauseAudio() : resumeOrStart();
     if (a === 'next') return playAt(Math.min(items.length - 1, pos + 1));
     if (a === 'prev') return playAt(Math.max(0, pos - 1));
