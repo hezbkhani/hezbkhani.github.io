@@ -1,9 +1,9 @@
 // خواندن متن قرآنِ سهم روزانه (عربی + ترجمه فارسی).
-// فعلاً فقط در نمای پیش‌نمایش مدیر (آدرس با ‎#admin‎) نمایش داده می‌شود؛ برای انتشار عمومی، PREVIEW_ONLY را false کنید.
+// برای اینکه دوباره فقط در نمای مدیر (آدرس با ‎#admin‎) نمایش داده شود، PREVIEW_ONLY را true کنید.
 // متن عربی: مصحف مجمع ملک فهد (روایت حفص، رسم عثمان طه) با فونت KFGQPC Uthmanic Hafs.
 // ترجمه: آیت‌الله ناصر مکارم شیرازی، از Tanzil.net. داده‌ها در پوشه quran/p هستند (یک فایل برای هر سهم).
 (function () {
-  const PREVIEW_ONLY = true;
+  const PREVIEW_ONLY = false;
   const enabled = () => !PREVIEW_ONLY || location.hash === '#admin';
   const fa = '۰۱۲۳۴۵۶۷۸۹', arD = '٠١٢٣٤٥٦٧٨٩';
   const toFa = x => String(x).replace(/\d/g, d => fa[d]);
