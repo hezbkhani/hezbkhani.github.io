@@ -113,7 +113,7 @@ body.qr-lock{overflow:hidden}
       }).join('');
       return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small></div>${bism}<div class="qr-seg">${ayahs}</div>`;
     }).join('');
-    $('qrSub').textContent = `${toFa(count)} آیه`;
+    $('qrSub').textContent = `${typeof hizbLabel === 'function' && hizbLabel(current.index) ? `حزب ${toFa(current.index + 1)} · ` : ''}${toFa(count)} آیه`;
     body.innerHTML = html + `<div class="qr-end"><p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>
 <p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: آیت‌الله مکارم شیرازی (Tanzil.net)</p></div>`;
     el.scrollTop = 0;
