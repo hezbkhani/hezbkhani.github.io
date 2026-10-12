@@ -36,11 +36,11 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
-      - uses: android-actions/setup-android@v3
       - name: Android build tools
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "build-tools;36.1.0" "platforms;android-36" > /dev/null
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "build-tools;36.1.0" "platforms;android-36" > /dev/null
       - name: Signing key
         id: key
         env:
