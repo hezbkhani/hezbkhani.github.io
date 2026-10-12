@@ -12,4 +12,4 @@ uthmanic-hafs.woff2: فونت KFGQPC Uthmanic Script HAFS (مجمع ملک فه�
 
 t/<مترجم>/001.json تا 120.json: ترجمه‌های فارسی دیگر از Tanzil.net (انصاریان، فولادوند، الهی قمشه‌ای، قرائتی، خرمشاهی، آیتی، بهرام‌پور، مجتبوی، صفوی، صادقی تهرانی، خرمدل، معزی)، از بسته npm ‎@ghoran/translation‎؛ هر فایل فهرست ترجمه آیه‌های همان سهم است.
 صوت از سایت این فایل‌ها پخش نمی‌شود؛ مرورگر هر آیه را از everyayah.com (و در صورت خطا از cdn.islamic.network) می‌گیرد.
-پخش صوت و انتخاب مترجم فعلاً فقط در ‎#admin‎ است؛ برای انتشار عمومی در quran-reader.js مقدار EXTRAS_PREVIEW_ONLY را false کنید.
+پخش صوت و انتخاب مترجم برای همه فعال است؛ برای محدود کردن به ‎#admin‎ در quran-reader.js مقدار EXTRAS_PREVIEW_ONLY را true کنید.
