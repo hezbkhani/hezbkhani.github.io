@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.hezbkhani.app",
+    "sha256_cert_fingerprints": ["E7:E9:13:D8:23:45:EA:46:8F:FF:57:B0:DE:04:7E:F5:C6:23:4C:F9:ED:FD:79:A2:6A:B2:A1:E5:2F:CE:04:41"]
+  }
+}]
