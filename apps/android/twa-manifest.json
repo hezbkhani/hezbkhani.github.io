@@ -31,5 +31,5 @@
   "isChromeOSOnly": false,
   "isMetaQuest": false,
   "fullScopeUrl": "https://hezbkhani.github.io/",
-  "minSdkVersion": 21
+  "minSdkVersion": 24
 }
