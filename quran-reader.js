@@ -5,8 +5,8 @@
 (function () {
   const PREVIEW_ONLY = false;
   const enabled = () => !PREVIEW_ONLY || location.hash === '#admin';
-  // پخش صوت (قاری و ترجمه گویا) و انتخاب ترجمه: فعلاً فقط در ‎#admin‎؛ برای نمایش عمومی EXTRAS_PREVIEW_ONLY را false کنید.
-  const EXTRAS_PREVIEW_ONLY = true;
+  // پخش صوت (قاری و ترجمه گویا) و انتخاب ترجمه؛ برای اینکه دوباره فقط در ‎#admin‎ باشد، EXTRAS_PREVIEW_ONLY را true کنید.
+  const EXTRAS_PREVIEW_ONLY = false;
   const extras = () => !EXTRAS_PREVIEW_ONLY || location.hash === '#admin';
   // ترجمه‌های فارسی Tanzil.net؛ متن مکارم داخل quran/p است و بقیه در quran/t/<id>/NNN.json.
   const TRANSLATIONS = [
