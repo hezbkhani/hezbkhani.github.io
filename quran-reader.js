@@ -139,7 +139,7 @@ body.qr-lock{overflow:hidden}
 <div class="qr-body" id="qrBody"></div>
 <div class="qr-player" id="qrPlayer"><button type="button" class="qr-play" data-a="play" aria-label="پخش">▶</button>
 <div class="qr-now" id="qrNow"><b>پخش صوت</b>از اولین آیه، یا روی شماره یک آیه بزنید</div>
-<button type="button" data-a="prev" aria-label="آیه قبل">⏭</button><button type="button" data-a="next" aria-label="آیه بعد">⏮</button></div>`;
+<button type="button" data-a="next" aria-label="آیه بعد">⏭</button><button type="button" data-a="prev" aria-label="آیه قبل">⏮</button></div>`;
   document.body.appendChild(el);
   const $ = id => el.querySelector('#' + id);
   const menu = $('qrMenu'), body = $('qrBody');
