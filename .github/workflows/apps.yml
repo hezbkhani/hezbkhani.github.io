@@ -41,6 +41,8 @@ jobs:
           SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$SDKM" --licenses > /dev/null || true
           "$SDKM" "build-tools;36.1.0" "platforms;android-36" > /dev/null
+          # Bubblewrap expects sdkmanager at $ANDROID_HOME/bin.
+          [ -e "$ANDROID_HOME/bin" ] || ln -s "$(dirname "$SDKM")" "$ANDROID_HOME/bin"
       - name: Signing key
         id: key
         env:
