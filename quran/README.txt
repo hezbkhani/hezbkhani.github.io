@@ -8,4 +8,4 @@ uthmanic-hafs.woff2: فونت KFGQPC Uthmanic Script HAFS (مجمع ملک فه�
 - ترجمه فارسی: آیت‌الله ناصر مکارم شیرازی، از Tanzil.net (استفاده غیرتجاری با ذکر منبع)، از بسته npm ‎@ghoran/translation‎.
 
 اگر portions.json تغییر کند، این فایل‌ها باید دوباره ساخته شوند.
-نمایش دکمه فعلاً فقط در آدرس ‎#admin‎ است؛ برای انتشار عمومی در quran-reader.js مقدار PREVIEW_ONLY را false کنید.
+دکمه برای همه نمایش داده می‌شود؛ برای محدود کردن به آدرس ‎#admin‎ در quran-reader.js مقدار PREVIEW_ONLY را true کنید.
