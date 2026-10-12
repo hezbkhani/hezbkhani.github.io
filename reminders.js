@@ -51,6 +51,7 @@
     const sub = await currentSub(); if (!sub) throw Error('nosub');
     const r = await fetch(`${cfg.SUPABASE_URL}/functions/v1/daily-reminders?slot=test`, { method: 'POST', headers: { apikey: cfg.SUPABASE_ANON_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) });
     if (!r.ok) throw Error('test ' + r.status);
+    if (!(await r.json()).sent) throw Error('notsent');
   }
 
   const same = (a, b) => a && b && a.g === b.g && a.id === b.id;
@@ -58,7 +59,8 @@
   const ERR = {
     denied: 'اجازه اعلان داده نشد. اگر اشتباهی «Block» زدید، از تنظیمات مرورگر (نماد قفل کنار آدرس سایت) اعلان‌ها را برای این سایت مجاز کنید.',
     dismissed: 'اجازه اعلان داده نشد. هر وقت خواستید دوباره دکمه را بزنید.',
-    nosub: 'روی این دستگاه یادآوری فعال نیست.'
+    nosub: 'روی این دستگاه یادآوری فعال نیست.',
+    notsent: 'اعلان فرستاده نشد: دوره این گروه هنوز شروع نشده یا گروه در فهرست سایت نیست.'
   };
   const fail = e => ERR[e && e.message] || 'انجام نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.';
 
