@@ -46,6 +46,7 @@
     if (!r.ok) {
       const m = data?.message || '';
       if (r.status === 401 || /JWT/i.test(m)) throw Error('نشست مدیر منقضی شده است؛ دوباره وارد شوید.');
+      if (data?.code === 'PGRST202' || data?.code === 'PGRST205' || data?.code === '42P01' || data?.code === '42883') throw Error('بخش ثبت‌نام هنوز در Supabase راه‌اندازی نشده است: فایل backend/supabase/registration.sql را در SQL Editor اجرا کنید.');
       throw Error(ERRORS[m] || 'انجام نشد. لطفاً دوباره تلاش کنید.');
     }
     return data;
