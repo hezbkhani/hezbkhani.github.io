@@ -98,15 +98,15 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     try { rounds = await rpc('reg_rounds'); } catch (e) { error = e.message; }
     const live = (rounds || []).filter(r => r.status !== 'closed');
     const hidden = (window.siteSettings?.registration?.mode || 'auto') === 'hidden';
-    const mine = codes.all().length > 0;
-    // بازدیدکنندگان عادی: فقط وقتی ثبت‌نامی هست (یا خودشان ثبت‌نام کرده‌اند) و مدیر آن را پنهان نکرده است.
-    panel.hidden = !isAdminView() && (hidden || error || (!live.length && !mine));
+    const mine = error ? [] : await lookupMine();
+    // بازدیدکنندگان عادی: فقط وقتی ثبت‌نامی هست (یا خودشان در دوره‌ای جاری ثبت‌نام کرده‌اند) و مدیر آن را پنهان نکرده است.
+    panel.hidden = !isAdminView() && (hidden || error || (!live.length && !mine.length));
     if (panel.hidden) return;
     let note = '';
     if (isAdminView() && hidden) note = '<p class="reg-note">این بخش اکنون برای بازدیدکنندگان پنهان است (تنظیمات › بخش ثبت‌نام).</p>';
     if (error) box.innerHTML = note + `<p class="reg-msg reg-bad">${esc(error)}</p>`;
     else box.innerHTML = note + (live.length ? live.map(roundCard).join('') : '<p class="hint">در حال حاضر ثبت‌نامی باز نیست. زمان ثبت‌نام دوره بعد در گروه‌ها اعلام می‌شود.</p>');
-    await loadMine();
+    renderMine(mine);
   }
   window.regReloadPublic = loadPublic;
 
@@ -120,19 +120,22 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     return `<div class="reg-round"><h3>${esc(r.title)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform] || esc(r.platform)}</span><span>${fa(r.registered)} از ${fa(CAPACITY)} نفر</span><span>${STATUS[r.status]}</span></div><div class="reg-bar"><span style="width:${pct}%"></span></div>${start}${body}</div>`;
   }
 
-  async function loadMine() {
-    const box = $p('#regMine'), list = codes.all();
-    if (!list.length) { box.innerHTML = ''; return; }
-    const items = await Promise.all(list.map(async c => { try { const a = await rpc('reg_lookup', { p_code: c }); return { c, r: a?.[0] || null }; } catch { return { c, r: undefined }; } }));
+  // ثبت‌نام‌های این دستگاه؛ کدِ دوره‌های حذف‌شده یا بسته‌شده خودکار فراموش می‌شود.
+  async function lookupMine() {
+    const items = await Promise.all(codes.all().map(async c => { try { const a = await rpc('reg_lookup', { p_code: c }); return { c, r: a?.[0] || null }; } catch { return { c, r: undefined }; } }));
+    items.filter(x => x.r === null || x.r?.status === 'closed').forEach(x => codes.remove(x.c));
+    return items.filter(x => x.r !== null && x.r?.status !== 'closed');
+  }
+  function renderMine(items) {
+    const box = $p('#regMine');
+    if (!items.length) { box.innerHTML = ''; return; }
     box.innerHTML = '<h3 class="reg-sub">ثبت‌نام‌های من</h3>' + items.map(({ c, r }) => {
       if (r === undefined) return `<div class="reg-round"><span class="hint">کد ${fa(c)}: دریافت وضعیت انجام نشد.</span></div>`;
-      if (r === null) return `<div class="reg-round"><p class="hint">ثبت‌نام با کد ${fa(c)} دیگر وجود ندارد (انصراف داده‌اید یا مدیر آن را حذف کرده است).</p><button type="button" class="reg-light" data-forget="${c}">حذف از این فهرست</button></div>`;
       let s = `<div class="reg-round"><h3>${esc(r.name)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform] || esc(r.platform)}</span><span>${esc(r.title)}</span><span>${STATUS[r.status]}</span></div>`;
       s += `<p class="hint">کد پیگیری: <span class="reg-code">${fa(c)}</span></p>`;
       if (r.status === 'announced' && r.participant_id) s += `<p>شناسه شما: <span class="reg-id">${fa(r.participant_id)}</span><br>تاریخ شروع: <strong>${esc(dateFa(r.start_date))}</strong></p><p class="hint">از روز شروع، با همین شناسه در بخش «شناسه و سهم روزانه» سهم خود را ببینید.</p>`;
       else if (r.status === 'open' || r.status === 'full') s += `<p class="hint">شما نفر ${fa(r.place)} از ${fa(r.registered)} ثبت‌نام‌کننده هستید.${r.start_date ? ` شروع دوره (پیش‌بینی): ${esc(dateFa(r.start_date))}.` : ''} پس از تکمیل ظرفیت، شناسه شما همین‌جا نشان داده می‌شود.</p><button type="button" class="reg-danger" data-unreg="${c}">انصراف از ثبت‌نام</button><div class="reg-msg" id="regUn${c}"></div>`;
       else if (r.status === 'assigned') s += '<p class="hint">شناسه‌ها داده شده و به‌زودی اعلام می‌شود.</p>';
-      else s += `<button type="button" class="reg-light" data-forget="${c}">حذف از این فهرست</button>`;
       return s + '</div>';
     }).join('');
   }
@@ -159,7 +162,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
       b.disabled = true;
       try { await rpc('reg_unregister', { p_code: c }); codes.remove(c); await loadPublic(); if (window.regAdminReload) window.regAdminReload(); }
       catch (err) { msg.className = 'reg-msg reg-bad'; msg.textContent = err.message; b.disabled = false; }
-    } else if (b.dataset.forget) { codes.remove(b.dataset.forget); loadPublic(); }
+    }
   }
 
   // ---------- مدیریت: زبانه «ثبت‌نام» ----------
@@ -250,7 +253,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
         if (same && r.status !== 'announced') s += `<p class="reg-bad">گروه شماره ${fa(gnum)} («${esc(same.name)}») وجود دارد و جایگزین می‌شود. اگر نمی‌خواهید، شماره دیگری بگذارید.</p>`;
         s += `<div class="reg-tools"><button type="button" data-a="announce">${r.status === 'announced' ? 'به‌روزرسانی اعلام' : 'اعلام شناسه‌ها و تاریخ شروع'}</button></div>`;
       }
-      if (r.status !== 'closed') s += `<div class="reg-tools"><button type="button" class="reg-danger" data-a="close">${r.status === 'announced' ? 'بایگانی دوره' : 'بستن این ثبت‌نام'}</button></div>`;
+      s += '<div class="reg-tools">' + (r.status !== 'closed' ? `<button type="button" class="reg-light" data-a="close">${r.status === 'announced' ? 'بایگانی دوره' : 'بستن این ثبت‌نام'}</button>` : '') + '<button type="button" class="reg-danger" data-a="delete">حذف کامل دوره</button></div>';
     }
     s += '<div class="reg-msg" data-msg></div>';
     if (expanded) {
@@ -299,6 +302,10 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
       } else if (a === 'close') {
         if (!confirm(r.status === 'announced' ? 'این دوره بایگانی شود؟ (گروه ساخته‌شده در سایت می‌ماند.)' : 'ثبت‌نام این دوره بسته شود؟ ثبت‌نام‌کنندگان دیگر نمی‌توانند ثبت‌نام یا انصراف دهند.')) { b.disabled = false; return; }
         await api(`registration_rounds?id=eq.${id}`, { method: 'PATCH', body: { status: 'closed' }, auth: true, prefer: 'return=minimal' });
+      } else if (a === 'delete') {
+        if (!confirm(`«${r.title}» و ${fa(regsOf(id).length)} ثبت‌نام آن برای همیشه حذف شود؟ (اگر گروهی از این دوره ساخته شده، در زبانه «گروه‌ها» می‌ماند.)`)) { b.disabled = false; return; }
+        await api(`registration_rounds?id=eq.${id}`, { method: 'DELETE', auth: true, prefer: 'return=minimal' });
+        if (openRound === id) openRound = null;
       } else if (a === 'assign') {
         if (r.status === 'assigned' && !confirm('شناسه‌ها دوباره به ترتیب ثبت‌نام داده شود؟')) { b.disabled = false; return; }
         await rpc('reg_assign_ids', { p_round: id }, true);
