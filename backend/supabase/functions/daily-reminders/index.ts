@@ -1,6 +1,6 @@
 // ارسال یادآوری روزانه با اعلان مرورگر. با Supabase Cron ساعت ۱۰ (slot=morning) و ۱۹ (slot=evening) به وقت ایران صدا زده می‌شود.
-// Secrets لازم: VAPID_PUBLIC_KEY، VAPID_PRIVATE_KEY، CRON_SECRET. اختیاری: SITE_URL (پیش‌فرض https://hezbkhani.github.io)،
-// GROUPS_FROM_DB=true وقتی گروه‌ها برای همه از پایگاه داده (site_groups) خوانده می‌شوند (همراه با GROUPS_FROM_DB_PREVIEW_ONLY=false در app.js).
+// Secrets لازم: VAPID_PUBLIC_KEY، VAPID_PRIVATE_KEY، CRON_SECRET. اختیاری: SITE_URL (پیش‌فرض https://hezbkhani.github.io).
+// منبع گروه‌ها مثل خود سایت (app.js) است: تنظیم groups_source در site_settings؛ پایگاه داده مگر «files» انتخاب شده یا خالی باشد.
 // SUPABASE_URL و SUPABASE_SERVICE_ROLE_KEY را خود Supabase می‌گذارد.
 // این تابع باید با JWT verification خاموش deploy شود؛ اجازه با x-cron-secret بررسی می‌شود.
 // slot=test فقط به یک دستگاهِ ازپیش‌مشترک (endpoint در بدنه) پیام سهم امروز را می‌فرستد؛ برای دکمه «ارسال آزمایشی» در سایت.
@@ -16,9 +16,11 @@ const json = (x: unknown, status = 200) => new Response(JSON.stringify(x), { sta
 const makeDb = () => createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } })
 
 async function loadGroups(db: ReturnType<typeof makeDb>): Promise<Group[]> {
-  if (env('GROUPS_FROM_DB') === 'true') {
+  const setting = await db.from('site_settings').select('value').eq('key', 'groups_source').maybeSingle()
+  if ((setting.data?.value?.source || 'db') !== 'files') {
     const { data, error } = await db.from('site_groups').select('number,name,start_date,names').eq('visible', true)
-    if (!error && data?.length) return data.filter(g => g.names?.length === 120).map(g => ({ number: g.number, name: g.name, start: isoToUtc(g.start_date), names: g.names }))
+    const list = (error ? [] : data || []).filter(g => g.names?.length === 120)
+    if (list.length) return list.map(g => ({ number: g.number, name: g.name, start: isoToUtc(g.start_date), names: g.names }))
   }
   const list = await fetch(`${SITE_URL}/groups/index.json`, { cache: 'no-store' }).then(r => r.json())
   const out = await Promise.all(list.map(async (e: { number?: number; name?: string } | number) => {

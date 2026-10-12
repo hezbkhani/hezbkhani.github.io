@@ -1,11 +1,57 @@
--- ثبت‌نام دوره جدید + فهرست گروه‌ها در پایگاه داده.
--- اجرا یک‌بار در Supabase SQL Editor (پس از schema.sql). اجرای دوباره بی‌خطر است.
--- پیش از اجرا، REPLACE_WITH_ADMIN_EMAIL را (پایین همین بخش) با ایمیل مدیر عوض کنید؛ همان ایمیلی که در schema.sql گذاشتید.
+-- ثبت‌نام دوره جدید، فهرست گروه‌ها، تنظیمات سایت و فهرست مدیران در پایگاه داده.
+-- اجرا در Supabase SQL Editor (پس از schema.sql). اجرای دوباره بی‌خطر است و چیزی را پاک نمی‌کند؛
+-- پس از هر به‌روزرسانی این فایل، کل آن را دوباره اجرا کنید.
+-- ایمیل مدیر خودکار از سیاست گزارش‌ها (schema.sql) برداشته می‌شود. اگر schema.sql را اجرا نکرده‌اید،
+-- در خط «insert into public.site_admins» پایین، REPLACE_WITH_ADMIN_EMAIL را با ایمیل مدیر عوض کنید.
+
+create table if not exists public.site_admins (
+  email text primary key check (email = lower(email) and email like '%@%'),
+  added_at timestamptz not null default now()
+);
+alter table public.site_admins enable row level security;
+
+do $$
+declare src text; m text[];
+begin
+  select qual into src from pg_policies where schemaname = 'public' and tablename = 'daily_reports'
+     and policyname = 'authenticated admin reads reports';
+  m := regexp_match(coalesce(src, ''), '''([^'']+@[^'']+)''');
+  if m is null then
+    select prosrc into src from pg_proc where proname = 'is_site_admin' and pronamespace = 'public'::regnamespace;
+    m := regexp_match(coalesce(src, ''), '''([^'']+@[^'']+)''');
+  end if;
+  if m is not null then insert into public.site_admins (email) values (lower(m[1])) on conflict do nothing; end if;
+end $$;
+insert into public.site_admins (email) select lower('REPLACE_WITH_ADMIN_EMAIL')
+ where 'REPLACE_WITH_ADMIN_EMAIL' like '%@%' on conflict do nothing;
 
 create or replace function public.is_site_admin() returns boolean
-language sql stable as $$
-  select coalesce(auth.jwt() ->> 'email', '') = 'REPLACE_WITH_ADMIN_EMAIL'
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from site_admins where email = lower(coalesce(auth.jwt() ->> 'email', '')))
 $$;
+drop policy if exists "admins manage admins" on public.site_admins;
+create policy "admins manage admins" on public.site_admins for all to authenticated
+  using (public.is_site_admin()) with check (public.is_site_admin());
+grant select, insert, delete on public.site_admins to authenticated;
+
+-- تنظیمات سایت (اطلاعیه بالای صفحه، نمایش بخش ثبت‌نام، منبع فهرست گروه‌ها). همه می‌خوانند، فقط مدیر تغییر می‌دهد.
+create table if not exists public.site_settings (
+  key text primary key check (length(key) between 1 and 40),
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.site_settings enable row level security;
+drop policy if exists "anyone reads settings" on public.site_settings;
+create policy "anyone reads settings" on public.site_settings for select to anon, authenticated using (true);
+drop policy if exists "admin manages settings" on public.site_settings;
+create policy "admin manages settings" on public.site_settings for all to authenticated
+  using (public.is_site_admin()) with check (public.is_site_admin());
+grant select on public.site_settings to anon, authenticated;
+grant insert, update, delete on public.site_settings to authenticated;
+
+-- گزارش‌ها: مدیرانِ فهرست بالا هم بتوانند بخوانند (سیاست قبلی schema.sql هم می‌ماند).
+drop policy if exists "site admins read reports" on public.daily_reports;
+create policy "site admins read reports" on public.daily_reports for select to authenticated using (public.is_site_admin());
 
 -- فهرست گروه‌ها (جایگزین groups/index.json و groups/group-N.txt). نام‌ها عمومی‌اند، همان‌طور که فایل‌ها عمومی بودند.
 create table if not exists public.site_groups (
@@ -116,7 +162,7 @@ language sql stable security definer set search_path = public as $$
              and (x.created_at, x.id) <= (g.created_at, g.id)),
          (select count(*)::integer from registrations x where x.round_id = g.round_id),
          case when r.status = 'announced' then g.participant_id end,
-         case when r.status = 'announced' then r.start_date end,
+         r.start_date,
          case when r.status = 'announced' then r.group_number end
     from registrations g join registration_rounds r on r.id = g.round_id
    where g.code = btrim(p_code)
