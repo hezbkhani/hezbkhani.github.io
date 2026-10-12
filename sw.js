@@ -1,9 +1,28 @@
-// سرویس‌ورکر فقط برای اعلان یادآوری روزانه است؛ هیچ فایلی را کش نمی‌کند.
+// سرویس‌ورکر: اعلان یادآوری روزانه، و نسخه آفلاین برای حالت «برنامه» (نصب‌شده).
+// همیشه اول از اینترنت می‌خواند تا تغییرات سایت فوراً دیده شود؛ فقط اگر اینترنت نبود از نسخه ذخیره‌شده استفاده می‌کند.
 self.window = self; importScripts('config.js');
 const cfg = self.APP_CONFIG || {};
 
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+const CACHE = 'hezb-v1';
+const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'portions.json', 'Vazirmatn.woff2', 'IranNastaliq2.woff2', 'background.jpg'];
+
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}));
+});
+self.addEventListener('activate', e => e.waitUntil(
+  caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('hezb-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())
+));
+
+self.addEventListener('fetch', e => {
+  const req = e.request, url = new URL(req.url);
+  // فقط فایل‌های خود سایت؛ درخواست‌های پایگاه داده و سایت‌های دیگر دست‌نخورده می‌مانند.
+  if (req.method !== 'GET' || url.origin !== self.location.origin || req.headers.has('range')) return;
+  e.respondWith(fetch(req).then(res => {
+    if (res.status === 200 && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {}); }
+    return res;
+  }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || (req.mode === 'navigate' ? caches.match('./') : Response.error()))));
+});
 
 self.addEventListener('push', e => {
   let d = {};
