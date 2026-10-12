@@ -1,10 +1,40 @@
 // خواندن متن قرآنِ سهم روزانه (عربی + ترجمه فارسی).
-// فعلاً فقط در نمای پیش‌نمایش مدیر (آدرس با ‎#admin‎) نمایش داده می‌شود؛ برای انتشار عمومی، PREVIEW_ONLY را false کنید.
+// برای اینکه دوباره فقط در نمای مدیر (آدرس با ‎#admin‎) نمایش داده شود، PREVIEW_ONLY را true کنید.
 // متن عربی: مصحف مجمع ملک فهد (روایت حفص، رسم عثمان طه) با فونت KFGQPC Uthmanic Hafs.
 // ترجمه: آیت‌الله ناصر مکارم شیرازی، از Tanzil.net. داده‌ها در پوشه quran/p هستند (یک فایل برای هر سهم).
 (function () {
-  const PREVIEW_ONLY = true;
+  const PREVIEW_ONLY = false;
   const enabled = () => !PREVIEW_ONLY || location.hash === '#admin';
+  // پخش صوت (قاری و ترجمه گویا) و انتخاب ترجمه؛ برای اینکه دوباره فقط در ‎#admin‎ باشد، EXTRAS_PREVIEW_ONLY را true کنید.
+  const EXTRAS_PREVIEW_ONLY = false;
+  const extras = () => !EXTRAS_PREVIEW_ONLY || location.hash === '#admin';
+  // ترجمه‌های فارسی Tanzil.net؛ متن مکارم داخل quran/p است و بقیه در quran/t/<id>/NNN.json.
+  const TRANSLATIONS = [
+    ['makarem', 'مکارم شیرازی'], ['ansarian', 'انصاریان'], ['fooladvand', 'فولادوند'], ['ghomshei', 'الهی قمشه‌ای'],
+    ['gharaati', 'قرائتی'], ['khorramshahi', 'خرمشاهی'], ['ayati', 'آیتی'], ['bahrampour', 'بهرام‌پور'],
+    ['mojtabavi', 'مجتبوی'], ['safavi', 'صفوی'], ['sadeqi', 'صادقی تهرانی'], ['khorramdel', 'خرمدل'], ['moezzi', 'معزی']
+  ];
+  // فایل صوتی هر آیه: اول از everyayah.com، اگر نشد از cdn.islamic.network (alquran.cloud).
+  const RECITERS = [
+    ['abdulbasit', 'عبدالباسط (ترتیل)', 'Abdul_Basit_Murattal_192kbps', 'ar.abdulsamad'],
+    ['abdulbasit_mj', 'عبدالباسط (تحقیق)', 'Abdul_Basit_Mujawwad_128kbps', ''],
+    ['minshawi', 'منشاوی (ترتیل)', 'Minshawy_Murattal_128kbps', 'ar.minshawi'],
+    ['minshawi_mj', 'منشاوی (تحقیق)', 'Minshawy_Mujawwad_192kbps', 'ar.minshawimujawwad'],
+    ['husary', 'محمود خلیل الحصری', 'Husary_128kbps', 'ar.husary'],
+    ['parhizgar', 'شهریار پرهیزگار', 'Parhizgar_48kbps', ''],
+    ['mansoori', 'کریم منصوری', 'Karim_Mansoori_40kbps', ''],
+    ['alafasy', 'مشاری العفاسی', 'Alafasy_128kbps', 'ar.alafasy'],
+    ['sudais', 'عبدالرحمن السدیس', 'Abdurrahmaan_As-Sudais_192kbps', 'ar.abdurrahmaansudais'],
+    ['muaiqly', 'ماهر المعیقلی', 'Maher_AlMuaiqly_64kbps', 'ar.mahermuaiqly'],
+    ['ghamadi', 'سعد الغامدی', 'Ghamadi_40kbps', '']
+  ];
+  const VOICES = [
+    ['hedayatfar', 'فولادوند، صدای هدایت‌فر', 'translations/Fooladvand_Hedayatfar_40Kbps'],
+    ['kabiri', 'مکارم، صدای کبیری', 'translations/Makarem_Kabiri_16Kbps']
+  ];
+  const SURAH_AYAHS = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
+  const SURAH_START = SURAH_AYAHS.reduce((a, n, i) => (a.push(i ? a[i - 1] + SURAH_AYAHS[i - 1] : 0), a), []);
+  const pad3 = n => String(n).padStart(3, '0');
   const fa = '۰۱۲۳۴۵۶۷۸۹', arD = '٠١٢٣٤٥٦٧٨٩';
   const toFa = x => String(x).replace(/\d/g, d => fa[d]);
   const toAr = x => String(x).replace(/\d/g, d => arD[d]);
@@ -14,7 +44,7 @@
     get() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } },
     set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} }
   };
-  const prefs = Object.assign({ size: 27, trans: true, night: false }, store.get());
+  const prefs = Object.assign({ size: 27, trans: true, night: false, tr: 'makarem', reciter: 'abdulbasit', voice: 'hedayatfar', mode: 'ar' }, store.get());
   const save = () => store.set(prefs);
 
   const css = `
@@ -61,6 +91,22 @@ body.qr-lock{overflow:hidden}
 .qr-src{margin:18px 0 0;font-size:12.5px;line-height:1.8;color:var(--muted);text-align:center}
 .qr-state{padding:60px 16px;text-align:center;color:var(--muted)}
 .qr.night .qr-end button,.qr.night .qr-row .ctl .qr-chip.on{color:#10201a}
+.qr-x{display:none}
+.qr.x .qr-x{display:flex}
+.qr-xi{display:none}
+.qr.x .qr-xi{display:inline}
+.qr-row select{flex:1;min-width:0;max-width:62%;height:40px;padding:0 8px;font:inherit;font-size:15px;color:var(--text);background:var(--bg);border:1px solid var(--line)}
+.qr-sec{font-size:13px;font-weight:700;color:var(--accent);border-top:1px solid var(--line);padding-top:10px}
+.qr-ayah.playing{background:rgba(199,154,69,.16);box-shadow:inset -3px 0 0 var(--gold)}
+.qr.flow .qr-ayah.playing .qr-ar{background:rgba(199,154,69,.22)}
+.qr-num{cursor:pointer}
+.qr-player{position:sticky;bottom:0;z-index:2;display:none;align-items:center;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);box-shadow:0 -4px 16px #0002}
+.qr.x .qr-player{display:flex}
+.qr-player button{flex:none;width:44px;height:44px;padding:0;border:0;background:transparent;color:var(--accent);font-size:20px}
+.qr-player .qr-play{width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;font-size:22px}
+.qr.night .qr-player .qr-play{color:#10201a}
+.qr-player .qr-now{flex:1;min-width:0;font-size:13.5px;line-height:1.5;color:var(--muted)}
+.qr-player .qr-now b{display:block;font-size:14.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qr-state button{margin-top:12px;height:44px;background:var(--accent);color:#fff;border:0}
 @media(min-width:700px){.qr-body{padding-left:24px;padding-right:24px}}
 `;
@@ -80,8 +126,16 @@ body.qr-lock{overflow:hidden}
 <div class="qr-row"><span>اندازه متن</span><span class="ctl"><button type="button" data-a="smaller" aria-label="کوچک‌تر">−</button><button type="button" data-a="bigger" aria-label="بزرگ‌تر">+</button></span></div>
 <div class="qr-row"><span>ترجمه فارسی</span><span class="ctl"><button type="button" class="qr-chip" data-a="trans-on">نمایش</button><button type="button" class="qr-chip" data-a="trans-off">فقط عربی</button></span></div>
 <div class="qr-row"><span>رنگ صفحه</span><span class="ctl"><button type="button" class="qr-chip" data-a="day">روز</button><button type="button" class="qr-chip" data-a="night">شب</button></span></div>
+<div class="qr-row qr-x"><span>مترجم</span><select id="qrTr" aria-label="ترجمه">${TRANSLATIONS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
+<div class="qr-row qr-x qr-sec">صوت</div>
+<div class="qr-row qr-x"><span>پخش</span><span class="ctl"><button type="button" class="qr-chip" data-a="mode-ar">تلاوت</button><button type="button" class="qr-chip" data-a="mode-both">تلاوت + ترجمه</button><button type="button" class="qr-chip" data-a="mode-fa">ترجمه</button></span></div>
+<div class="qr-row qr-x"><span>قاری</span><select id="qrReciter" aria-label="قاری">${RECITERS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
+<div class="qr-row qr-x"><span>ترجمه گویا</span><select id="qrVoice" aria-label="ترجمه گویا">${VOICES.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
 </div>
-<div class="qr-body" id="qrBody"></div>`;
+<div class="qr-body" id="qrBody"></div>
+<div class="qr-player" id="qrPlayer"><button type="button" class="qr-play" data-a="play" aria-label="پخش">▶</button>
+<div class="qr-now" id="qrNow"><b>پخش صوت</b>از اولین آیه، یا روی شماره یک آیه بزنید</div>
+<button type="button" data-a="prev" aria-label="آیه قبل">⏭</button><button type="button" data-a="next" aria-label="آیه بعد">⏮</button></div>`;
   document.body.appendChild(el);
   const $ = id => el.querySelector('#' + id);
   const menu = $('qrMenu'), body = $('qrBody');
@@ -96,12 +150,19 @@ body.qr-lock{overflow:hidden}
     el.querySelector('[data-a="trans-off"]').classList.toggle('on', !prefs.trans);
     el.querySelector('[data-a="day"]').classList.toggle('on', !prefs.night);
     el.querySelector('[data-a="night"]').classList.toggle('on', prefs.night);
+    for (const m of ['ar', 'both', 'fa']) el.querySelector(`[data-a="mode-${m}"]`).classList.toggle('on', prefs.mode === m);
+    $('qrTr').value = prefs.tr; $('qrReciter').value = prefs.reciter; $('qrVoice').value = prefs.voice;
   }
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
 
+  let items = [];
+  const trName = () => (TRANSLATIONS.find(t => t[0] === activeTr()) || TRANSLATIONS[0])[1];
+  const activeTr = () => extras() && TRANSLATIONS.some(t => t[0] === prefs.tr) ? prefs.tr : 'makarem';
+
   function render(data) {
     let count = 0;
+    data.segments.forEach(seg => { FA_NAME[seg.s] = seg.fa; });
     const html = data.segments.map(seg => {
       const to = seg.from + seg.ayahs.length - 1;
       count += seg.ayahs.length;
@@ -109,15 +170,35 @@ body.qr-lock{overflow:hidden}
       const bism = seg.from === 1 && seg.s !== 1 && seg.s !== 9 ? `<div class="qr-bism">${BISMILLAH}</div>` : '';
       const ayahs = seg.ayahs.map(([a, t], i) => {
         const n = seg.from + i;
-        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<span class="qr-num">${toAr(n)}</span> </p><p class="qr-fa"><i>(${toFa(n)})</i>${esc(t)}</p></div>`;
+        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<span class="qr-num" data-a="ayah">${toAr(n)}</span> </p><p class="qr-fa"><i>(${toFa(n)})</i>${esc(t)}</p></div>`;
       }).join('');
       return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small></div>${bism}<div class="qr-seg">${ayahs}</div>`;
     }).join('');
-    $('qrSub').textContent = `${toFa(count)} آیه`;
+    $('qrSub').textContent = `${typeof hizbLabel === 'function' && hizbLabel(current.index) ? `حزب ${toFa(current.index + 1)} · ` : ''}${toFa(count)} آیه`;
     body.innerHTML = html + `<div class="qr-end"><p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>
-<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: آیت‌الله مکارم شیرازی (Tanzil.net)</p></div>`;
+<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net)<span class="qr-xi"> · صوت: everyayah.com و alquran.cloud</span></p></div>`;
+    items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
     el.scrollTop = 0;
     onScroll();
+    loadTranslation();
+  }
+
+  async function loadTranslation() {
+    const t = activeTr(), want = current;
+    const fas = items.map(it => it.e.querySelector('.qr-fa'));
+    let list;
+    if (t === 'makarem') list = items.map(it => it.makarem ?? (it.makarem = it.e.querySelector('.qr-fa').lastChild.textContent));
+    else {
+      try {
+        const r = await fetch(`quran/t/${t}/${pad3(current.index + 1)}.json`);
+        if (!r.ok) throw Error(r.status);
+        list = await r.json();
+        items.forEach(it => { if (it.makarem == null) it.makarem = it.e.querySelector('.qr-fa').lastChild.textContent; });
+      } catch { return; }
+    }
+    if (want !== current || list.length !== items.length) return;
+    fas.forEach((p, i) => { p.lastChild.textContent = list[i]; });
+    const src = $('qrTrSrc'); if (src) src.textContent = trName();
   }
 
   async function load() {
@@ -135,6 +216,8 @@ body.qr-lock{overflow:hidden}
     current = task;
     $('qrTitle').textContent = toFa(task.title);
     $('qrSub').textContent = '';
+    el.classList.toggle('x', extras());
+    stopAudio();
     applyPrefs();
     menu.classList.remove('show');
     el.classList.add('show');
@@ -146,6 +229,7 @@ body.qr-lock{overflow:hidden}
 
   let afterClose = null;
   function close(fromHistory, then) {
+    stopAudio();
     el.classList.remove('show');
     document.body.classList.remove('qr-lock');
     if (pushed && !fromHistory) { pushed = false; afterClose = then || null; history.back(); return; }
@@ -181,6 +265,10 @@ body.qr-lock{overflow:hidden}
     if (a === 'close') return close();
     if (a === 'menu') { const s = menu.classList.toggle('show'); b.setAttribute('aria-expanded', s); return; }
     if (a === 'retry') return load();
+    if (a === 'play') return playing ? pauseAudio() : resumeOrStart();
+    if (a === 'next') return playAt(Math.min(items.length - 1, pos + 1));
+    if (a === 'prev') return playAt(Math.max(0, pos - 1));
+    if (a === 'ayah') return playAt(items.findIndex(it => it.e === b.closest('.qr-ayah')));
     if (a === 'report') {
       const id = current.id;
       return close(false, () => {
@@ -197,10 +285,103 @@ body.qr-lock{overflow:hidden}
       if (a === 'trans-off') prefs.trans = false;
       if (a === 'day') prefs.night = false;
       if (a === 'night') prefs.night = true;
+      if (a.startsWith('mode-')) prefs.mode = a.slice(5);
       applyPrefs();
     });
     save();
   });
+
+  // ---------- پخش صوت ----------
+  const audio = new Audio(), nextAudio = new Audio();
+  audio.preload = 'auto'; nextAudio.preload = 'auto';
+  let pos = -1, step = 0, playing = false, queue = [], qi = 0, srcIdx = 0;
+
+  ['qrTr', 'qrReciter', 'qrVoice'].forEach(id => $(id).addEventListener('change', e => {
+    const key = { qrTr: 'tr', qrReciter: 'reciter', qrVoice: 'voice' }[id];
+    prefs[key] = e.target.value; save();
+    if (key === 'tr') loadTranslation(); else if (playing) playAt(pos);
+  }));
+
+  function arUrls(s, n) {
+    const r = RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0];
+    const u = [`https://everyayah.com/data/${r[2]}/${pad3(s)}${pad3(n)}.mp3`];
+    if (r[3]) u.push(`https://cdn.islamic.network/quran/audio/128/${r[3]}/${SURAH_START[s - 1] + n}.mp3`);
+    return u;
+  }
+  function faUrls(s, n) {
+    const v = VOICES.find(x => x[0] === prefs.voice) || VOICES[0];
+    return [`https://everyayah.com/data/${v[2]}/${pad3(s)}${pad3(n)}.mp3`];
+  }
+  // صف پخش یک آیه: بسم‌الله برای آیه اول سوره (جز حمد و توبه)، تلاوت، سپس ترجمه گویا.
+  function tracksFor(it) {
+    const t = [];
+    if (prefs.mode !== 'fa') {
+      if (it.n === 1 && it.s !== 1 && it.s !== 9) t.push(arUrls(1, 1));
+      t.push(arUrls(it.s, it.n));
+    }
+    if (prefs.mode !== 'ar') t.push(faUrls(it.s, it.n));
+    return t;
+  }
+
+  function setNow(title, sub) { $('qrNow').innerHTML = `<b>${esc(title)}</b>${esc(sub)}`; }
+  function setPlayBtn() { const b = el.querySelector('[data-a="play"]'); b.textContent = playing ? '❚❚' : '▶'; b.setAttribute('aria-label', playing ? 'توقف' : 'پخش'); }
+  function highlight() {
+    items.forEach((it, i) => it.e.classList.toggle('playing', i === pos));
+    const it = items[pos]; if (!it) return;
+    const r = it.e.getBoundingClientRect(), top = el.querySelector('.qr-bar').offsetHeight, bottom = el.clientHeight - $('qrPlayer').offsetHeight;
+    if (r.top < top || r.bottom > bottom) it.e.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function label() {
+    const it = items[pos];
+    if (!it) return;
+    const who = prefs.mode === 'fa' ? (VOICES.find(x => x[0] === prefs.voice) || VOICES[0])[1] : (RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0])[1];
+    setNow(`سوره ${FA_NAME[it.s] || ''} · آیه ${toFa(it.n)}`, who);
+  }
+  const FA_NAME = {};
+
+  function playAt(i) {
+    if (i < 0 || !items[i]) return;
+    pos = i; queue = tracksFor(items[i]); qi = 0; srcIdx = 0; playing = true;
+    highlight(); label(); setPlayBtn(); playTrack(); preloadNext();
+  }
+  function playTrack() {
+    const urls = queue[qi];
+    if (!urls) return advance();
+    audio.src = urls[srcIdx];
+    audio.play().catch(err => { if (err && err.name === 'NotAllowedError') { playing = false; setPlayBtn(); } });
+  }
+  function preloadNext() {
+    const it = items[pos + 1];
+    if (it) nextAudio.src = tracksFor(it)[0][0];
+  }
+  function advance() {
+    if (pos + 1 < items.length) playAt(pos + 1);
+    else { stopAudio(); setNow('پایان سهم امروز', 'قبول باشد'); }
+  }
+  audio.addEventListener('ended', () => { qi++; srcIdx = 0; if (qi < queue.length) playTrack(); else advance(); });
+  audio.addEventListener('error', () => {
+    if (!playing || !audio.getAttribute('src')) return;
+    srcIdx++;
+    if (queue[qi] && srcIdx < queue[qi].length) return playTrack();
+    playing = false; setPlayBtn();
+    setNow('پخش این آیه ممکن نشد', 'اتصال اینترنت را بررسی کنید یا قاری دیگری انتخاب کنید');
+  });
+  function pauseAudio() { audio.pause(); playing = false; setPlayBtn(); }
+  function resumeOrStart() {
+    if (pos >= 0 && audio.getAttribute('src') && !audio.ended && audio.currentTime > 0) { playing = true; setPlayBtn(); audio.play().catch(() => {}); }
+    else {
+      // از آیه‌ای که الان روی صفحه است شروع کن.
+      const top = el.querySelector('.qr-bar').offsetHeight;
+      const i = items.findIndex(it => it.e.getBoundingClientRect().bottom > top + 40);
+      playAt(pos >= 0 ? pos : Math.max(0, i));
+    }
+  }
+  function stopAudio() {
+    audio.pause(); audio.removeAttribute('src'); audio.load();
+    playing = false; pos = -1; queue = [];
+    items.forEach(it => it.e.classList.remove('playing'));
+    if ($('qrPlayer')) { setPlayBtn(); setNow('پخش صوت', 'از اولین آیه، یا روی شماره یک آیه بزنید'); }
+  }
 
   const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/></svg>';
   document.addEventListener('task:shown', e => {
