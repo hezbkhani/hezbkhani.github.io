@@ -81,6 +81,9 @@ create table if not exists public.registration_rounds (
   created_at timestamptz not null default now(),
   announced_at timestamptz
 );
+alter table public.registration_rounds add column if not exists auto_announce boolean not null default false;
+alter table public.registration_rounds add column if not exists auto_next boolean not null default false;
+alter table public.registration_rounds add column if not exists start_after_days integer not null default 1;
 create table if not exists public.registrations (
   id bigint generated always as identity primary key,
   round_id bigint not null references public.registration_rounds(id) on delete cascade,
@@ -149,6 +152,7 @@ begin
   end loop;
   insert into registrations (round_id, name, code) values (p_round, nm, c);
   perform public.reg_refresh_status(p_round);
+  perform public.reg_auto_complete(p_round);
   return query select c, n + 1;
 end $$;
 
@@ -209,11 +213,10 @@ begin
 end $$;
 
 -- مدیر: دادن شناسه ۱ تا ۱۲۰ به ترتیب ثبت‌نام (فقط وقتی دوره کامل است).
-create or replace function public.reg_assign_ids(p_round bigint) returns void
+create or replace function public.reg_do_assign(p_round bigint) returns void
 language plpgsql security definer set search_path = public as $$
 declare st text;
 begin
-  if not public.is_site_admin() then raise exception 'not_admin'; end if;
   select status into st from registration_rounds where id = p_round for update;
   if st not in ('full', 'assigned') then raise exception 'round_not_full'; end if;
   update registrations set participant_id = null where round_id = p_round;
@@ -224,11 +227,10 @@ begin
 end $$;
 
 -- مدیر: اعلام دوره. گروه را با همین ۱۲۰ نام و تاریخ شروع در site_groups می‌سازد (یا شماره موجود را جایگزین می‌کند).
-create or replace function public.reg_announce(p_round bigint, p_start date, p_group_number integer, p_group_name text) returns void
+create or replace function public.reg_do_announce(p_round bigint, p_start date, p_group_number integer, p_group_name text) returns void
 language plpgsql security definer set search_path = public as $$
 declare st text; arr text[];
 begin
-  if not public.is_site_admin() then raise exception 'not_admin'; end if;
   select status into st from registration_rounds where id = p_round for update;
   if st not in ('assigned', 'announced') then raise exception 'ids_not_assigned'; end if;
   if p_start is null or p_group_number is null or p_group_number < 1 then raise exception 'bad_input'; end if;
@@ -242,7 +244,42 @@ begin
          announced_at = coalesce(announced_at, now()) where id = p_round;
 end $$;
 
-revoke all on function public.reg_refresh_status(bigint) from public, anon, authenticated;
+-- مدیر (یا خودکار): دادن شناسه و اعلام. نسخه‌های reg_do_* بررسی مدیر ندارند و فقط از داخل پایگاه داده صدا زده می‌شوند.
+create or replace function public.reg_assign_ids(p_round bigint) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_site_admin() then raise exception 'not_admin'; end if;
+  perform public.reg_do_assign(p_round);
+end $$;
+create or replace function public.reg_announce(p_round bigint, p_start date, p_group_number integer, p_group_name text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_site_admin() then raise exception 'not_admin'; end if;
+  perform public.reg_do_announce(p_round, p_start, p_group_number, p_group_name);
+end $$;
+
+-- ثبت‌نام خودکار: وقتی دوره‌ای با auto_announce به ۱۲۰ نفر برسد، شناسه‌ها داده می‌شود، گروه ساخته و اعلام می‌شود
+-- (تاریخ شروع: تاریخی که مدیر گذاشته، یا اگر نگذاشته/گذشته باشد، start_after_days روز بعد از امروز به وقت تهران)،
+-- و اگر auto_next روشن باشد، ثبت‌نام دوره بعدِ همان پیام‌رسان خودکار باز می‌شود.
+create or replace function public.reg_auto_complete(p_round bigint) returns void
+language plpgsql security definer set search_path = public as $$
+declare r registration_rounds; d date; num integer; today date := (now() at time zone 'Asia/Tehran')::date;
+begin
+  select * into r from registration_rounds where id = p_round;
+  if r.id is null or r.status <> 'full' or not r.auto_announce then return; end if;
+  perform public.reg_do_assign(p_round);
+  d := case when r.start_date is not null and r.start_date > today then r.start_date else today + greatest(r.start_after_days, 1) end;
+  select coalesce(max(number), 0) + 1 into num from site_groups;
+  perform public.reg_do_announce(p_round, d, num,
+    'گروه ' || case r.platform when 'bale' then 'بله' else 'تلگرام' end || ' ' || translate(num::text, '0123456789', '۰۱۲۳۴۵۶۷۸۹'));
+  if r.auto_next then
+    insert into registration_rounds (platform, title, auto_announce, auto_next, start_after_days)
+    values (r.platform, r.title, true, true, r.start_after_days);
+  end if;
+end $$;
+
+revoke all on function public.reg_refresh_status(bigint), public.reg_do_assign(bigint), public.reg_do_announce(bigint, date, integer, text),
+  public.reg_auto_complete(bigint) from public, anon, authenticated;
 revoke all on function public.reg_admin_add(bigint, text), public.reg_admin_remove(bigint), public.reg_assign_ids(bigint),
   public.reg_announce(bigint, date, integer, text) from public, anon;
 grant execute on function public.reg_rounds(), public.reg_register(bigint, text), public.reg_lookup(text),

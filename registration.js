@@ -172,11 +172,12 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     pane = document.getElementById('pane-reg'); if (!pane || pane.dataset.built) return;
     pane.dataset.built = 1;
     pane.innerHTML = `<div class="reg-round"><h3>شروع ثبت‌نام جدید</h3>
-<p class="hint">ثبت‌نام بلافاصله باز می‌شود و با رسیدن به ۱۲۰ نفر خودکار بسته می‌شود. تاریخ شروع دوره را می‌توانید همین حالا بگذارید (به ثبت‌نام‌کنندگان نشان داده می‌شود) یا بعداً هنگام اعلام.</p>
+<p class="hint">ثبت‌نام بلافاصله باز می‌شود و با رسیدن به ۱۲۰ نفر بسته می‌شود. با گزینه «خودکار»، بقیه کارها (شناسه، ساختن گروه، اعلام و حتی باز کردن دوره بعد) هم خودکار انجام می‌شود.</p>
 <div class="reg-grid"><div><label for="regNewPlat">پیام‌رسان</label><select id="regNewPlat"><option value="telegram">تلگرام</option><option value="bale">بله</option></select></div>
 <div><label for="regNewTitle">عنوان دوره</label><input id="regNewTitle" maxlength="80"></div></div>
 <label class="adm-opt"><input type="checkbox" id="regNewHasStart"> تاریخ شروع دوره را الان مشخص می‌کنم</label>
 <div id="regNewStartBox" hidden><input id="regNewStart"></div>
+<div id="regNewAuto">${autoOpts()}</div>
 <div class="reg-tools"><button type="button" id="regNewBtn">شروع ثبت‌نام</button></div><div class="reg-msg" id="regAdminMsg"></div></div>
 <div class="adm-bar"><strong>دوره‌ها</strong><button type="button" class="reg-light" id="regReload">تازه‌سازی</button></div>
 <div id="regAdminRounds"><p class="hint">در حال دریافت…</p></div>`;
@@ -186,9 +187,20 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     $('#regNewPlat').onchange = syncTitle; syncTitle();
     $('#regNewHasStart').onchange = e => { $('#regNewStartBox').hidden = !e.target.checked; };
     $('#regNewBtn').onclick = createRound;
+    pane.addEventListener('change', e => { if (e.target.matches('[data-o=auto]')) { const box = e.target.closest('.reg-round').querySelector('[data-o-box]'); if (box) box.hidden = !e.target.checked; } });
     $('#regReload').onclick = loadAdmin;
     pane.addEventListener('click', onAdminClick);
   }
+  // گزینه‌های «ثبت‌نام خودکار» (برای ساختن دوره و ویرایش آن)
+  const DAYS = [1, 2, 3, 7];
+  function autoOpts(r) {
+    const on = r ? r.auto_announce : true, next = r ? r.auto_next : true, days = r ? r.start_after_days : 1;
+    return `<label class="adm-opt"><input type="checkbox" data-o="auto" ${on ? 'checked' : ''}> <span><b>خودکار:</b> با رسیدن به ۱۲۰ نفر، شناسه‌ها داده شود و گروه ساخته و اعلام شود (بدون نیاز به مدیر)</span></label>
+<div data-o-box ${on ? '' : 'hidden'}><label>اگر تاریخ شروع مشخص نشده باشد، دوره شروع شود:</label><select data-o="days">${DAYS.map(d => `<option value="${d}" ${d === days ? 'selected' : ''}>${d === 1 ? 'فردای روزی که ظرفیت کامل شد' : `${fa(d)} روز پس از تکمیل ظرفیت`}</option>`).join('')}</select>
+<label class="adm-opt"><input type="checkbox" data-o="next" ${next ? 'checked' : ''}> سپس ثبت‌نام دوره بعدِ همین پیام‌رسان خودکار باز شود</label></div>`;
+  }
+  const readAuto = el => { const on = el.querySelector('[data-o=auto]').checked; return { auto_announce: on, auto_next: on && el.querySelector('[data-o=next]').checked, start_after_days: +el.querySelector('[data-o=days]').value }; };
+  const autoText = r => r.auto_announce ? `خودکار: با رسیدن به ${fa(CAPACITY)} نفر، شناسه‌ها و گروه ساخته و اعلام می‌شود؛ شروع ${r.start_date ? esc(dateFa(r.start_date)) : (r.start_after_days === 1 ? 'فردای تکمیل ظرفیت' : `${fa(r.start_after_days)} روز پس از تکمیل ظرفیت`)}${r.auto_next ? '، و ثبت‌نام دوره بعد خودکار باز می‌شود' : ''}.` : '';
   const amsg = (t, ok) => { const m = pane.querySelector('#regAdminMsg'); m.className = 'reg-msg ' + (ok ? 'reg-ok' : 'reg-bad'); m.textContent = t; };
 
   async function createRound() {
@@ -199,7 +211,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     if (busy && !confirm(`ثبت‌نام «${busy.title}» برای ${PLATFORMS[platform]} هنوز در جریان است. دوره دیگری هم شروع شود؟`)) return;
     $('#regNewBtn').disabled = true;
     try {
-      await api('registration_rounds', { method: 'POST', body: { platform, title, start_date }, auth: true, prefer: 'return=minimal' });
+      await api('registration_rounds', { method: 'POST', body: { platform, title, start_date, ...readAuto($('#regNewAuto')) }, auth: true, prefer: 'return=minimal' });
       amsg('ثبت‌نام جدید باز شد. «کپی متن دعوت» را بزنید و در گروه بفرستید.', true); await loadAdmin(); loadPublic();
     } catch (e) { amsg(e.message); }
     $('#regNewBtn').disabled = false;
@@ -230,24 +242,25 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
   function adminCard(r) {
     const regs = regsOf(r.id), n = regs.length, pct = Math.min(100, Math.round(n / CAPACITY * 100)), expanded = openRound === r.id;
     const step = (k, t) => `<div class="reg-step"><b>${fa(k)}.</b> ${t}</div>`;
-    let s = `<div class="reg-round" data-round="${r.id}"><h3>${esc(r.title)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform]}</span><span>${fa(n)} از ${fa(CAPACITY)} نفر</span><span>${STATUS[r.status]}</span>${r.start_date ? `<span>شروع: ${esc(dateFa(r.start_date))}</span>` : ''}</div><div class="reg-bar"><span style="width:${pct}%"></span></div>`;
+    let s = `<div class="reg-round" data-round="${r.id}"><h3>${esc(r.title)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform]}</span><span>${fa(n)} از ${fa(CAPACITY)} نفر</span><span>${STATUS[r.status]}</span>${r.auto_announce && ['open', 'full'].includes(r.status) ? '<span class="reg-plat">خودکار</span>' : ''}${r.start_date ? `<span>شروع: ${esc(dateFa(r.start_date))}</span>` : ''}</div><div class="reg-bar"><span style="width:${pct}%"></span></div>`;
     if (editRound === r.id) {
       s += `<label>عنوان دوره</label><input data-f="title" maxlength="80" value="${esc(r.title)}"><label>تاریخ شروع دوره</label><input data-f="start" value="${esc(r.start_date || '')}">
+${['open', 'full'].includes(r.status) ? autoOpts(r) : ''}
 <div class="reg-tools"><button type="button" data-a="saveEdit">ذخیره</button><button type="button" class="reg-light" data-a="cancelEdit">انصراف</button></div>`;
     } else {
       s += '<div class="reg-tools">';
       s += `<button type="button" class="reg-light" data-a="toggle">${expanded ? 'بستن فهرست نام‌ها' : `نام‌ها (${fa(n)})`}</button>`;
-      if (r.status !== 'announced' && r.status !== 'closed') s += '<button type="button" class="reg-light" data-a="edit">ویرایش عنوان و تاریخ</button>';
+      if (r.status !== 'announced' && r.status !== 'closed') s += '<button type="button" class="reg-light" data-a="edit">ویرایش دوره</button>';
       if (r.status === 'open') s += '<button type="button" class="reg-light" data-a="invite">کپی متن دعوت</button>';
       if (r.status === 'announced') s += '<button type="button" data-a="copyAnn">کپی متن اعلام</button>';
       s += '</div>';
-      if (r.status === 'open') s += step(1, `ثبت‌نام باز است. با رسیدن به ${fa(CAPACITY)} نفر خودکار بسته می‌شود.`);
+      if (r.status === 'open') s += step(1, r.auto_announce ? autoText(r) : `ثبت‌نام باز است. با رسیدن به ${fa(CAPACITY)} نفر خودکار بسته می‌شود.`);
       if (r.status === 'full' || r.status === 'assigned') s += step(2, `${r.status === 'assigned' ? 'شناسه‌ها به ترتیب ثبت‌نام داده شد.' : 'ظرفیت کامل شد. شناسه‌ها را به ترتیب ثبت‌نام بدهید.'}`) + `<div class="reg-tools"><button type="button" data-a="assign">${r.status === 'assigned' ? 'دادن دوباره شناسه‌ها' : 'دادن شناسه ۱ تا ۱۲۰'}</button></div>`;
       if (r.status === 'assigned' || r.status === 'announced') {
         const gs = allGroups(), next = Math.max(0, ...gs.map(g => g.number)) + 1;
         const gnum = r.group_number || next, same = gs.find(g => g.number === gnum);
         const gname = (r.status === 'announced' && same?.name) || `گروه ${PLATFORMS[r.platform]} ${fa(gnum)}`;
-        s += step(3, 'تاریخ شروع و گروه را مشخص و اعلام کنید. گروه با همین ۱۲۰ نام در زبانه «گروه‌ها» ساخته می‌شود و هر نفر شناسه‌اش را در سایت می‌بیند.');
+        s += step(3, r.status === 'announced' ? `اعلام شد${r.auto_announce ? ' (خودکار)' : ''}. گروه در زبانه «گروه‌ها» ساخته شد و هر نفر شناسه‌اش را در سایت می‌بیند. «کپی متن اعلام» را در گروه بفرستید. برای تغییر، تاریخ یا نام را عوض کنید و «به‌روزرسانی اعلام» را بزنید.` : 'تاریخ شروع و گروه را مشخص و اعلام کنید. گروه با همین ۱۲۰ نام در زبانه «گروه‌ها» ساخته می‌شود و هر نفر شناسه‌اش را در سایت می‌بیند.');
         s += `<label>تاریخ شروع دوره</label><input data-f="start" value="${esc(r.start_date || J.addDays(J.todayIso(), 1))}">
 <div class="reg-grid"><div><label>شماره گروه</label><input type="number" min="1" data-f="num" value="${gnum}"></div><div><label>نام گروه در سایت</label><input data-f="gname" maxlength="80" value="${esc(gname)}"></div></div>`;
         if (same && r.status !== 'announced') s += `<p class="reg-bad">گروه شماره ${fa(gnum)} («${esc(same.name)}») وجود دارد و جایگزین می‌شود. اگر نمی‌خواهید، شماره دیگری بگذارید.</p>`;
@@ -297,7 +310,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     try {
       if (a === 'saveEdit') {
         const title = f('title').value.trim(); if (!title) return fail(Error('عنوان را بنویسید.'));
-        await api(`registration_rounds?id=eq.${id}`, { method: 'PATCH', body: { title, start_date: f('start').value || null }, auth: true, prefer: 'return=minimal' });
+        await api(`registration_rounds?id=eq.${id}`, { method: 'PATCH', body: { title, start_date: f('start').value || null, ...(card.querySelector('[data-o=auto]') ? readAuto(card) : {}) }, auth: true, prefer: 'return=minimal' });
         editRound = null;
       } else if (a === 'close') {
         if (!confirm(r.status === 'announced' ? 'این دوره بایگانی شود؟ (گروه ساخته‌شده در سایت می‌ماند.)' : 'ثبت‌نام این دوره بسته شود؟ ثبت‌نام‌کنندگان دیگر نمی‌توانند ثبت‌نام یا انصراف دهند.')) { b.disabled = false; return; }
