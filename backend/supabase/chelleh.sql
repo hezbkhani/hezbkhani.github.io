@@ -80,6 +80,7 @@ alter table public.chelleh_rounds add column if not exists capacity integer chec
 alter table public.chelleh_rounds add column if not exists personal boolean not null default false;
 alter table public.chelleh_rounds add column if not exists start_after_days integer not null default 0;
 alter table public.chelleh_rounds add column if not exists times_per_day integer not null default 1;
+alter table public.chelleh_rounds add column if not exists news text not null default '' check (length(news) <= 1000);
 create index if not exists chelleh_rounds_type on public.chelleh_rounds(type_key, status);
 
 create or replace function public.chl_new_code() returns text
@@ -96,6 +97,17 @@ create table if not exists public.chelleh_members (
 );
 -- شروع شخصی (فقط در دوره‌های همیشه‌باز)؛ در دوره‌های گروهی خالی است و شروع دوره ملاک است.
 alter table public.chelleh_members add column if not exists start_date date;
+-- ایمیل اختیاری برای اخبار دوره؛ فقط مدیر و خود شخص (با کدش) آن را می‌بینند.
+alter table public.chelleh_members add column if not exists email text check (email is null or length(email) <= 120);
+
+create or replace function public.chl_clean_email(p text) returns text
+language plpgsql immutable as $$
+declare e text := lower(btrim(coalesce(p, '')));
+begin
+  if e = '' then return null; end if;
+  if length(e) > 120 or e !~ '^[^@\s<>"]+@[^@\s<>"]+\.[^@\s<>"]+$' then raise exception 'chl_bad_email'; end if;
+  return e;
+end $$;
 create unique index if not exists chelleh_members_name on public.chelleh_members(round_id, public.reg_clean_name(name));
 
 create table if not exists public.chelleh_marks (
@@ -164,17 +176,18 @@ declare t chelleh_types; rid bigint;
 begin
   select * into t from chelleh_types where key = p_type for update;
   if t.key is null then raise exception 'chl_not_found'; end if;
+  -- همیشه‌باز: دوره همیشه‌باز (دوره‌های تاریخ‌دار را شخص خودش از فهرست انتخاب می‌کند).
+  if t.capacity is null then
+    select x.id into rid from chelleh_rounds x
+     where x.type_key = t.key and x.status = 'open' and x.joinable and x.personal order by x.id limit 1;
+    return coalesce(rid, public.chl_new_round(t.key, true));
+  end if;
   select x.id into rid from chelleh_rounds x
    where x.type_key = t.key and x.status = 'open' and x.joinable and not x.personal
      and (x.capacity is null or (select count(*) from chelleh_members m where m.round_id = x.id) < x.capacity)
      and (x.start_date is null or public.reading_day() <= x.start_date + x.days - 1)
    order by x.id limit 1;
   if rid is not null then return rid; end if;
-  if t.capacity is null then
-    select x.id into rid from chelleh_rounds x
-     where x.type_key = t.key and x.status = 'open' and x.joinable and x.personal order by x.id limit 1;
-    return coalesce(rid, public.chl_new_round(t.key, true));
-  end if;
   return public.chl_new_round(t.key, false);
 end $$;
 
@@ -226,17 +239,45 @@ begin
 end $$;
 
 -- ثبت‌نام از منو: کد ۸ رقمی برمی‌گرداند.
-create or replace function public.chl_join_type(p_type text, p_name text) returns text
+drop function if exists public.chl_join_type(text, text);
+create or replace function public.chl_join_type(p_type text, p_name text, p_email text default null) returns text
 language plpgsql security definer set search_path = public as $$
+declare e text := public.chl_clean_email(p_email); c text;
 begin
   if not exists (select 1 from chelleh_types where key = p_type and visible) then raise exception 'chl_not_found'; end if;
-  return public.chl_add_member(public.chl_round_for(p_type), p_name);
+  c := public.chl_add_member(public.chl_round_for(p_type), p_name);
+  if e is not null then update chelleh_members set email = e where code = c; end if;
+  return c;
 end $$;
 
--- پیوستن به یک دوره مشخص (برای دوره‌های قدیمی بدون نوع).
-create or replace function public.chl_join(p_round bigint, p_name text) returns text
+-- دوره‌های گروهی که الان ثبت‌نام دارند (وقتی مدیر چند دوره هم‌زمان باز کرده، شخص خودش انتخاب می‌کند).
+create or replace function public.chl_type_rounds(p_type text)
+returns table (id bigint, number integer, start_date date, capacity integer, members integer, news text, today date)
+language sql stable security definer set search_path = public as $$
+  select x.id, x.number, x.start_date, x.capacity,
+         (select count(*)::integer from chelleh_members m where m.round_id = x.id), x.news, public.reading_day()
+    from chelleh_rounds x join chelleh_types t on t.key = x.type_key and t.visible
+   where x.type_key = p_type and x.status = 'open' and x.joinable and not x.personal
+     and (x.capacity is null or (select count(*) from chelleh_members m where m.round_id = x.id) < x.capacity)
+     and (x.start_date is null or public.reading_day() <= x.start_date + x.days - 1)
+   order by x.start_date nulls last, x.id
+$$;
+
+-- ثبت یا تغییر ایمیل اخبار با کد چله (خالی یعنی حذف).
+create or replace function public.chl_set_email(p_code text, p_email text) returns text
 language plpgsql security definer set search_path = public as $$
-declare r chelleh_rounds;
+declare e text := public.chl_clean_email(p_email);
+begin
+  update chelleh_members set email = e where code = btrim(p_code);
+  if not found then raise exception 'chl_member_not_found'; end if;
+  return e;
+end $$;
+
+-- پیوستن به یک دوره مشخص (دوره‌ای که شخص از فهرست انتخاب کرده، یا دوره‌های قدیمی بدون نوع).
+drop function if exists public.chl_join(bigint, text);
+create or replace function public.chl_join(p_round bigint, p_name text, p_email text default null) returns text
+language plpgsql security definer set search_path = public as $$
+declare r chelleh_rounds; e text := public.chl_clean_email(p_email); c text;
 begin
   select * into r from chelleh_rounds where id = p_round;
   if r.id is null or r.status <> 'open' then raise exception 'chl_not_found'; end if;
@@ -244,7 +285,12 @@ begin
      or (r.capacity is not null and (select count(*) from chelleh_members where round_id = r.id) >= r.capacity) then
     raise exception 'chl_not_joinable';
   end if;
-  return public.chl_add_member(p_round, p_name);
+  if r.personal or (r.type_key is not null and not exists (select 1 from chelleh_types where key = r.type_key and visible)) then
+    raise exception 'chl_not_joinable';
+  end if;
+  c := public.chl_add_member(p_round, p_name);
+  if e is not null then update chelleh_members set email = e where code = c; end if;
+  return c;
 end $$;
 
 -- دوره‌های قدیمی (بدون نوع)؛ نسخه اول سایت از آن استفاده می‌کرد.
@@ -268,7 +314,7 @@ drop function if exists public.chl_lookup(text[]);
 create or replace function public.chl_lookup(p_codes text[])
 returns table (code text, name text, round_id bigint, type_key text, number integer, title text, text_key text,
                description text, start_date date, days integer, status text, capacity integer, personal boolean,
-               times_per_day integer, members integer, done_today integer, today date, marked date[])
+               times_per_day integer, members integer, done_today integer, today date, marked date[], email text, news text)
 language sql stable security definer set search_path = public as $$
   select m.code, m.name, r.id, r.type_key, r.number, r.title, r.text_key, r.description,
          coalesce(m.start_date, r.start_date), r.days, r.status, r.capacity, r.personal, r.times_per_day,
@@ -276,7 +322,8 @@ language sql stable security definer set search_path = public as $$
          (select count(*)::integer from chelleh_members x join chelleh_marks k on k.member_id = x.id
            where x.round_id = r.id and k.day = public.reading_day()),
          public.reading_day(),
-         coalesce((select array_agg(k.day order by k.day) from chelleh_marks k where k.member_id = m.id), '{}')
+         coalesce((select array_agg(k.day order by k.day) from chelleh_marks k where k.member_id = m.id), '{}'),
+         m.email, r.news
     from chelleh_members m join chelleh_rounds r on r.id = m.round_id
    where m.code = any (p_codes[1:20])
 $$;
@@ -386,12 +433,14 @@ begin
   return public.chl_add_member(p_round, p_name);
 end $$;
 
+revoke all on function public.chl_clean_email(text) from public, anon, authenticated;
 revoke all on function public.chl_new_code(), public.chl_new_round(text, boolean, date), public.chl_fill_check(bigint),
   public.chl_round_for(text), public.chl_add_member(bigint, text) from public, anon, authenticated;
 grant execute on function public.chl_new_code() to authenticated;
 revoke all on function public.chl_admin_sync_type(text), public.chl_admin_new_round(text, date),
   public.chl_admin_start(bigint), public.chl_admin_add(bigint, text) from public, anon;
-grant execute on function public.chl_types(), public.chl_join_type(text, text), public.chl_rounds(), public.chl_join(bigint, text),
+grant execute on function public.chl_types(), public.chl_join_type(text, text, text), public.chl_rounds(), public.chl_join(bigint, text, text),
+  public.chl_type_rounds(text), public.chl_set_email(text, text),
   public.chl_lookup(text[]), public.chl_mark(text, date, boolean), public.chl_leave(text) to anon, authenticated;
 grant execute on function public.chl_admin_sync_type(text), public.chl_admin_new_round(text, date),
   public.chl_admin_start(bigint), public.chl_admin_add(bigint, text) to authenticated;
