@@ -52,6 +52,8 @@ create table if not exists public.chelleh_types (
 alter table public.chelleh_types add column if not exists kind text not null default 'text';
 alter table public.chelleh_types add column if not exists start_mode text;
 alter table public.chelleh_types add column if not exists next_start date;
+-- فهرست رزرو: پس از پر شدن ظرفیت، این تعداد نفر دیگر هم ثبت‌نام می‌کنند تا جای کسی که انصراف می‌دهد را بگیرند.
+alter table public.chelleh_types add column if not exists reserve integer not null default 0 check (reserve between 0 and 50);
 update public.chelleh_types set start_mode = case when capacity is null then 'self' else 'fill' end where start_mode is null;
 alter table public.chelleh_types alter column start_mode set default 'self', alter column start_mode set not null;
 alter table public.chelleh_types drop constraint if exists chelleh_types_kind_check,
@@ -94,6 +96,7 @@ alter table public.chelleh_rounds add column if not exists kind text not null de
 alter table public.chelleh_rounds drop constraint if exists chelleh_rounds_days_check,
   add constraint chelleh_rounds_days_check check (days between 1 and 1000);
 alter table public.chelleh_rounds add column if not exists news text not null default '' check (length(news) <= 1000);
+alter table public.chelleh_rounds add column if not exists reserve integer not null default 0 check (reserve between 0 and 50);
 create index if not exists chelleh_rounds_type on public.chelleh_rounds(type_key, status);
 
 create or replace function public.chl_new_code() returns text
@@ -121,6 +124,20 @@ begin
   if length(e) > 120 or e !~ '^[^@\s<>"]+@[^@\s<>"]+\.[^@\s<>"]+$' then raise exception 'chl_bad_email'; end if;
   return e;
 end $$;
+-- جایگاه ثابت هر نفر در دوره (۱ تا ظرفیت؛ در جزءخوانی جزء شروع را تعیین می‌کند). نفر رزرو جایگاه ندارد
+-- تا وقتی که جای کسی را بگیرد؛ promoted_at و replaced_name همان لحظه پر می‌شوند.
+alter table public.chelleh_members add column if not exists slot integer;
+alter table public.chelleh_members add column if not exists reserve boolean not null default false;
+alter table public.chelleh_members add column if not exists promoted_at timestamptz;
+alter table public.chelleh_members add column if not exists replaced_name text;
+-- اعضای قبلی به ترتیب ثبت‌نام جایگاه می‌گیرند (فقط دوره‌هایی که هنوز هیچ جایگاهی ندارند).
+update public.chelleh_members m set slot = o.n
+  from (select x.id, row_number() over (partition by x.round_id order by x.created_at, x.id)::integer n
+          from public.chelleh_members x join public.chelleh_rounds r on r.id = x.round_id
+         where not r.personal and not x.reserve
+           and not exists (select 1 from public.chelleh_members y where y.round_id = x.round_id and y.slot is not null)) o
+ where o.id = m.id;
+create unique index if not exists chelleh_members_slot on public.chelleh_members(round_id, slot) where slot is not null;
 create unique index if not exists chelleh_members_name on public.chelleh_members(round_id, public.reg_clean_name(name));
 
 create table if not exists public.chelleh_marks (
@@ -129,6 +146,26 @@ create table if not exists public.chelleh_marks (
   created_at timestamptz not null default now(),
   primary key (member_id, day)
 );
+
+-- انصراف‌ها (از طرف خود شخص یا حذف به دست مدیر) و کسی که از فهرست رزرو جایش را گرفت.
+create table if not exists public.chelleh_leaves (
+  id bigint generated always as identity primary key,
+  round_id bigint not null references public.chelleh_rounds(id) on delete cascade,
+  name text not null,
+  email text,
+  slot integer,
+  was_reserve boolean not null default false,
+  by_admin boolean not null default false,
+  replaced_by_id bigint,
+  replaced_by_name text,
+  replaced_by_email text,
+  left_at timestamptz not null default now()
+);
+create index if not exists chelleh_leaves_round on public.chelleh_leaves(round_id);
+alter table public.chelleh_leaves enable row level security;
+drop policy if exists "admin manages chelleh leaves" on public.chelleh_leaves;
+create policy "admin manages chelleh leaves" on public.chelleh_leaves for all to authenticated
+  using (public.is_site_admin()) with check (public.is_site_admin());
 
 alter table public.chelleh_rounds enable row level security;
 alter table public.chelleh_members enable row level security;
@@ -153,27 +190,28 @@ begin
   select * into t from chelleh_types where key = p_type;
   if t.key is null then raise exception 'chl_not_found'; end if;
   insert into chelleh_rounds (title, text_key, description, start_date, days, type_key, number, capacity, personal,
-                              start_after_days, times_per_day, kind)
+                              start_after_days, times_per_day, kind, reserve)
   values (t.title, t.text_key, t.description, case when p_personal then null else p_start end, t.days, t.key,
           (select coalesce(max(number), 0) + 1 from chelleh_rounds where type_key = t.key),
-          case when p_personal then null else t.capacity end, p_personal, t.start_after_days, t.times_per_day, t.kind)
+          case when p_personal then null else t.capacity end, p_personal, t.start_after_days, t.times_per_day, t.kind,
+          case when p_personal or t.capacity is null then 0 else t.reserve end)
   returning id into rid;
   return rid;
 end $$;
 
--- پس از هر پیوستن: اگر ظرفیت دوره پر شد، پیوستن بسته می‌شود؛ دوره‌ای که هنوز شروع نشده خودکار شروع می‌شود
--- و اگر auto_next روشن باشد دوره بعد باز می‌شود.
+-- پس از هر پیوستن: اگر ظرفیت اصلی دوره پر شد، دوره‌ای که هنوز شروع نشده خودکار شروع می‌شود؛ وقتی فهرست رزرو هم
+-- پر شد، پیوستن بسته می‌شود و اگر auto_next روشن باشد دوره بعد باز می‌شود.
 create or replace function public.chl_fill_check(p_round bigint) returns void
 language plpgsql security definer set search_path = public as $$
-declare r chelleh_rounds; n integer; t chelleh_types;
+declare r chelleh_rounds; n integer; nr integer; t chelleh_types;
 begin
   select * into r from chelleh_rounds where id = p_round for update;
   if r.id is null or r.personal or r.capacity is null or r.status <> 'open' then return; end if;
-  select count(*) into n from chelleh_members where round_id = r.id;
+  select count(*) filter (where not reserve), count(*) filter (where reserve) into n, nr from chelleh_members where round_id = r.id;
   if n < r.capacity then return; end if;
-  update chelleh_rounds set joinable = false,
-         start_date = coalesce(start_date, public.reading_day() + start_after_days)
-   where id = r.id;
+  update chelleh_rounds set start_date = coalesce(start_date, public.reading_day() + start_after_days) where id = r.id;
+  if n + nr < r.capacity + r.reserve then return; end if;
+  update chelleh_rounds set joinable = false where id = r.id;
   select * into t from chelleh_types where key = r.type_key;
   if t.key is not null and t.auto_next and t.start_mode = 'fill' and not exists (
        select 1 from chelleh_rounds x where x.type_key = t.key and x.status = 'open' and x.joinable and not x.personal
@@ -186,7 +224,7 @@ end $$;
 create or replace function public.chl_can_join(x chelleh_rounds) returns boolean
 language sql stable security definer set search_path = public as $$
   select x.status = 'open' and x.joinable and not x.personal
-     and (x.capacity is null or (select count(*) from chelleh_members m where m.round_id = x.id) < x.capacity)
+     and (x.capacity is null or (select count(*) from chelleh_members m where m.round_id = x.id) < x.capacity + x.reserve)
      and (x.start_date is null or public.reading_day() <= x.start_date + least(2, x.days - 1))
 $$;
 
@@ -237,7 +275,8 @@ drop function if exists public.chl_types();
 create or replace function public.chl_types()
 returns table (key text, title text, text_key text, description text, days integer, capacity integer,
                start_after_days integer, times_per_day integer, kind text, start_mode text,
-               round_id bigint, round_number integer, round_start date, waiting integer, active integer, today date)
+               round_id bigint, round_number integer, round_start date, waiting integer, active integer, today date,
+               reserve integer, reserved integer)
 language plpgsql security definer set search_path = public as $$
 declare k text;
 begin
@@ -245,15 +284,17 @@ begin
   return query
   select t.key, t.title, t.text_key, t.description, t.days, t.capacity, t.start_after_days, t.times_per_day, t.kind, t.start_mode,
          o.id, o.number, o.start_date,
-         (select count(*)::integer from chelleh_members m where m.round_id = o.id),
+         (select count(*)::integer from chelleh_members m where m.round_id = o.id and not m.reserve),
          (select count(*)::integer from chelleh_members m join chelleh_rounds r on r.id = m.round_id
-           where r.type_key = t.key and r.status = 'open'
+           where r.type_key = t.key and r.status = 'open' and not m.reserve
              and coalesce(m.start_date, r.start_date) <= public.reading_day()
              and public.reading_day() <= coalesce(m.start_date, r.start_date) + r.days - 1),
-         public.reading_day()
+         public.reading_day(),
+         coalesce(o.reserve, case when t.capacity is null then 0 else t.reserve end),
+         (select count(*)::integer from chelleh_members m where m.round_id = o.id and m.reserve)
     from chelleh_types t
     left join lateral (
-      select x.id, x.number, x.start_date from chelleh_rounds x
+      select x.id, x.number, x.start_date, x.reserve from chelleh_rounds x
        where x.type_key = t.key and public.chl_can_join(x)
        order by x.start_date nulls last, x.id limit 1) o on true
    where t.visible
@@ -262,7 +303,8 @@ end $$;
 
 create or replace function public.chl_add_member(p_round bigint, p_name text) returns text
 language plpgsql security definer set search_path = public as $$
-declare r chelleh_rounds; nm text := public.reg_clean_name(p_name); c text;
+declare r chelleh_rounds; nm text := public.reg_clean_name(p_name); c text; n integer; nr integer;
+        sl integer; res boolean := false;
 begin
   select * into r from chelleh_rounds where id = p_round for update;
   if r.id is null or r.status <> 'open' then raise exception 'chl_not_found'; end if;
@@ -270,12 +312,23 @@ begin
   if exists (select 1 from chelleh_members where round_id = p_round and public.reg_clean_name(name) = nm) then
     raise exception 'chl_duplicate_name';
   end if;
+  if not r.personal then
+    -- ظرفیت اصلی پر است؟ پس فهرست رزرو (اگر جا دارد).
+    select count(*) filter (where not reserve), count(*) filter (where reserve) into n, nr from chelleh_members where round_id = p_round;
+    if r.capacity is not null and n >= r.capacity then
+      if nr >= r.reserve then raise exception 'chl_not_joinable'; end if;
+      res := true;
+    else
+      select min(g) into sl from generate_series(1, coalesce(r.capacity, n + 1)) g
+       where not exists (select 1 from chelleh_members x where x.round_id = p_round and x.slot = g);
+    end if;
+  end if;
   loop
     c := public.chl_new_code();
     exit when not exists (select 1 from chelleh_members m where m.code = c);
   end loop;
-  insert into chelleh_members (round_id, name, code, start_date)
-  values (p_round, nm, c, case when r.personal then public.reading_day() + r.start_after_days end);
+  insert into chelleh_members (round_id, name, code, start_date, slot, reserve)
+  values (p_round, nm, c, case when r.personal then public.reading_day() + r.start_after_days end, sl, res);
   perform public.chl_fill_check(p_round);
   return c;
 end $$;
@@ -295,13 +348,15 @@ end $$;
 -- دوره‌های گروهی که الان ثبت‌نام دارند (وقتی مدیر چند دوره هم‌زمان باز کرده، شخص خودش انتخاب می‌کند).
 drop function if exists public.chl_type_rounds(text);
 create or replace function public.chl_type_rounds(p_type text)
-returns table (id bigint, number integer, start_date date, capacity integer, members integer, news text, today date)
+returns table (id bigint, number integer, start_date date, capacity integer, members integer, news text, today date,
+               reserve integer, reserved integer)
 language plpgsql security definer set search_path = public as $$
 begin
   perform public.chl_ensure(p_type);
   return query
   select x.id, x.number, x.start_date, x.capacity,
-         (select count(*)::integer from chelleh_members m where m.round_id = x.id), x.news, public.reading_day()
+         (select count(*)::integer from chelleh_members m where m.round_id = x.id and not m.reserve), x.news, public.reading_day(),
+         x.reserve, (select count(*)::integer from chelleh_members m where m.round_id = x.id and m.reserve)
     from chelleh_rounds x join chelleh_types t on t.key = x.type_key and t.visible
    where x.type_key = p_type and public.chl_can_join(x)
    order by x.start_date nulls last, x.id;
@@ -362,18 +417,25 @@ create or replace function public.chl_lookup(p_codes text[])
 returns table (code text, name text, round_id bigint, type_key text, number integer, title text, text_key text,
                description text, start_date date, days integer, status text, capacity integer, personal boolean,
                times_per_day integer, members integer, done_today integer, today date, marked date[], email text, news text,
-               kind text, slot integer)
+               kind text, slot integer, reserve boolean, reserve_pos integer, reserved integer, reserve_max integer,
+               promoted_at timestamptz, replaced_name text, promoted_day date)
 language sql stable security definer set search_path = public as $$
   select m.code, m.name, r.id, r.type_key, r.number, r.title, r.text_key, r.description,
          coalesce(m.start_date, r.start_date), r.days, r.status, r.capacity, r.personal, r.times_per_day,
-         (select count(*)::integer from chelleh_members x where x.round_id = r.id),
+         (select count(*)::integer from chelleh_members x where x.round_id = r.id and not x.reserve),
          (select count(*)::integer from chelleh_members x join chelleh_marks k on k.member_id = x.id
            where x.round_id = r.id and k.day = public.reading_day()),
          public.reading_day(),
          coalesce((select array_agg(k.day order by k.day) from chelleh_marks k where k.member_id = m.id), '{}'),
          m.email, r.news, r.kind,
          -- جایگاه این شخص در دوره (برای جزءخوانی: نفر اول جزء ۱ را شروع می‌کند، نفر دوم جزء ۲ و…).
-         (select count(*)::integer from chelleh_members x where x.round_id = r.id and (x.created_at, x.id) <= (m.created_at, m.id))
+         case when not m.reserve then coalesce(m.slot, (select count(*)::integer from chelleh_members x
+           where x.round_id = r.id and not x.reserve and (x.created_at, x.id) <= (m.created_at, m.id))) end,
+         m.reserve,
+         case when m.reserve then (select count(*)::integer from chelleh_members x where x.round_id = r.id and x.reserve
+                                    and (x.created_at, x.id) <= (m.created_at, m.id)) end,
+         (select count(*)::integer from chelleh_members x where x.round_id = r.id and x.reserve),
+         r.reserve, m.promoted_at, m.replaced_name, (m.promoted_at at time zone 'Asia/Tehran')::date
     from chelleh_members m join chelleh_rounds r on r.id = m.round_id
    where m.code = any (p_codes[1:20])
 $$;
@@ -387,6 +449,7 @@ begin
   if m.id is null then raise exception 'chl_member_not_found'; end if;
   select * into r from chelleh_rounds where id = m.round_id;
   if r.status <> 'open' then raise exception 'chl_not_found'; end if;
+  if m.reserve then raise exception 'chl_reserve'; end if;
   s := coalesce(m.start_date, r.start_date);
   if s is null or s > t then raise exception 'chl_not_started'; end if;
   -- روزی یک صفحه: تاریخ پایان ندارد؛ هر روزی که خوانده شود صفحه بعد است.
@@ -399,19 +462,50 @@ begin
   return res;
 end $$;
 
--- انصراف از چله (روزهای ثبت‌شده هم پاک می‌شود). اگر دوره هنوز شروع نشده بود، جای خالی دوباره باز می‌شود.
-create or replace function public.chl_leave(p_code text) returns boolean
+-- انصراف از چله (روزهای ثبت‌شده هم پاک می‌شود) و ثبت آن برای مدیر. اگر از گروه اصلی بود و دوره تمام نشده،
+-- نفر اول فهرست رزرو همان جایگاه را می‌گیرد (در جزءخوانی از همان جزء ادامه می‌دهد) و دفعه بعد که سایت را باز کند خبردار می‌شود.
+create or replace function public.chl_remove(p_member bigint, p_admin boolean) returns void
 language plpgsql security definer set search_path = public as $$
-declare m chelleh_members; r chelleh_rounds;
+declare m chelleh_members; r chelleh_rounds; p chelleh_members; lid bigint; d date := public.reading_day();
 begin
-  select * into m from chelleh_members where code = btrim(p_code);
-  if m.id is null then return false; end if;
+  select * into m from chelleh_members where id = p_member;
+  if m.id is null then return; end if;
   select * into r from chelleh_rounds where id = m.round_id for update;
+  select * into m from chelleh_members where id = p_member;
+  if m.id is null then return; end if;
+  insert into chelleh_leaves (round_id, name, email, slot, was_reserve, by_admin)
+  values (r.id, m.name, m.email, m.slot, m.reserve, p_admin) returning id into lid;
   delete from chelleh_members where id = m.id;
-  if r.start_date is null and not r.personal and r.status = 'open' then
+  if not m.reserve and not r.personal and r.status = 'open'
+     and (r.start_date is null or d <= r.start_date + r.days - 1) then
+    select * into p from chelleh_members where round_id = r.id and reserve order by created_at, id limit 1 for update;
+    if p.id is not null then
+      update chelleh_members set reserve = false, slot = m.slot, promoted_at = now(), replaced_name = m.name where id = p.id;
+      update chelleh_leaves set replaced_by_id = p.id, replaced_by_name = p.name, replaced_by_email = p.email where id = lid;
+    end if;
+  end if;
+  -- جای خالی (در گروه یا فهرست رزرو) تا روز سوم دوره دوباره ثبت‌نام می‌پذیرد.
+  if not r.personal and r.status = 'open' and (r.start_date is null or d <= r.start_date + least(2, r.days - 1)) then
     update chelleh_rounds set joinable = true where id = r.id;
   end if;
+end $$;
+
+create or replace function public.chl_leave(p_code text) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare mid bigint;
+begin
+  select id into mid from chelleh_members where code = btrim(p_code);
+  if mid is null then return false; end if;
+  perform public.chl_remove(mid, false);
   return true;
+end $$;
+
+-- مدیر: حذف یک نفر از دوره؛ مثل انصراف ثبت می‌شود و نفر اول رزرو جایش را می‌گیرد.
+create or replace function public.chl_admin_remove(p_member bigint) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_site_admin() then raise exception 'not_admin'; end if;
+  perform public.chl_remove(p_member, true);
 end $$;
 
 -- ---------- برای مدیر ----------
@@ -433,7 +527,8 @@ begin
   if t.kind = 'hezb' then return; end if;
   -- دوره‌هایی که هنوز شروع نشده‌اند (و دوره همیشه‌باز) تنظیمات تازه را می‌گیرند؛ دوره‌های در جریان همان‌طور ادامه می‌دهند.
   update chelleh_rounds set title = t.title, text_key = t.text_key, description = t.description, days = t.days,
-         times_per_day = t.times_per_day, start_after_days = t.start_after_days, kind = t.kind
+         times_per_day = t.times_per_day, start_after_days = t.start_after_days, kind = t.kind,
+         reserve = case when personal or t.capacity is null then 0 else t.reserve end
    where type_key = t.key and status = 'open' and (personal or start_date is null or start_date > d);
   if t.start_mode <> 'self' then
     -- دوره همیشه‌باز دیگر عضو تازه نمی‌گیرد (اعضای فعلی ادامه می‌دهند).
@@ -511,20 +606,21 @@ begin
   return public.chl_add_member(p_round, p_name);
 end $$;
 
-revoke all on function public.chl_clean_email(text), public.chl_can_join(chelleh_rounds), public.chl_ensure(text), public.chl_sync_type(text) from public, anon, authenticated;
+revoke all on function public.chl_clean_email(text), public.chl_can_join(chelleh_rounds), public.chl_ensure(text), public.chl_sync_type(text),
+  public.chl_remove(bigint, boolean) from public, anon, authenticated;
 revoke all on function public.chl_new_code(), public.chl_new_round(text, boolean, date), public.chl_fill_check(bigint),
   public.chl_round_for(text), public.chl_add_member(bigint, text) from public, anon, authenticated;
 grant execute on function public.chl_new_code() to authenticated;
 revoke all on function public.chl_admin_sync_type(text), public.chl_admin_new_round(text, date),
-  public.chl_admin_start(bigint), public.chl_admin_add(bigint, text) from public, anon;
+  public.chl_admin_start(bigint), public.chl_admin_add(bigint, text), public.chl_admin_remove(bigint) from public, anon;
 grant execute on function public.chl_types(), public.chl_join_type(text, text, text), public.chl_rounds(), public.chl_join(bigint, text, text),
   public.chl_type_rounds(text), public.chl_set_email(text, text),
   public.chl_lookup(text[]), public.chl_mark(text, date, boolean), public.chl_leave(text) to anon, authenticated;
 grant execute on function public.chl_admin_sync_type(text), public.chl_admin_new_round(text, date),
-  public.chl_admin_start(bigint), public.chl_admin_add(bigint, text) to authenticated;
+  public.chl_admin_start(bigint), public.chl_admin_add(bigint, text), public.chl_admin_remove(bigint) to authenticated;
 grant select on public.chelleh_texts, public.chelleh_types to anon, authenticated;
 grant select, insert, update, delete on public.chelleh_texts, public.chelleh_types, public.chelleh_rounds,
-  public.chelleh_members, public.chelleh_marks to authenticated;
+  public.chelleh_members, public.chelleh_marks, public.chelleh_leaves to authenticated;
 
 -- ---------- دوره‌های پیش‌فرض منو ----------
 -- هر نسخه فقط یک بار اعمال می‌شود (chelleh_meta)؛ تغییر یا حذفی که مدیر بعداً انجام دهد سر جایش می‌ماند.
@@ -552,5 +648,15 @@ begin
      where key in ('ashura', 'kisa', 'alyasin') and start_mode = 'self' and capacity is null and kind = 'text';
     perform public.chl_sync_type(k) from unnest(array['ashura', 'kisa', 'alyasin']) k;
     insert into public.chelleh_meta (key, value) values ('seed_v2', now()::text);
+  end if;
+end $$;
+
+-- نسخه ۳: فهرست رزرو ۵ نفره برای جزءخوانی.
+do $$
+begin
+  if not exists (select 1 from public.chelleh_meta where key = 'seed_v3') then
+    update public.chelleh_types set reserve = 5 where key = 'juz' and kind = 'juz' and reserve = 0;
+    if found then perform public.chl_sync_type('juz'); end if;
+    insert into public.chelleh_meta (key, value) values ('seed_v3', now()::text);
   end if;
 end $$;
