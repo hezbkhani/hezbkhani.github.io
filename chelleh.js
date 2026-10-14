@@ -1,0 +1,923 @@
+// چله‌ها: خواندن گروهی زیارت عاشورا، حدیث کسا، زیارت آل یاسین و متن‌های دیگر (معمولاً ۴۰ روز).
+// - منوی سه‌خط (menu.js): بخش «ثبت‌نام در چله» با نوع‌هایی که مدیر تعیین می‌کند؛ با زدن هر کدام صفحه ثبت‌نام باز می‌شود.
+// - صفحه اصلی: بخش «چله‌های من» (با خبر دوره و ایمیل اختیاری برای اخبار) برای کسانی که روی این گوشی ثبت‌نام کرده‌اند (جدول روزها، «امروز خواندم»، خواندن متن).
+// - مدیریت (زبانه «چله‌ها»): نوع‌های منو (مدت، ظرفیت هر دوره یا همیشه باز، شروع، تعداد بار در روز)، دوره‌ها و شرکت‌کنندگان، متن‌ها.
+// لینک مستقیم ثبت‌نام: ‎?chelleh=ashura‎ (کلید نوع). داده‌ها در Supabase، جدول‌ها و تابع‌ها در backend/supabase/chelleh.sql.
+// متن‌های آماده در پوشه chelleh هستند. به admin.js و menu.js نیاز دارد.
+(function () {
+  Object.assign(window.sbErrors, {
+    chl_not_found: 'این چله پیدا نشد یا بسته شده است.',
+    chl_not_joinable: 'ثبت‌نام در این دوره بسته شده است.',
+    chl_duplicate_name: 'این نام قبلاً در این دوره ثبت شده است. اگر شخص دیگری هستید، نام خانوادگی یا نام پدر را هم بنویسید.',
+    chl_member_not_found: 'این کد در چله‌ها پیدا نشد.',
+    chl_not_started: 'چله شما هنوز شروع نشده است.',
+    chl_bad_day: 'فقط برای امروز (یا دیروز، اگر فراموش شده بود) می‌شود ثبت کرد.',
+    chl_need_start: 'این نوع ظرفیت ندارد (همیشه باز است)؛ برای دوره تازه، تاریخ شروع را مشخص کنید.',
+    chl_empty: 'این دوره هنوز شرکت‌کننده‌ای ندارد.',
+    chl_bad_email: 'ایمیل درست نوشته نشده است. اگر نمی‌خواهید، خالیش بگذارید.'
+  });
+  const api = window.sbApi, rpc = window.sbRpc;
+  const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fa = x => toFa(x);
+  const DAY = 86400000;
+  const isoAdd = (iso, n) => new Date(Date.parse(iso + 'T12:00:00Z') + n * DAY).toISOString().slice(0, 10);
+  const isoDiff = (a, b) => Math.round((Date.parse(a + 'T12:00:00Z') - Date.parse(b + 'T12:00:00Z')) / DAY);
+  const dateFa = iso => (iso && window.J ? J.label(iso) : iso || '');
+  const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const isAdminView = () => location.hash === '#admin';
+  const siteUrl = () => location.origin + location.pathname;
+  const regLink = key => `${siteUrl()}?chelleh=${encodeURIComponent(key)}`;
+  const startWord = n => (n <= 0 ? 'همان روز' : n === 1 ? 'از روز بعد' : `${fa(n)} روز بعد`);
+
+  // کدهای چله روی این دستگاه
+  const KEY = 'chlCodes';
+  const codes = {
+    all() { const a = read(KEY, []); return Array.isArray(a) ? a.filter(c => /^\d{8}$/.test(c)) : []; },
+    add(c) { write(KEY, [...new Set([c, ...this.all()])]); },
+    remove(c) { write(KEY, this.all().filter(x => x !== c)); }
+  };
+
+  // ---------- متن‌ها ----------
+  // متن آماده از پوشه chelleh؛ اگر مدیر نسخه‌ای با همان key در پایگاه داده گذاشته باشد، آن نسخه خوانده می‌شود.
+  let builtins = null, dbTexts = null;
+  const textCache = {};
+  async function loadBuiltins() {
+    if (!builtins) builtins = await fetch('chelleh/index.json').then(r => r.json()).catch(() => []);
+    return builtins;
+  }
+  async function loadDbTexts(force) {
+    if (!dbTexts || force) {
+      try { dbTexts = await api('chelleh_texts?select=key,title,about,sections,updated_at&order=title', { timeout: 8000 }); }
+      catch { dbTexts = dbTexts || []; }
+    }
+    return dbTexts;
+  }
+  async function allTexts(force) {
+    const [b, d] = await Promise.all([loadBuiltins(), loadDbTexts(force)]);
+    const map = new Map(b.map(t => [t.key, { key: t.key, title: t.title, builtin: true, edited: false }]));
+    d.forEach(t => map.set(t.key, { key: t.key, title: t.title, builtin: map.has(t.key), edited: map.has(t.key) }));
+    return [...map.values()];
+  }
+  async function getText(key) {
+    if (textCache[key]) return textCache[key];
+    const d = (await loadDbTexts()).find(t => t.key === key);
+    let t = d && Array.isArray(d.sections) && d.sections.length ? d : null;
+    if (!t && /^[a-z0-9_-]+$/.test(key)) t = await fetch(`chelleh/${key}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+    if (!t) throw Error('متن این چله پیدا نشد. اینترنت را بررسی کنید و دوباره امتحان کنید.');
+    return (textCache[key] = t);
+  }
+  const textTitle = (key, list) => (list || []).find(t => t.key === key)?.title || key;
+
+  // قالب ساده برای ویرایش متن در بخش مدیریت: هر بند با یک خط خالی جدا می‌شود؛
+  // خط اول بند عربی است و خط‌های بعد ترجمه. خط «! …» توضیح است و خط «# ۱۰۰» یعنی تکرار.
+  function toBlocks(sections) {
+    return sections.map(s => [s.note ? '! ' + s.note : '', s.repeat ? '# ' + s.repeat : '', s.ar || '', s.fa || ''].filter(Boolean).join('\n')).join('\n\n');
+  }
+  function fromBlocks(text) {
+    return text.replace(/\r/g, '').split(/\n\s*\n/).map(b => {
+      const lines = b.split('\n').map(x => x.trim()).filter(Boolean), s = {}, rest = [];
+      lines.forEach(l => {
+        if (l.startsWith('!')) s.note = l.slice(1).trim();
+        else if (/^#\s*[\d۰-۹٠-٩]+$/.test(l)) s.repeat = +norm(l.slice(1));
+        else rest.push(l);
+      });
+      if (rest.length) { s.ar = rest[0]; if (rest.length > 1) s.fa = rest.slice(1).join(' '); }
+      return s;
+    }).filter(s => s.ar || s.note);
+  }
+
+  const css = `
+@font-face{font-family:ChlArabic;src:url('quran/uthmanic-hafs.woff2') format('woff2');font-display:swap;unicode-range:U+0600-060B,U+060D-061E,U+0620-06FF,U+FB50-FDFF,U+FE70-FEFF}
+.chl-card{background:#fff;color:#000;text-shadow:none;border:1px solid var(--gold);padding:12px 14px;margin:12px 0;position:relative}
+.chl-card::before{content:"";position:absolute;inset:4px;border:1px solid rgba(215,170,91,.45);pointer-events:none}
+.chl-card h3{margin:0 0 2px;font:normal 26px/1.7 SiteFont,Tahoma,serif;color:var(--deep)}
+.chl-card .hint,.chl-card label,body.v2 .chl-card .hint{color:var(--muted);text-shadow:none}
+.chl-card label{color:var(--ink);font-weight:600;font-size:15px;margin:10px 0 4px}
+.chl-card.flash{animation:chlflash 1.6s ease}
+@keyframes chlflash{0%,40%{box-shadow:0 0 0 4px var(--gold)}100%{box-shadow:none}}
+.chl-meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:15px;color:var(--muted)}
+.chl-tag{display:inline-block;padding:0 10px;background:#e7f5f0;border:1px solid var(--gold);color:var(--deep);font-weight:600}
+.chl-tag.wait{background:#fff5d9}
+.chl-desc{white-space:pre-line;margin:6px 0 0;font-size:15.5px;color:var(--ink)}
+.chl-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin:10px 0 4px;direction:rtl}
+.chl-grid i{display:flex;align-items:center;justify-content:center;aspect-ratio:1;font-style:normal;font-size:12px;border:1px solid #e3d6b8;color:#9a8b78;background:#fffaf0}
+.chl-grid i.d{background:var(--emerald);border-color:var(--deep);color:#fff;font-weight:700}
+.chl-grid i.m{background:#f6e3e3;border-color:#e5c3c3;color:#a35a5a}
+.chl-grid i.t{outline:2px solid var(--gold);outline-offset:1px;color:var(--deep);font-weight:700}
+.chl-grid i.n{opacity:.45}
+.chl-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted)}
+.chl-legend b{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-left:4px;border:1px solid #e3d6b8}
+.chl-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.chl-actions button{height:50px}
+.chl-done{display:flex;align-items:center;justify-content:center;gap:6px;background:#e7f5f0!important;color:#00543f!important;border-color:var(--gold)!important}
+.chl-big{font-size:20px;font-weight:800;color:var(--deep)}
+.chl-msg{min-height:22px;margin-top:6px;font-weight:700}
+.chl-msg:empty{min-height:0;margin:0}
+.chl-ok{color:#006b50}.chl-bad{color:#9b2636}
+.chl-small{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:10px;font-size:14px}
+.chl-small button{height:auto;padding:0;background:none;border:0;color:var(--deep);text-decoration:underline;font-weight:500;font-size:14px}
+.chl-small button.chl-red{color:#9b2636}
+.chl-bar{height:10px;background:#eee4cf;margin:8px 0 4px;overflow:hidden;border-radius:5px}
+.chl-bar span{display:block;height:100%;background:var(--emerald)}
+.chl-read{display:flex;align-items:center;justify-content:center;gap:8px}
+.chl-read svg{width:20px;height:20px}
+.chl-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.chl-head button{height:42px;font-size:15px}
+.chl-fold summary{cursor:pointer;margin:10px 0 0;color:#f4ead8;font-size:15px}
+.sm .chl-mi .sm-ic{background:#fff5d9}
+.chs{position:fixed;inset:0;z-index:48;display:none;align-items:flex-end;justify-content:center;background:#0009}
+.chs.show{display:flex}
+.chs-box{width:100%;max-width:560px;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;background:#fffaf0;color:var(--ink);text-shadow:none;border-top:3px solid var(--gold);border-radius:18px 18px 0 0;padding:0 18px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px #0007;animation:chsup .22s ease}
+@keyframes chsup{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+.chs-grip{width:44px;height:5px;border-radius:3px;background:#d9cba9;margin:10px auto 4px}
+.chs-top{display:flex;align-items:flex-start;gap:8px}
+.chs-top h2{flex:1;margin:4px 0 0;font:normal 34px/1.6 SiteFont,Tahoma,serif;color:var(--deep)}
+.chs-top button{flex:none;width:42px;height:42px;padding:0;background:transparent;border:0;color:var(--muted);font-size:24px}
+.chs-facts{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.chs-facts span{padding:2px 10px;background:#e7f5f0;border:1px solid #cfe3da;color:var(--deep);font-size:14px;font-weight:600;border-radius:999px}
+.chs-state{background:#fff;border:1px solid var(--gold);padding:10px 14px;margin:10px 0;font-size:15.5px}
+.chs-state b{color:var(--deep)}
+.chs-box label{display:block;font-weight:700;margin:12px 0 6px;color:var(--ink);text-shadow:none}
+.chs-box input{width:100%}
+.chs-box .chs-main{width:100%;height:54px;margin-top:10px;font-size:18px}
+.chs-box .chs-alt{width:100%;height:48px;margin-top:8px;background:#fff;color:var(--deep);border-color:var(--emerald)}
+.chs-ok{text-align:center;padding:10px 0}
+.chs-ok .chs-check{width:64px;height:64px;margin:6px auto;border-radius:50%;background:var(--emerald);color:#fff;font-size:34px;display:flex;align-items:center;justify-content:center;border:2px solid var(--gold)}
+.chs-ok p{margin:6px 0}
+.chs-code{display:inline-block;direction:ltr;font-size:22px;letter-spacing:2px;font-weight:700;color:var(--deep);background:#fff5d9;padding:0 10px;border:1px dashed var(--gold)}
+.chs-rounds{margin:10px 0}
+.chs-rounds label{display:flex;gap:10px;align-items:flex-start;margin:0 0 8px;padding:10px 12px;background:#fff;border:1px solid #d9cba9;font-weight:400;font-size:15px;cursor:pointer}
+.chs-rounds label:has(input:checked){border:2px solid var(--emerald);background:#f2faf6}
+.chs-rounds input{width:auto;margin-top:6px;flex:none}
+.chs-rounds b{color:var(--deep)}
+.chl-note{margin:4px 0 0;font-size:14px;color:var(--muted);line-height:1.8}
+.chl-news{white-space:pre-line;margin:8px 0 0;padding:8px 12px;background:#fff5d9;border-right:4px solid var(--gold);font-size:15px;color:var(--ink)}
+.chl-mail{margin-top:8px;font-size:14px;color:var(--muted)}
+.chl-mail summary{cursor:pointer}
+.chl-mail input{direction:ltr;text-align:left}
+.chs-mine{background:#e7f5f0;border:1px solid var(--gold);padding:8px 12px;margin:10px 0;font-size:15px}
+body.chl-lock{overflow:hidden}
+${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60;--line:#e6d9bd;--accent:#0b6b50;--gold:#c79a45;--qs:28px;
+  position:fixed;inset:0;z-index:50;background:var(--bg);color:var(--text);text-shadow:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:none;font-family:Vazirmatn,Tahoma,sans-serif}
+.cr.night{--bg:#14110d;--card:#1c1813;--text:#efe6d6;--tr:#c9bba7;--muted:#9b8e7c;--line:#3a3127;--accent:#5fc3a0;--gold:#b98f45}
+.cr.show{display:block}
+.cr-bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:6px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:var(--accent);color:#fff;box-shadow:0 2px 10px #0003}
+.cr.night .cr-bar{background:#0f2a22}
+.cr-bar button{flex:none;height:42px;min-width:42px;padding:0 10px;background:transparent;border:0;color:#fff;font-size:22px;line-height:1}
+.cr-title{flex:1;min-width:0;text-align:center;line-height:1.35}
+.cr-title b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr-title small{font-size:12.5px;opacity:.85}
+.cr-prog{position:absolute;bottom:0;right:0;height:3px;width:0;background:var(--gold)}
+.cr-menu{position:sticky;top:58px;z-index:2;max-width:760px;margin:0 auto;display:none;gap:12px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line);box-shadow:0 8px 20px #0002}
+.cr-menu.show{display:grid}
+.cr-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15.5px}
+.cr-row div{display:flex;gap:6px}
+.cr-row button{height:40px;min-width:44px;padding:0 12px;background:transparent;color:var(--text);border:1px solid var(--line);font-size:15px;font-weight:600}
+.cr-row button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.cr-body{max-width:760px;margin:0 auto;padding:6px 14px calc(40px + env(safe-area-inset-bottom))}
+.cr-head{margin:22px 0 8px;padding:14px 10px 10px;text-align:center;border:1px solid var(--gold);outline:3px double var(--gold);outline-offset:3px;background:var(--card)}
+.cr-head h3{margin:0;font:normal 34px/1.6 SiteFont,Tahoma,serif;color:var(--accent)}
+.cr-head small{display:block;font-size:13px;color:var(--muted);line-height:1.8}
+.cr-bism{margin:18px 0 6px;text-align:center;font:normal calc(var(--qs)*1.05)/2 ChlArabic,Vazirmatn,serif}
+.cr-sec{padding:14px 2px;border-bottom:1px solid var(--line)}
+.cr-sec:last-child{border-bottom:0}
+.cr-note{margin:0 0 6px;color:var(--accent);font-weight:700;font-size:15px}
+.cr-sec.only{border:1px dashed var(--line);background:var(--card);padding:10px 12px;margin:14px 0}
+.cr-sec.only .cr-note{margin:0;color:var(--muted);font-weight:500}
+.cr-ar{margin:0;font:normal var(--qs)/2.15 ChlArabic,Vazirmatn,serif;text-align:right;word-spacing:1px}
+.cr-fa{margin:6px 0 0;font-size:calc(var(--qs)*.58);line-height:2;color:var(--tr);text-align:justify}
+.cr.no-tr .cr-fa{display:none}
+.cr-count{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.cr-count button{height:48px;min-width:120px;background:var(--accent);border:1px solid var(--gold);color:#fff;font-size:18px;font-weight:700}
+.cr-count button.full{background:var(--gold)}
+.cr-count small{color:var(--muted)}
+.cr-count .cr-reset{min-width:0;height:36px;background:transparent;color:var(--muted);border-color:var(--line);font-size:13px;font-weight:500}
+.cr-end{margin:24px 0 8px;padding:16px;text-align:center;background:var(--card);border:1px solid var(--gold)}
+.cr-end p{margin:0 0 10px}
+.cr-end button{width:100%;height:54px;font-size:18px;background:var(--accent);border-color:var(--gold)}
+.cr-end .chl-done{height:54px}
+.chl-adm .chl-card h3{font:700 18px/1.6 Vazirmatn,Tahoma,sans-serif}
+.chl-adm .adm-card .hint,body.v2 #pane-chl .hint{color:var(--muted)}
+.chl-adm h4{margin:18px 0 6px;font-size:17px;color:#fff;text-shadow:var(--glow)}
+.chl-members{max-height:420px;overflow:auto;border:1px solid #e6dcc6;margin-top:8px}
+.chl-members div{display:flex;gap:8px;align-items:center;padding:5px 8px;border-bottom:1px solid #f0e8d6}
+.chl-members span{flex:1;min-width:0;overflow-wrap:anywhere}
+.chl-members small{color:var(--muted)}
+.chl-members button{height:32px;padding:0 10px;font-size:13px}
+.chl-mini{display:inline-flex;gap:1px;vertical-align:middle;direction:rtl;flex-wrap:wrap}
+.chl-mini i{display:block;width:4px;height:12px;background:#eadfca}
+.chl-mini i.d{background:var(--emerald)}
+.chl-mark{font-weight:800;color:var(--emerald)}
+.chl-form{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.chl-form .full{grid-column:1/-1}
+.chl-form input[type=number]{direction:ltr;text-align:right}
+.chl-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chl-chips button{height:34px;padding:0 12px;font-size:14px;background:#fff;color:var(--deep);border-color:var(--emerald)}
+.chl-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chl-tools button{flex:1 1 auto;height:42px;font-size:15px}
+.chl-tools .chl-arr{flex:0 0 48px;padding:0}
+.chl-tools .chl-mailto{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 14px;font-size:15px;font-weight:700;text-decoration:none;border:1px solid var(--emerald);background:#fff;color:var(--deep)}
+.chl-off{opacity:.6}
+.chl-edit textarea{min-height:260px;direction:rtl;font-size:15px}
+@media(max-width:600px){.chl-actions{grid-template-columns:1fr}.cr-head h3{font-size:30px}.chl-form{grid-template-columns:1fr}.chs-top h2{font-size:30px}}`;
+  { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
+
+  // ---------- داده‌ها ----------
+  let types = [], typesError = '', mine = [], today = null, ready = false;
+  async function loadTypes() {
+    try { types = (await rpc('chl_types')) || []; typesError = ''; } catch (e) { types = []; typesError = e.message; }
+    if (types[0]?.today) today = types[0].today;
+    return types;
+  }
+  async function loadMine() {
+    const list = codes.all();
+    if (!list.length) { mine = []; return mine; }
+    try {
+      const a = (await rpc('chl_lookup', { p_codes: list })) || [];
+      // کدِ چله‌های حذف‌شده یا بایگانی‌شده خودکار فراموش می‌شود.
+      const found = new Set(a.filter(m => m.status === 'open').map(m => m.code));
+      list.filter(c => !found.has(c)).forEach(c => codes.remove(c));
+      mine = a.filter(m => m.status === 'open');
+      if (mine[0]?.today) today = mine[0].today;
+    } catch { /* اینترنت قطع: فهرست قبلی می‌ماند */ }
+    return mine;
+  }
+  async function refresh() {
+    await Promise.all([loadTypes(), loadMine()]);
+    today = today || isoIran();
+    ready = true;
+    renderPanel(); window.siteMenu?.refresh();
+    const live = mine.filter(m => state(m) === 'run' && !(m.marked || []).includes(today));
+    window.siteMenu?.dot(live.length > 0);
+  }
+  window.chlRefresh = refresh;
+
+  // وضعیت هر عضویت: wait (در انتظار تکمیل ظرفیت)، soon (تاریخ شروع آینده)، run (در جریان)، end (تمام شده)
+  const dayNo = m => (m.start_date ? isoDiff(today, m.start_date) + 1 : 0);
+  function state(m) {
+    if (!m.start_date) return 'wait';
+    const n = dayNo(m);
+    return n < 1 ? 'soon' : n > m.days ? 'end' : 'run';
+  }
+  const typeOf = key => types.find(t => t.key === key);
+
+  // ---------- منو ----------
+  window.siteMenu?.section({
+    id: 'chelleh', order: 1,
+    render(box) {
+      if (!ready) { box.innerHTML = '<h3>ثبت‌نام در چله</h3><p class="sm-note">در حال دریافت…</p>'; return; }
+      if (!types.length) { if (isAdminView() && typesError) box.innerHTML = `<h3>ثبت‌نام در چله</h3><p class="sm-note">${esc(typesError)}</p>`; return; }
+      const mineHtml = mine.length ? `<button type="button" class="sm-item" data-chl-mine><span class="sm-ic">⭐</span><span>چله‌های من<small>${fa(mine.length)} چله${mine.some(m => state(m) === 'run' && !(m.marked || []).includes(today)) ? '، امروز هنوز ثبت نشده' : ''}</small></span><span class="sm-go">‹</span></button>` : '';
+      box.innerHTML = `${mineHtml}<h3>ثبت‌نام در چله</h3>` + types.map(t => `<button type="button" class="sm-item chl-mi" data-chl-type="${esc(t.key)}"><span class="sm-ic">📿</span><span>${esc(t.title)}<small>${esc(typeLine(t))}</small></span><span class="sm-go">‹</span></button>`).join('');
+      box.onclick = e => {
+        const b = e.target.closest('[data-chl-type],[data-chl-mine]'); if (!b) return;
+        window.siteMenu.close(true);
+        if (b.dataset.chlType) openSheet(b.dataset.chlType, true);
+        else { goBack(); setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200); }
+      };
+    }
+  });
+  // منو با history.back بسته می‌شود؛ وقتی از منو صفحه دیگری باز می‌شود، به‌جای back همان ردیف تاریخچه جایگزین می‌شود.
+  function goBack() { try { if (history.state?.sm) history.back(); } catch {} }
+  function pushState(s, replace) { try { if (replace && history.state?.sm) history.replaceState(s, ''); else history.pushState(s, ''); } catch {} }
+
+  function typeLine(t) {
+    const base = `${fa(t.days)} روز`;
+    if (!t.capacity) return `${base}، همیشه باز`;
+    if (t.round_start) return `${base}، دوره ${fa(t.round_number)} از ${dateFa(t.round_start)}`;
+    return `${base}، دوره ${fa(t.round_number || 1)}: ${fa(t.waiting || 0)} از ${fa(t.capacity)} نفر`;
+  }
+
+  // ---------- صفحه ثبت‌نام (از پایین باز می‌شود) ----------
+  let sheet = null, sheetType = null, sheetRounds = [];
+  // وضعیت یک دوره گروهی برای صفحه ثبت‌نام: تعداد ثبت‌نام، تاریخ شروع یا تعداد لازم، و روز چندم اگر شروع شده.
+  function roundLine(r, t) {
+    const who = `${fa(r.members)}${r.capacity ? ' از ' + fa(r.capacity) : ''} نفر ثبت‌نام کرده‌اند`;
+    if (!r.start_date) {
+      const left = Math.max(0, (r.capacity || 0) - r.members);
+      return `<b>دوره ${fa(r.number)}</b>: ${who}.<div class="chl-bar"><span style="width:${Math.min(100, r.members / (r.capacity || 1) * 100)}%"></span></div>با ${fa(left)} نفر دیگر ظرفیت کامل می‌شود و چله خودکار ${startWord(t.start_after_days)} شروع می‌شود.`;
+    }
+    const k = isoDiff(r.start_date, today);
+    if (k > 0) return `<b>دوره ${fa(r.number)}</b>: شروع ${esc(dateFa(r.start_date))} (${k === 1 ? 'فردا' : fa(k) + ' روز دیگر'}). ${who}.`;
+    return `<b>دوره ${fa(r.number)}</b>: شروع شده است؛ امروز <b>روز ${fa(1 - k)} از ${fa(t.days)}</b>. ${who}. اگر الان ثبت‌نام کنید، از امروز همراه گروه می‌خوانید.`;
+  }
+  function buildSheet() {
+    if (sheet) return;
+    sheet = document.createElement('div'); sheet.className = 'chs'; sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true');
+    sheet.innerHTML = '<div class="chs-box"><div class="chs-grip"></div><div class="chs-in"></div></div>';
+    document.body.appendChild(sheet);
+    sheet.addEventListener('click', e => {
+      if (e.target === sheet || e.target.closest('[data-chs-close]')) return closeSheet();
+      onSheetClick(e);
+    });
+    sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'chsName') sheet.querySelector('[data-chs-join]')?.click(); });
+    window.addEventListener('popstate', () => { if (sheet.classList.contains('show')) closeSheet(true); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet.classList.contains('show') && !reader?.classList.contains('show')) closeSheet(); });
+  }
+  async function openSheet(key, fromMenu) {
+    buildSheet();
+    sheetType = key;
+    sheet.classList.add('show'); document.body.classList.add('chl-lock');
+    pushState({ chs: 1 }, fromMenu);
+    const t = typeOf(key);
+    sheetRounds = [];
+    if (!t) { sheet.querySelector('.chs-in').innerHTML = '<div class="chs-top"><h2>چله</h2><button type="button" data-chs-close aria-label="بستن">✕</button></div><p>در حال دریافت…</p>'; await loadTypes(); }
+    const tt = typeOf(key);
+    if (tt && (tt.capacity || tt.round_id)) { try { sheetRounds = (await rpc('chl_type_rounds', { p_type: key })) || []; } catch { sheetRounds = []; } }
+    if (sheetType === key) renderSheet();
+  }
+  function closeSheet(fromHistory) {
+    if (!sheet?.classList.contains('show')) return;
+    sheet.classList.remove('show');
+    if (!reader?.classList.contains('show')) document.body.classList.remove('chl-lock');
+    if (!fromHistory) { try { if (history.state?.chs) history.back(); } catch {} }
+  }
+  function renderSheet(done) {
+    const t = typeOf(sheetType), box = sheet.querySelector('.chs-in');
+    const top = title => `<div class="chs-top"><h2>${esc(title)}</h2><button type="button" data-chs-close aria-label="بستن">✕</button></div>`;
+    if (!t) { box.innerHTML = top('چله') + `<p class="chl-bad">${esc(typesError || 'این چله دیگر در فهرست نیست.')}</p>`; return; }
+    if (done) {
+      const m = mine.find(x => x.code === done);
+      const when = !m ? '' : state(m) === 'wait' ? `هر وقت ظرفیت دوره (${fa(m.capacity)} نفر) کامل شود، چله ${startWord(t.start_after_days)} شروع می‌شود و همین‌جا خبر می‌دهیم. الان ${fa(m.members)} نفر ثبت‌نام کرده‌اند.`
+        : state(m) === 'soon' ? `چله شما ${dateFa(m.start_date)} شروع می‌شود.` : 'چله شما از امروز شروع شده است. همین حالا می‌توانید متن را بخوانید و «امروز خواندم» را بزنید.';
+      box.innerHTML = top(t.title) + `<div class="chs-ok"><div class="chs-check">✓</div><p class="chl-big">ثبت‌نام شد. قبول باشد.</p><p>${esc(when)}</p>
+<p class="chl-note">${m?.email ? `اخبار دوره به ${esc(m.email)} هم فرستاده می‌شود.` : 'اخبار دوره را در همین سایت، بخش «چله‌های من» ببینید.'}</p>
+<p class="hint" style="color:var(--muted)">کد چله شما: <span class="chs-code">${fa(done)}</span><br>این کد روی همین گوشی ذخیره شد. برای ادامه روی گوشی دیگر لازم است.</p></div>
+<button type="button" class="chs-main" data-chs-go="${done}">رفتن به چله‌های من</button><button type="button" class="chs-alt" data-chs-share>دعوت دیگران به این چله</button>`;
+      return;
+    }
+    const facts = [`${fa(t.days)} روز`, t.times_per_day > 1 ? `هر روز ${fa(t.times_per_day)} بار` : 'هر روز یک بار', t.capacity ? `هر دوره ${fa(t.capacity)} نفر` : 'بدون محدودیت نفرات'];
+    let st;
+    const openOpt = !t.capacity && sheetRounds.length ? `<label><input type="radio" name="chsRound" value="" checked><span><b>همیشه باز</b>: چله شما ${t.start_after_days ? startWord(t.start_after_days) + ' از ثبت‌نام' : 'از همان روز ثبت‌نام'} شروع می‌شود.</span></label>` : '';
+    if (sheetRounds.length > 1 || openOpt) st = `${openOpt ? 'می‌توانید از امروز خودتان شروع کنید یا با یک دوره گروهی همراه شوید:' : 'چند دوره ثبت‌نام دارد؛ یکی را انتخاب کنید:'}<div class="chs-rounds">${openOpt}${sheetRounds.map((r, i) => `<label><input type="radio" name="chsRound" value="${r.id}"${i || openOpt ? '' : ' checked'}><span>${roundLine(r, t)}${r.news ? `<span class="chl-news" style="display:block">${esc(r.news)}</span>` : ''}</span></label>`).join('')}</div>`;
+    else if (sheetRounds.length === 1) st = roundLine(sheetRounds[0], t) + (sheetRounds[0].news ? `<div class="chl-news">${esc(sheetRounds[0].news)}</div>` : '');
+    else if (!t.capacity && !t.round_id) st = `همیشه باز است. چله شما ${t.start_after_days ? startWord(t.start_after_days) + ' از ثبت‌نام' : 'از همان روز ثبت‌نام'} شروع می‌شود.${t.active ? ` الان <b>${fa(t.active)}</b> نفر در این چله هستند.` : ''}`;
+    else if (t.round_start) st = `<b>دوره ${fa(t.round_number)}</b> ${isoDiff(t.round_start, today) > 0 ? 'شروع می‌شود' : 'شروع شده'}: ${esc(dateFa(t.round_start))}.${t.capacity ? ` ${fa(t.waiting)} از ${fa(t.capacity)} نفر ثبت‌نام کرده‌اند.` : ''}`;
+    else {
+      const left = t.capacity - (t.waiting || 0);
+      st = `<b>دوره ${fa(t.round_number || 1)}</b> در حال ثبت‌نام: ${fa(t.waiting || 0)} از ${fa(t.capacity)} نفر.<div class="chl-bar"><span style="width:${Math.min(100, (t.waiting || 0) / t.capacity * 100)}%"></span></div>
+با ${fa(left)} نفر دیگر ظرفیت کامل می‌شود و چله خودکار ${startWord(t.start_after_days)} شروع می‌شود.`;
+    }
+    const already = mine.filter(m => m.type_key === t.key && state(m) !== 'end');
+    const lastName = read('chlName', '');
+    box.innerHTML = top(t.title) + `<div class="chs-facts">${facts.map(f => `<span>${esc(f)}</span>`).join('')}</div>
+${t.description ? `<p class="chl-desc">${esc(t.description)}</p>` : ''}<div class="chs-state">${st}</div>
+${already.length ? `<div class="chs-mine">شما با نام «${esc(already.map(m => m.name).join('، '))}» در این چله هستید. اگر برای شخص دیگری ثبت‌نام می‌کنید، نام او را بنویسید.</div>` : ''}
+<label for="chsName">نام و نام خانوادگی</label><input id="chsName" maxlength="60" autocomplete="name" placeholder="مثلاً فاطمه رضایی" value="${already.length ? '' : esc(lastName)}">
+<label for="chsEmail">ایمیل <small style="font-weight:400;color:var(--muted)">(اختیاری)</small></label><input id="chsEmail" type="email" inputmode="email" dir="ltr" maxlength="120" autocomplete="email" placeholder="name@example.com" value="${esc(read('chlEmail', ''))}">
+<p class="chl-note">برای دریافت اخبار دوره، مثل شروع چله. اگر نمی‌خواهید خالی بگذارید؛ همه اخبار در همین سایت، بخش «چله‌های من» هم هست.</p>
+<button type="button" class="chs-main" data-chs-join>ثبت‌نام در چله</button><div class="chl-msg" id="chsMsg"></div>
+<button type="button" class="chs-alt chl-read" data-read="${esc(t.text_key)}">${ICON_BOOK}دیدن متن ${esc(textTitle(t.text_key, textsList) || '')}</button>`;
+  }
+  async function onSheetClick(e) {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.read) return openReader(b.dataset.read, null);
+    if (b.hasAttribute('data-chs-join')) {
+      const input = sheet.querySelector('#chsName'), msg = sheet.querySelector('#chsMsg'), name = input.value.trim().replace(/\s+/g, ' ');
+      const email = norm(sheet.querySelector('#chsEmail').value).trim(), pick = sheet.querySelector('[name=chsRound]:checked')?.value;
+      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.className = 'chl-msg chl-bad'; msg.textContent = window.sbErrors.chl_bad_email; sheet.querySelector('#chsEmail').focus(); return; }
+      if (name.length < 2) { msg.className = 'chl-msg chl-bad'; msg.textContent = 'نام خود را بنویسید (دست‌کم دو حرف).'; input.focus(); return; }
+      b.disabled = true; b.textContent = 'در حال ثبت…';
+      try {
+        const code = pick ? await rpc('chl_join', { p_round: +pick, p_name: name, p_email: email || null })
+          : await rpc('chl_join_type', { p_type: sheetType, p_name: name, p_email: email || null });
+        codes.add(code); write('chlName', name); write('chlEmail', email);
+        await refresh();
+        renderSheet(code);
+      } catch (err) { msg.className = 'chl-msg chl-bad'; msg.textContent = err.message; b.disabled = false; b.textContent = 'ثبت‌نام در چله'; }
+      return;
+    }
+    if (b.dataset.chsGo) { const c = b.dataset.chsGo; closeSheet(); setTimeout(() => flash(c), 250); return; }
+    if (b.hasAttribute('data-chs-share')) share(typeOf(sheetType));
+  }
+  async function share(t) {
+    if (!t) return;
+    const text = `دعوت به ${t.title}${t.capacity ? ` (هر دوره ${fa(t.capacity)} نفر)` : ''}؛ ${fa(t.days)} روز با هم بخوانیم. برای ثبت‌نام این لینک را باز کنید:`;
+    const url = regLink(t.key);
+    try { if (navigator.share) { await navigator.share({ title: t.title, text, url }); return; } } catch (e) { if (e?.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(`${text}\n${url}`); toast('لینک دعوت کپی شد؛ در گروه بفرستید.'); }
+    catch { prompt('این متن را کپی کنید:', `${text}\n${url}`); }
+  }
+  let toastEl = null, toastT = 0;
+  function toast(t) {
+    if (!toastEl) { toastEl = document.createElement('div'); toastEl.style.cssText = 'position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;max-width:90vw;background:#1f1a14;color:#fff;padding:10px 18px;border:1px solid var(--gold);text-shadow:none;font-size:15px;text-align:center'; document.body.appendChild(toastEl); }
+    toastEl.textContent = t; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 3200);
+  }
+  const ICON_BOOK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2zM22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z"/></svg>';
+  let textsList = [];
+  allTexts().then(l => { textsList = l; }).catch(() => {});
+
+  // ---------- صفحه اصلی: «چله‌های من» ----------
+  const panel = document.createElement('section');
+  panel.className = 'panel'; panel.id = 'chellehPanel'; panel.hidden = true;
+  {
+    const groupsPanel = document.getElementById('groupsNav')?.closest('.panel');
+    document.querySelector('main').insertBefore(panel, groupsPanel || null);
+  }
+  panel.addEventListener('click', onPanelClick);
+
+  function renderPanel() {
+    const has = mine.length > 0;
+    panel.hidden = !has && !(isAdminView() && types.length);
+    if (panel.hidden) return;
+    const order = { run: 0, soon: 1, wait: 2, end: 3 };
+    const list = [...mine].sort((a, b) => order[state(a)] - order[state(b)]);
+    const active = list.filter(m => state(m) !== 'end'), ended = list.filter(m => state(m) === 'end');
+    panel.innerHTML = `<div class="chl-head"><h2>چله‌های من</h2><button type="button" class="reg-light" data-new>+ چله تازه</button></div>
+${has ? '' : '<p class="hint">هنوز در چله‌ای ثبت‌نام نکرده‌اید. از منوی سه‌خط بالای صفحه یا دکمه «چله تازه» یکی را انتخاب کنید.</p>'}
+${active.map(card).join('')}${ended.length ? `<details class="chl-fold"${active.length ? '' : ' open'}><summary>چله‌های تمام‌شده (${fa(ended.length)})</summary>${ended.map(card).join('')}</details>` : ''}
+<details class="hint"><summary>کد چله دارید؟ (برای ادامه چله روی گوشی دیگر)</summary>
+<div class="row" style="margin-top:8px"><input id="chlCodeIn" inputmode="numeric" placeholder="کد ۸ رقمی"><button type="button" data-addcode>ادامه چله</button></div><div class="chl-msg" id="chlCodeMsg"></div></details>`;
+  }
+  const readBtn = (key, code) => `<button type="button" class="reg-light chl-read" data-read="${esc(key)}"${code ? ` data-code="${code}"` : ''}>${ICON_BOOK}خواندن متن</button>`;
+
+  function grid(m) {
+    const done = new Set(m.marked || []), n = dayNo(m);
+    let s = '';
+    for (let i = 1; i <= m.days; i++) {
+      const iso = isoAdd(m.start_date, i - 1);
+      const cls = done.has(iso) ? 'd' : i === n ? 't' : i < n ? 'm' : 'n';
+      s += `<i class="${cls}" title="${esc(dateFa(iso))}">${done.has(iso) ? '✓' : fa(i)}</i>`;
+    }
+    return `<div class="chl-grid" aria-label="جدول روزهای چله">${s}</div><div class="chl-legend"><span><b style="background:var(--emerald)"></b>خوانده‌شده</span><span><b style="background:#f6e3e3"></b>جامانده</span><span><b style="outline:2px solid var(--gold)"></b>امروز</span></div>`;
+  }
+
+  function card(m) {
+    const s = state(m), n = dayNo(m), done = new Set(m.marked || []), count = done.size, yesterday = isoAdd(today, -1);
+    const label = m.personal || !m.type_key ? '' : `<span>دوره ${fa(m.number)}</span>`;
+    let body = '', tag = '';
+    if (s === 'wait') {
+      const left = Math.max(0, (m.capacity || 0) - m.members), t = typeOf(m.type_key);
+      tag = '<span class="chl-tag wait">در انتظار تکمیل ظرفیت</span>';
+      body = `<p style="margin:8px 0 0">${fa(m.members)} از ${fa(m.capacity)} نفر ثبت‌نام کرده‌اند.</p><div class="chl-bar"><span style="width:${Math.min(100, m.members / (m.capacity || 1) * 100)}%"></span></div>
+<p class="hint">با ${fa(left)} نفر دیگر، چله خودکار ${startWord(t ? t.start_after_days : 1)} شروع می‌شود. با دعوت دوستان زودتر شروع می‌شود.</p>
+<div class="chl-actions">${readBtn(m.text_key)}<button type="button" data-share="${esc(m.type_key || '')}">دعوت دیگران</button></div>`;
+    } else if (s === 'soon') {
+      tag = '<span class="chl-tag wait">به‌زودی</span>';
+      const k = isoDiff(m.start_date, today);
+      body = `<p style="margin:8px 0 0">چله شما ${esc(dateFa(m.start_date))} شروع می‌شود (${k === 1 ? 'فردا' : fa(k) + ' روز دیگر'}).</p><div class="reg-tools">${readBtn(m.text_key)}</div>`;
+    } else if (s === 'run') {
+      tag = `<span class="chl-tag">روز ${fa(n)} از ${fa(m.days)}</span>`;
+      const act = done.has(today)
+        ? `<button type="button" class="chl-done" data-unmark="${m.code}" data-day="${today}" title="برای برداشتن بزنید">✓ امروز خوانده شد</button>`
+        : `<button type="button" data-mark="${m.code}" data-day="${today}">امروز خواندم</button>`;
+      body = `<p style="margin:8px 0 0">${fa(count)} روز از ${fa(n)} روز گذشته را خوانده‌اید.${m.times_per_day > 1 ? ` هر روز ${fa(m.times_per_day)} بار بخوانید.` : ''}</p>${grid(m)}
+<div class="chl-actions">${readBtn(m.text_key, m.code)}${act}</div>
+${n > 1 && !done.has(yesterday) ? `<div class="chl-small"><button type="button" data-mark="${m.code}" data-day="${yesterday}">دیروز خواندم ولی ثبت نکردم</button></div>` : ''}`;
+    } else {
+      tag = '<span class="chl-tag">تمام شد</span>';
+      body = `<p class="chl-big">${fa(count)} روز از ${fa(m.days)} روز را خواندید. قبول باشد.</p>${grid(m)}
+<div class="chl-actions">${m.type_key && typeOf(m.type_key) ? `<button type="button" data-again="${esc(m.type_key)}">شروع دوباره این چله</button>` : ''}<button type="button" class="reg-light" data-forget="${m.code}">برداشتن از فهرست</button></div>`;
+    }
+    return `<div class="chl-card" id="chlC${m.code}"><h3>${esc(m.title)}</h3><div class="chl-meta">${tag}<span>${esc(m.name)}</span>${label}${s === 'run' ? `<span>امروز ${fa(m.done_today)} از ${fa(m.members)} نفر خوانده‌اند</span>` : ''}</div>
+${m.description ? `<p class="chl-desc">${esc(m.description)}</p>` : ''}${m.news && s !== 'end' ? `<div class="chl-news"><b>خبر دوره:</b> ${esc(m.news)}</div>` : ''}${body}<div class="chl-msg" id="chlM${m.code}"></div>
+${s !== 'end' ? `<details class="chl-mail"><summary>${m.email ? `اخبار دوره به ایمیل ${esc(m.email)} (تغییر)` : 'دریافت اخبار دوره با ایمیل'}</summary><div class="row" style="margin-top:6px"><input id="chlE${m.code}" type="email" inputmode="email" maxlength="120" placeholder="name@example.com" value="${esc(m.email || '')}"><button type="button" data-email="${m.code}">ذخیره</button></div></details>` : ''}
+${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="ltr">${fa(m.code)}</b></span><button type="button" class="chl-red" data-leave="${m.code}">انصراف از چله</button></div>` : ''}</div>`;
+  }
+  function flash(code) {
+    const el = document.getElementById('chlC' + code); if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  }
+
+  async function onPanelClick(e) {
+    const b = e.target.closest('button'); if (!b) return;
+    const d = b.dataset;
+    if (b.hasAttribute('data-new')) return window.siteMenu ? window.siteMenu.open() : null;
+    if (d.read) return openReader(d.read, d.code ? mine.find(m => m.code === d.code) : null);
+    if (d.share !== undefined) return share(typeOf(d.share));
+    if (d.again) return openSheet(d.again);
+    if (d.forget) { codes.remove(d.forget); mine = mine.filter(m => m.code !== d.forget); renderPanel(); return; }
+    if (b.hasAttribute('data-addcode')) return addCode();
+    if (d.email) {
+      const v = norm(panel.querySelector('#chlE' + d.email).value).trim();
+      try { const e = await rpc('chl_set_email', { p_code: d.email, p_email: v }); const m = mine.find(x => x.code === d.email); if (m) m.email = e; if (e) write('chlEmail', e); renderPanel(); toast(e ? 'ایمیل ثبت شد.' : 'ایمیل برداشته شد.'); }
+      catch (err) { const el = panel.querySelector('#chlM' + d.email); if (el) { el.className = 'chl-msg chl-bad'; el.textContent = err.message; } }
+      return;
+    }
+    if (d.mark || d.unmark) {
+      const code = d.mark || d.unmark;
+      if (d.unmark && !confirm('ثبت «خواندم» برای امروز برداشته شود؟')) return;
+      b.disabled = true;
+      try { await mark(code, d.day, !!d.mark); if (d.mark) toast(d.day === today ? 'ثبت شد. قبول باشد.' : 'روز دیروز هم ثبت شد.'); }
+      catch (err) { const m = panel.querySelector('#chlM' + code); if (m) { m.className = 'chl-msg chl-bad'; m.textContent = err.message; } b.disabled = false; }
+      return;
+    }
+    if (d.leave) {
+      const m = mine.find(x => x.code === d.leave);
+      if (!confirm(`«${m?.name || ''}» از ${m?.title || 'این چله'} انصراف دهد؟ روزهای ثبت‌شده هم پاک می‌شود.`)) return;
+      try { await rpc('chl_leave', { p_code: d.leave }); codes.remove(d.leave); await refresh(); toast('انصراف ثبت شد.'); }
+      catch (err) { const el = panel.querySelector('#chlM' + d.leave); if (el) { el.className = 'chl-msg chl-bad'; el.textContent = err.message; } }
+    }
+  }
+  async function addCode() {
+    const c = norm(panel.querySelector('#chlCodeIn').value).replace(/\D/g, ''), msg = panel.querySelector('#chlCodeMsg');
+    if (c.length !== 8) { msg.className = 'chl-msg chl-bad'; msg.textContent = 'کد چله ۸ رقم است.'; return; }
+    try {
+      const a = await rpc('chl_lookup', { p_codes: [c] });
+      if (!a?.length) { msg.className = 'chl-msg chl-bad'; msg.textContent = 'چله‌ای با این کد پیدا نشد.'; return; }
+      codes.add(c); await refresh(); flash(c);
+    } catch (e) { msg.className = 'chl-msg chl-bad'; msg.textContent = e.message; }
+  }
+  async function mark(code, day, done) {
+    const marked = await rpc('chl_mark', { p_code: code, p_day: day, p_done: done });
+    const m = mine.find(x => x.code === code);
+    if (m) { m.marked = marked || []; if (day === today) m.done_today = Math.max(0, m.done_today + (done ? 1 : -1)); }
+    renderPanel();
+    window.siteMenu?.dot(mine.some(x => state(x) === 'run' && !(x.marked || []).includes(today)));
+    return m;
+  }
+
+  // ---------- خواندن متن ----------
+  const RKEY = 'chlReader';
+  const prefs = Object.assign({ size: 28, trans: true, night: false }, read(RKEY, {}));
+  let reader = null, current = null;
+  function buildReader() {
+    if (reader) return reader;
+    reader = document.createElement('div'); reader.className = 'cr'; reader.setAttribute('role', 'dialog'); reader.setAttribute('aria-modal', 'true');
+    reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات">⚙</button><span class="cr-prog"></span></div>
+<div class="cr-menu"><div class="cr-row"><span>اندازه متن</span><div><button type="button" data-x="smaller">−</button><button type="button" data-x="bigger">+</button></div></div>
+<div class="cr-row"><span>ترجمه فارسی</span><div><button type="button" data-x="tr-on">نمایش</button><button type="button" data-x="tr-off">پنهان</button></div></div>
+<div class="cr-row"><span>حالت شب</span><div><button type="button" data-x="day">روز</button><button type="button" data-x="night">شب</button></div></div></div>
+<div class="cr-body"></div>`;
+    document.body.appendChild(reader);
+    reader.addEventListener('click', onReaderClick);
+    reader.addEventListener('scroll', () => { const h = reader.scrollHeight - reader.clientHeight; reader.querySelector('.cr-prog').style.width = (h > 0 ? reader.scrollTop / h * 100 : 0) + '%'; }, { passive: true });
+    window.addEventListener('popstate', () => { if (reader.classList.contains('show')) closeReader(true); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && reader.classList.contains('show')) closeReader(); });
+    return reader;
+  }
+  function applyPrefs() {
+    reader.style.setProperty('--qs', prefs.size + 'px');
+    reader.classList.toggle('night', prefs.night); reader.classList.toggle('no-tr', !prefs.trans);
+    const on = { 'tr-on': prefs.trans, 'tr-off': !prefs.trans, day: !prefs.night, night: prefs.night };
+    reader.querySelectorAll('.cr-row [data-x]').forEach(b => b.classList.toggle('on', !!on[b.dataset.x]));
+    write(RKEY, prefs);
+  }
+  // شمارنده بندهای تکراری (مثلاً صد لعن و صد سلام)، جدا برای هر روز.
+  const countKey = () => `chlCount:${current.key}:${today || isoIran()}`;
+  const counts = () => read(countKey(), {});
+
+  async function openReader(key, member) {
+    buildReader();
+    reader.querySelector('.cr-title b').textContent = 'در حال بارگذاری…';
+    reader.querySelector('.cr-title small').textContent = '';
+    reader.querySelector('.cr-body').innerHTML = '';
+    reader.querySelector('.cr-menu').classList.remove('show');
+    reader.classList.add('show'); document.body.classList.add('chl-lock');
+    pushState({ chl: 1 });
+    applyPrefs();
+    let t;
+    try { t = await getText(key); }
+    catch (e) { reader.querySelector('.cr-title b').textContent = 'متن باز نشد'; reader.querySelector('.cr-body').innerHTML = `<p class="cr-sec only" style="margin-top:30px">${esc(e.message)}</p>`; return; }
+    current = { key, member, text: t };
+    reader.querySelector('.cr-title b').textContent = t.title;
+    reader.querySelector('.cr-title small').textContent = member && state(member) === 'run' ? `${member.title}، روز ${fa(dayNo(member))} از ${fa(member.days)}` : '';
+    renderReader();
+    reader.scrollTop = 0;
+  }
+  function renderReader() {
+    const t = current.text, c = counts(), m = current.member;
+    let html = `<div class="cr-head"><h3>${esc(t.title)}</h3>${t.about ? `<small>${esc(t.about)}</small>` : ''}</div><p class="cr-bism">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</p>`;
+    html += (t.sections || []).map((s, i) => {
+      if (!s.ar) return `<div class="cr-sec only"><p class="cr-note">${esc(s.note)}</p></div>`;
+      const n = c[i] || 0, rep = s.repeat ? `<div class="cr-count"><button type="button" data-count="${i}" class="${n >= s.repeat ? 'full' : ''}">${fa(n)} / ${fa(s.repeat)}</button><small>${n >= s.repeat ? 'کامل شد' : 'با هر بار خواندن بزنید'}</small>${n ? `<button type="button" class="cr-reset" data-reset="${i}">از نو</button>` : ''}</div>` : '';
+      return `<div class="cr-sec">${s.note ? `<p class="cr-note">${esc(s.note)}</p>` : ''}<p class="cr-ar" lang="ar" dir="rtl">${esc(s.ar)}</p>${s.fa ? `<p class="cr-fa">${esc(s.fa)}</p>` : ''}${rep}</div>`;
+    }).join('');
+    if (m && state(m) === 'run') {
+      const done = (m.marked || []).includes(today);
+      html += `<div class="cr-end"><p>${esc(m.name)}، روز ${fa(dayNo(m))} از ${fa(m.days)} چله</p>${done ? '<div class="chl-done">✓ امروز ثبت شده است. قبول باشد.</div>' : `<button type="button" data-done="1">خواندم؛ ثبت برای امروز</button>`}<div class="chl-msg" id="crMsg"></div></div>`;
+    }
+    html += '<p class="cr-bism" style="font-size:20px">صَدَقَ اللّهُ الْعَلِيُّ الْعَظِيم</p>';
+    reader.querySelector('.cr-body').innerHTML = html;
+  }
+  async function onReaderClick(e) {
+    const b = e.target.closest('button'); if (!b) return;
+    const x = b.dataset.x;
+    if (x === 'close') return closeReader();
+    if (x === 'menu') return reader.querySelector('.cr-menu').classList.toggle('show');
+    if (x === 'smaller') prefs.size = Math.max(20, prefs.size - 2);
+    if (x === 'bigger') prefs.size = Math.min(44, prefs.size + 2);
+    if (x === 'tr-on' || x === 'tr-off') prefs.trans = x === 'tr-on';
+    if (x === 'day' || x === 'night') prefs.night = x === 'night';
+    if (x) return applyPrefs();
+    if (!current) return;
+    if (b.dataset.count || b.dataset.reset) {
+      const i = +(b.dataset.count ?? b.dataset.reset), c = counts(), s = current.text.sections[i];
+      c[i] = b.dataset.reset ? 0 : Math.min(s.repeat, (c[i] || 0) + 1);
+      write(countKey(), c);
+      if (navigator.vibrate && c[i] === s.repeat) navigator.vibrate(120);
+      const top = reader.scrollTop; renderReader(); reader.scrollTop = top; return;
+    }
+    if (b.dataset.done) {
+      b.disabled = true;
+      try { current.member = await mark(current.member.code, today, true) || current.member; const top = reader.scrollTop; renderReader(); reader.scrollTop = top; }
+      catch (err) { const m = reader.querySelector('#crMsg'); m.className = 'chl-msg chl-bad'; m.textContent = err.message; b.disabled = false; }
+    }
+  }
+  function closeReader(fromHistory) {
+    reader.classList.remove('show');
+    if (!sheet?.classList.contains('show')) document.body.classList.remove('chl-lock');
+    reader.querySelector('.cr-menu').classList.remove('show');
+    if (!fromHistory) { try { if (history.state?.chl) history.back(); } catch {} }
+  }
+
+  // ---------- مدیریت: زبانه «چله‌ها» ----------
+  let pane = null, adminTypes = [], adminRounds = [], texts = [], openRound = null, editKey = null, roundFilter = '';
+  const $a = s => pane.querySelector(s);
+  function buildAdmin() {
+    pane = document.getElementById('pane-chl'); if (!pane || pane.dataset.built) return;
+    pane.dataset.built = 1; pane.classList.add('chl-adm');
+    pane.innerHTML = `<div class="adm-card"><h3>منوی ثبت‌نام چله</h3>
+<p class="hint">این‌ها در منوی سه‌خط بالای سایت دیده می‌شوند. برای هر کدام تعیین کنید چند روز است و هر دوره چند نفر؛ «همیشه باز» یعنی هر کس از روز ثبت‌نام چله خودش را شروع می‌کند. در حالت دوره‌ای، با کامل شدن ظرفیت، دوره خودکار شروع و دوره بعد باز می‌شود.</p>
+<div id="chlTypes"><p class="hint">در حال دریافت…</p></div>
+<div class="chl-tools"><button type="button" id="chlTypeNew">+ افزودن چله تازه به منو</button></div><div class="adm-msg" id="chlTypeMsg"></div></div>
+<div class="adm-bar"><strong>دوره‌ها و شرکت‌کنندگان</strong><button type="button" class="reg-light" id="chlReload">تازه‌سازی</button></div>
+<div class="adm-card"><div class="chl-form"><div><label for="chlRoundFilter">نمایش</label><select id="chlRoundFilter"></select></div>
+<div><label class="adm-opt" style="margin-top:38px"><input type="checkbox" id="chlShowClosed"> بایگانی‌شده‌ها هم</label></div></div>
+<details style="margin-top:8px"><summary><b>باز کردن دوره تازه</b></summary>
+<p class="hint">معمولاً لازم نیست: با پر شدن هر دوره، دوره بعد خودکار باز می‌شود. اگر می‌خواهید دوره‌ای با تاریخ مشخص یا چند دوره هم‌زمان داشته باشید، از اینجا بسازید.</p>
+<div class="chl-form"><div><label for="chlNrType">چله</label><select id="chlNrType"></select></div><div></div>
+<label class="adm-opt full"><input type="checkbox" id="chlNrHasStart"> تاریخ شروع مشخص دارد (وگرنه با پر شدن ظرفیت شروع می‌شود)</label>
+<div class="full" id="chlNrStartBox" hidden><input id="chlNrStart"></div></div>
+<div class="chl-tools"><button type="button" id="chlNrBtn">باز کردن دوره</button></div></details><div class="adm-msg" id="chlAdminMsg"></div></div>
+<div id="chlAdminRounds"><p class="hint">در حال دریافت…</p></div>
+<div class="adm-card chl-edit"><h3>متن‌ها</h3>
+<p class="hint">سه متن آماده (زیارت عاشورا، حدیث کسا، آل یاسین) در سایت هست. متن و ترجمه را با یک مفاتیح چاپی مقابله کنید و اگر لازم بود همین‌جا اصلاح کنید. متن تازه (مثلاً دعای توسل) را هم می‌توانید اضافه کنید و بعد در «منوی ثبت‌نام» برای آن چله بسازید.</p>
+<div class="row"><select id="chlTextPick"></select><button type="button" class="reg-light" id="chlTextLoad">ویرایش</button><button type="button" class="reg-light" id="chlTextNew">متن تازه</button></div>
+<div id="chlTextForm" hidden><label for="chlTextTitle">عنوان</label><input id="chlTextTitle" maxlength="80">
+<label for="chlTextAbout">منبع یا توضیح کوتاه</label><input id="chlTextAbout" maxlength="500">
+<label for="chlTextBody">متن</label><p class="hint">هر بند را با یک خط خالی جدا کنید. خط اول هر بند متن عربی است و خط بعد ترجمه فارسی. خطی که با ! شروع شود توضیح است (مثلاً «! سپس صد مرتبه بگویید:») و خط «# ۱۰۰» یعنی آن بند ۱۰۰ بار تکرار می‌شود و شمارنده دارد.</p>
+<textarea id="chlTextBody"></textarea>
+<div class="reg-tools"><button type="button" id="chlTextSave">ذخیره متن</button><button type="button" class="reg-light" id="chlTextPreview">پیش‌نمایش</button><button type="button" class="reg-danger" id="chlTextReset" hidden>بازگرداندن متن اصلی</button></div></div>
+<div class="adm-msg" id="chlTextMsg"></div></div>`;
+    JDate($a('#chlNrStart')); $a('#chlNrStart').value = J.addDays(J.todayIso(), 1);
+    $a('#chlNrHasStart').onchange = e => { $a('#chlNrStartBox').hidden = !e.target.checked; };
+    $a('#chlNrBtn').onclick = newRound;
+    $a('#chlNrType').onchange = e => { const t = adminTypes.find(x => x.key === e.target.value), need = !t?.capacity; $a('#chlNrHasStart').checked = need; $a('#chlNrStartBox').hidden = !$a('#chlNrHasStart').checked; };
+    $a('#chlReload').onclick = loadAdmin;
+    $a('#chlRoundFilter').onchange = e => { roundFilter = e.target.value; renderRounds(); };
+    $a('#chlShowClosed').onchange = renderRounds;
+    $a('#chlTypeNew').onclick = () => { editKey = '__new'; renderTypes(); };
+    $a('#chlTextLoad').onclick = () => editText($a('#chlTextPick').value);
+    $a('#chlTextNew').onclick = () => editText(null);
+    $a('#chlTextSave').onclick = saveText;
+    $a('#chlTextPreview').onclick = () => { const t = formText(); if (!t.sections.length) return tmsg('متن خالی است.'); textCache.__preview = t; openReader('__preview'); };
+    $a('#chlTextReset').onclick = resetText;
+    pane.addEventListener('click', onAdminClick);
+  }
+  const msgTo = (id, t, ok) => { const m = $a('#' + id); if (!m) return; m.className = 'adm-msg ' + (ok ? 'adm-ok' : 'adm-bad'); m.textContent = t; };
+  const amsg = (t, ok) => msgTo('chlAdminMsg', t, ok), tmsg = (t, ok) => msgTo('chlTextMsg', t, ok), ymsg = (t, ok) => msgTo('chlTypeMsg', t, ok);
+
+  async function loadAdmin() {
+    buildAdmin(); if (!pane) return;
+    texts = textsList = await allTexts(true);
+    const opts = texts.map(t => `<option value="${esc(t.key)}">${esc(t.title)}${t.edited ? ' (ویرایش‌شده)' : ''}</option>`).join('');
+    const keepPick = $a('#chlTextPick').value; $a('#chlTextPick').innerHTML = opts; if (keepPick) $a('#chlTextPick').value = keepPick;
+    try {
+      [adminTypes, adminRounds] = await Promise.all([
+        api('chelleh_types?select=*&order=sort,created_at', { auth: true }),
+        api('chelleh_rounds?select=*,chelleh_members(count)&order=id.desc', { auth: true })
+      ]);
+    } catch (e) {
+      $a('#chlTypes').innerHTML = `<p class="adm-bad">${esc(e.message)}</p>`; $a('#chlAdminRounds').innerHTML = ''; return;
+    }
+    const tOpts = adminTypes.map(t => `<option value="${esc(t.key)}">${esc(t.title)}</option>`).join('');
+    $a('#chlNrType').innerHTML = tOpts; $a('#chlNrType').onchange?.({ target: $a('#chlNrType') });
+    $a('#chlRoundFilter').innerHTML = '<option value="">همه چله‌ها</option>' + tOpts + (adminRounds.some(r => !r.type_key) ? '<option value="-">بدون نوع (قدیمی)</option>' : '');
+    $a('#chlRoundFilter').value = roundFilter;
+    renderTypes(); await renderRounds();
+  }
+
+  // نوع‌ها
+  function typeSummary(t) {
+    const cap = t.capacity ? `هر دوره ${fa(t.capacity)} نفر، شروع ${startWord(t.start_after_days)} پس از تکمیل` : `همیشه باز، شروع ${t.start_after_days ? startWord(t.start_after_days) : 'همان روز ثبت‌نام'}`;
+    return `${fa(t.days)} روز، ${cap}${t.times_per_day > 1 ? `، روزی ${fa(t.times_per_day)} بار` : ''}`;
+  }
+  function renderTypes() {
+    const box = $a('#chlTypes');
+    const list = adminTypes.map((t, i) => editKey === t.key ? typeForm(t) : `<div class="chl-card${t.visible ? '' : ' chl-off'}"><h3>${esc(t.title)}${t.visible ? '' : ' (پنهان)'}</h3>
+<p class="hint" style="margin:0">${esc(typeSummary(t))}<br>متن: ${esc(textTitle(t.text_key, texts))}</p>
+<div class="chl-tools"><button type="button" data-tedit="${esc(t.key)}">ویرایش</button><button type="button" class="reg-light" data-tlink="${esc(t.key)}">کپی لینک ثبت‌نام</button><button type="button" class="reg-light chl-arr" data-tup="${i}" ${i ? '' : 'disabled'} aria-label="بالاتر">▲</button><button type="button" class="reg-light chl-arr" data-tdown="${i}" ${i < adminTypes.length - 1 ? '' : 'disabled'} aria-label="پایین‌تر">▼</button></div></div>`);
+    if (editKey === '__new') list.push(typeForm(null));
+    box.innerHTML = list.join('') || '<p class="hint">هنوز چله‌ای در منو نیست. «افزودن چله تازه» را بزنید.</p>';
+    const f = box.querySelector('.chl-tform'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function typeForm(t) {
+    const v = t || { key: '', title: '', text_key: texts[0]?.key || 'ashura', description: '', days: 40, capacity: null, start_after_days: 0, times_per_day: 1, auto_next: true, visible: true };
+    const opts = texts.map(x => `<option value="${esc(x.key)}"${x.key === v.text_key ? ' selected' : ''}>${esc(x.title)}</option>`).join('');
+    return `<div class="chl-card chl-tform"><h3>${t ? 'ویرایش ' + esc(t.title) : 'چله تازه در منو'}</h3><div class="chl-form">
+<div class="full"><label for="ctTitle">نام در منو</label><input id="ctTitle" maxlength="80" value="${esc(v.title)}" placeholder="مثلاً چله زیارت عاشورا"></div>
+<div><label for="ctText">متن</label><select id="ctText">${opts}</select></div>
+<div><label for="ctDays">مدت (روز)</label><input id="ctDays" type="number" min="1" max="120" inputmode="numeric" value="${v.days}"><div class="chl-chips">${[40, 14, 7].map(n => `<button type="button" data-set="ctDays" data-v="${n}">${fa(n)}</button>`).join('')}</div></div>
+<div class="full"><label>تعداد نفرات هر دوره</label>
+<label class="adm-opt"><input type="radio" name="ctMode" value="open"${v.capacity ? '' : ' checked'}> <span>بدون محدودیت، همیشه باز (هر کس از روز ثبت‌نام خودش شروع می‌کند)</span></label>
+<label class="adm-opt"><input type="radio" name="ctMode" value="cap"${v.capacity ? ' checked' : ''}> <span>دوره‌ای با ظرفیت مشخص؛ با تکمیل ظرفیت، دوره خودکار شروع می‌شود</span></label>
+<div id="ctCapBox"${v.capacity ? '' : ' hidden'}><input id="ctCap" type="number" min="2" max="1000" inputmode="numeric" value="${v.capacity || 40}"><div class="chl-chips">${[14, 30, 40, 72, 110, 120].map(n => `<button type="button" data-set="ctCap" data-v="${n}">${fa(n)} نفر</button>`).join('')}</div>
+<label class="adm-opt"><input type="checkbox" id="ctNext"${v.auto_next ? ' checked' : ''}> <span>با پر شدن هر دوره، دوره بعد خودکار باز شود</span></label></div></div>
+<div><label for="ctStart">شروع</label><select id="ctStart">${[0, 1, 2, 3, 7].map(n => `<option value="${n}"${n === v.start_after_days ? ' selected' : ''}>${n ? startWord(n) : 'همان روز'}</option>`).join('')}${[0, 1, 2, 3, 7].includes(v.start_after_days) ? '' : `<option value="${v.start_after_days}" selected>${startWord(v.start_after_days)}</option>`}</select><p class="hint" style="margin:2px 0 0">پس از ثبت‌نام (همیشه باز) یا تکمیل ظرفیت (دوره‌ای)</p></div>
+<div><label for="ctTimes">چند بار در روز</label><input id="ctTimes" type="number" min="1" max="100" inputmode="numeric" value="${v.times_per_day}"></div>
+<div class="full"><label for="ctDesc">نیت یا توضیح (در صفحه ثبت‌نام دیده می‌شود)</label><textarea id="ctDesc" maxlength="1000" placeholder="مثلاً: به نیت ظهور امام زمان و شفای بیماران">${esc(v.description)}</textarea></div>
+<label class="adm-opt full"><input type="checkbox" id="ctVisible"${v.visible ? ' checked' : ''}> <span>در منوی سایت نمایش داده شود</span></label></div>
+${t ? '<p class="hint">تغییرها روی دوره‌هایی که هنوز شروع نشده‌اند و ثبت‌نام‌های تازه اعمال می‌شود؛ دوره‌های در جریان همان‌طور ادامه می‌دهند.</p>' : ''}
+<div class="chl-tools"><button type="button" data-tsave="${esc(v.key)}">ذخیره</button><button type="button" class="reg-light" data-tcancel>انصراف</button>${t ? `<button type="button" class="reg-danger" data-tdel="${esc(t.key)}">حذف از منو</button>` : ''}</div><div class="adm-msg" id="ctMsg"></div></div>`;
+  }
+  async function saveType(key) {
+    const g = id => $a('#' + id), num = (id, d) => Math.round(+norm(g(id).value) || d);
+    const title = g('ctTitle').value.trim(), cap = document.querySelector('[name=ctMode]:checked')?.value === 'cap';
+    const body = { title, text_key: g('ctText').value, days: num('ctDays', 40), capacity: cap ? num('ctCap', 40) : null, start_after_days: +g('ctStart').value,
+      times_per_day: num('ctTimes', 1), auto_next: cap ? g('ctNext').checked : true, description: g('ctDesc').value.trim(), visible: g('ctVisible').checked };
+    const bad = !title ? 'نام را بنویسید.' : body.days < 1 || body.days > 120 ? 'مدت باید بین ۱ تا ۱۲۰ روز باشد.' : cap && (body.capacity < 2 || body.capacity > 1000) ? 'ظرفیت باید بین ۲ تا ۱۰۰۰ نفر باشد.' : body.times_per_day < 1 || body.times_per_day > 100 ? 'تعداد بار در روز باید بین ۱ تا ۱۰۰ باشد.' : '';
+    if (bad) return msgTo('ctMsg', bad);
+    try {
+      if (key) await api(`chelleh_types?key=eq.${encodeURIComponent(key)}`, { method: 'PATCH', body, auth: true, prefer: 'return=minimal' });
+      else { key = 'c' + Date.now().toString(36); await api('chelleh_types', { method: 'POST', body: { key, sort: (adminTypes.at(-1)?.sort || 0) + 1, ...body }, auth: true, prefer: 'return=minimal' }); }
+      await rpc('chl_admin_sync_type', { p_type: key }, true);
+      editKey = null; await loadAdmin(); refresh(); ymsg('ذخیره شد و در منوی سایت اعمال شد.', true);
+    } catch (e) { msgTo('ctMsg', e.message); }
+  }
+
+  // دوره‌ها
+  function roundState(r) {
+    const count = r.chelleh_members?.[0]?.count ?? 0;
+    if (r.status === 'closed') return ['بایگانی', count];
+    if (r.personal) return [r.joinable ? 'همیشه باز (شروع هر نفر جداست)' : 'همیشه باز، ثبت‌نام تازه بسته', count];
+    if (!r.start_date) return [`در حال ثبت‌نام: ${fa(count)}${r.capacity ? ' از ' + fa(r.capacity) : ''} نفر`, count];
+    const n = isoDiff(today || J.todayIso(), r.start_date) + 1;
+    return [n < 1 ? `شروع ${dateFa(r.start_date)}` : n > r.days ? 'تمام شده' : `روز ${fa(n)} از ${fa(r.days)}`, count];
+  }
+  function renderRounds() {
+    const box = $a('#chlAdminRounds'), all = $a('#chlShowClosed').checked;
+    const list = adminRounds.filter(r => (all || r.status === 'open') && (!roundFilter || (roundFilter === '-' ? !r.type_key : r.type_key === roundFilter)));
+    box.innerHTML = list.length ? list.map(roundCard).join('') : '<p class="hint" style="color:#f4ead8">دوره‌ای نیست. اولین ثبت‌نام از منوی سایت، دوره را خودکار می‌سازد.</p>';
+    if (openRound && list.some(r => r.id === openRound)) return showMembers(openRound);
+  }
+  function roundCard(r) {
+    const [st, count] = roundState(r), end = r.start_date ? isoAdd(r.start_date, r.days - 1) : null;
+    const waiting = !r.personal && !r.start_date && r.status === 'open';
+    return `<div class="chl-card${r.status === 'closed' ? ' chl-off' : ''}" id="chlA${r.id}"><h3>${esc(r.title)}${r.personal ? '' : ` · دوره ${fa(r.number)}`}</h3><div class="chl-meta"><span class="chl-tag${waiting ? ' wait' : ''}">${esc(st)}</span></div>
+${r.start_date && !r.personal ? `<p class="hint" style="margin:4px 0 0">از ${esc(dateFa(r.start_date))} تا ${esc(dateFa(end))}${r.joinable ? '' : '، ثبت‌نام بسته'}</p>` : ''}
+<div class="chl-tools"><button type="button" data-members="${r.id}">شرکت‌کنندگان</button>${waiting && count ? `<button type="button" class="reg-light" data-startnow="${r.id}">شروع از امروز</button>` : ''}${!r.personal && r.status === 'open' ? `<button type="button" class="reg-light" data-joinable="${r.id}">${r.joinable ? 'بستن ثبت‌نام' : 'باز کردن ثبت‌نام'}</button>` : ''}<button type="button" class="reg-light" data-status="${r.id}">${r.status === 'open' ? 'بایگانی' : 'بازگرداندن'}</button><button type="button" class="reg-danger" data-delround="${r.id}">حذف</button></div>
+<div id="chlMem${r.id}"></div></div>`;
+  }
+  async function newRound() {
+    const key = $a('#chlNrType').value, start = $a('#chlNrHasStart').checked ? $a('#chlNrStart').value : null;
+    if (!key) return amsg('ابتدا در «منوی ثبت‌نام» یک چله بسازید.');
+    $a('#chlNrBtn').disabled = true;
+    try { await rpc('chl_admin_new_round', { p_type: key, p_start: start }, true); amsg('دوره تازه باز شد.', true); await loadAdmin(); refresh(); }
+    catch (e) { amsg(e.message); }
+    $a('#chlNrBtn').disabled = false;
+  }
+
+  async function showMembers(id) {
+    openRound = id;
+    const box = $a('#chlMem' + id); if (!box) return;
+    const r = adminRounds.find(x => x.id === id), t = today || J.todayIso();
+    box.innerHTML = '<p class="hint">در حال دریافت…</p>';
+    try {
+      const list = await api(`chelleh_members?round_id=eq.${id}&select=id,name,code,email,created_at,start_date,chelleh_marks(day)&order=created_at`, { auth: true });
+      const mails = [...new Set(list.map(m => m.email).filter(Boolean))];
+      const rows = list.map((m, i) => {
+        const s = m.start_date || r.start_date, days = new Set(m.chelleh_marks.map(x => x.day));
+        const n = s ? Math.min(Math.max(isoDiff(t, s) + 1, 0), r.days) : 0;
+        const mini = s ? `<span class="chl-mini">${Array.from({ length: r.days }, (_, k) => `<i class="${days.has(isoAdd(s, k)) ? 'd' : ''}"></i>`).join('')}</span>` : '';
+        const info = !s ? 'منتظر شروع دوره' : n < 1 ? `شروع ${dateFa(s)}` : `${fa(days.size)} روز از ${fa(n)}`;
+        return `<div><small>${fa(i + 1)}</small><span>${esc(m.name)} ${days.has(t) ? '<span class="chl-mark" title="امروز خوانده">✓</span>' : ''}<br><small>${info}، کد ${fa(m.code)}</small>${m.email ? `<br><small dir="ltr">${esc(m.email)}</small>` : ''} ${mini}</span><button type="button" class="reg-danger" data-delmem="${m.id}" data-name="${esc(m.name)}">حذف</button></div>`;
+      }).join('');
+      const doneToday = list.filter(m => m.chelleh_marks.some(x => x.day === t)).length;
+      box.innerHTML = `<p style="margin:10px 0 0"><b>${fa(list.length)} نفر${r.capacity ? ` از ${fa(r.capacity)}` : ''}؛ امروز ${fa(doneToday)} نفر خوانده‌اند.</b></p>
+<div class="chl-members">${rows || '<p class="hint" style="padding:6px 8px">هنوز کسی ثبت‌نام نکرده است.</p>'}</div>
+${r.status === 'open' ? `<div class="row" style="margin-top:8px"><input id="chlAdd${id}" maxlength="60" placeholder="افزودن نام (مثلاً کسی که در پیام‌رسان اعلام کرده)"><button type="button" data-addmem="${id}">افزودن</button></div>` : ''}
+<div class="chl-tools"><button type="button" class="reg-light" data-copy="${id}">کپی گزارش امروز برای گروه</button></div>
+<label for="chlNews${id}" style="margin-top:12px">خبر دوره</label><p class="hint" style="margin:0">روی کارت همه شرکت‌کنندگان این دوره در سایت دیده می‌شود (مثلاً «چله از شنبه شروع می‌شود»). برای پاک کردن، خالی ذخیره کنید.</p>
+<textarea id="chlNews${id}" maxlength="1000" style="min-height:70px">${esc(r.news || '')}</textarea>
+<div class="chl-tools"><button type="button" data-news="${id}">ذخیره خبر</button>${mails.length ? `<a class="reg-light chl-mailto" href="mailto:?bcc=${encodeURIComponent(mails.join(','))}&subject=${encodeURIComponent(r.title)}&body=${encodeURIComponent(r.news || '')}">ایمیل به ${fa(mails.length)} نفر</a><button type="button" class="reg-light" data-mails="${id}">کپی ایمیل‌ها</button>` : ''}</div>
+<p class="hint" style="margin:4px 0 0">${mails.length ? `${fa(mails.length)} نفر ایمیل داده‌اند؛ «ایمیل به همه» برنامه ایمیل شما را با نشانی‌ها (مخفی از هم) و متن خبر باز می‌کند.` : 'هنوز کسی در این دوره ایمیل نداده است.'}</p><div class="adm-msg" id="chlMemMsg${id}"></div>`;
+      box._mails = mails;
+      box._list = list;
+    } catch (e) { box.innerHTML = `<p class="adm-bad">${esc(e.message)}</p>`; }
+  }
+  function reportText(r, list) {
+    const t = today || J.todayIso(), done = list.filter(m => m.chelleh_marks.some(x => x.day === t)), left = list.filter(m => !done.includes(m));
+    const n = r.start_date ? isoDiff(t, r.start_date) + 1 : 0;
+    const head = r.personal || !r.start_date ? `${r.title}\n${J.label(t)}` : `${r.title}، دوره ${fa(r.number)}\n${J.label(t)}، ${n < 1 ? `شروع از ${dateFa(r.start_date)}` : `روز ${fa(Math.min(n, r.days))} از ${fa(r.days)}`}`;
+    return `${head}\n\n✅ خوانده‌اند (${fa(done.length)} نفر):\n${done.map(m => '• ' + m.name).join('\n') || '—'}\n\n⏳ هنوز ثبت نکرده‌اند (${fa(left.length)} نفر):\n${left.map(m => '• ' + m.name).join('\n') || '—'}\n\nثبت روزانه: ${siteUrl()}`;
+  }
+  async function copy(text, msgId) {
+    try { await navigator.clipboard.writeText(text); msgTo(msgId, 'کپی شد؛ در گروه بفرستید.', true); }
+    catch { prompt('این متن را کپی کنید:', text); }
+  }
+
+  async function onAdminClick(e) {
+    const b = e.target.closest('button'); if (!b) return;
+    const d = b.dataset;
+    try {
+      if (d.set) { $a('#' + d.set).value = d.v; return; }
+      if (d.tedit) { editKey = d.tedit; renderTypes(); return; }
+      if (b.hasAttribute('data-tcancel')) { editKey = null; renderTypes(); return; }
+      if (d.tsave !== undefined) return saveType(d.tsave || null);
+      if (d.tlink) {
+        const t = adminTypes.find(x => x.key === d.tlink);
+        return copy(`برای ثبت‌نام در ${t.title} این لینک را باز کنید:\n${regLink(t.key)}`, 'chlTypeMsg');
+      }
+      if (d.tup || d.tdown) {
+        const i = +(d.tup ?? d.tdown), j = d.tup ? i - 1 : i + 1, a = adminTypes[i], c = adminTypes[j];
+        await Promise.all([[a, j], [c, i]].map(([t, s]) => api(`chelleh_types?key=eq.${encodeURIComponent(t.key)}`, { method: 'PATCH', body: { sort: s }, auth: true, prefer: 'return=minimal' })));
+        await loadAdmin(); refresh(); return;
+      }
+      if (d.tdel) {
+        const t = adminTypes.find(x => x.key === d.tdel);
+        if (!confirm(`«${t.title}» از منو حذف شود؟ دوره‌ها و شرکت‌کنندگانش می‌مانند و در فهرست دوره‌ها دیده می‌شوند. (برای پنهان کردن موقت، تیک «نمایش در منو» را بردارید.)`)) return;
+        await api(`chelleh_types?key=eq.${encodeURIComponent(t.key)}`, { method: 'DELETE', auth: true, prefer: 'return=minimal' });
+        editKey = null; await loadAdmin(); refresh(); return;
+      }
+      const r = adminRounds.find(x => x.id === +(d.members || d.startnow || d.joinable || d.status || d.delround || d.addmem || d.copy || d.news || d.mails));
+      if (d.news) { const v = $a('#chlNews' + r.id).value.trim(); await api(`chelleh_rounds?id=eq.${r.id}`, { method: 'PATCH', body: { news: v }, auth: true, prefer: 'return=minimal' }); await loadAdmin(); msgTo('chlMemMsg' + r.id, v ? 'خبر ذخیره شد و روی کارت شرکت‌کنندگان دیده می‌شود.' : 'خبر پاک شد.', true); return; }
+      if (d.mails) return copy(($a('#chlMem' + r.id)._mails || []).join(', '), 'chlMemMsg' + r.id);
+      if (d.members) { const box = $a('#chlMem' + r.id); if (openRound === r.id && box.innerHTML) { openRound = null; box.innerHTML = ''; } else showMembers(r.id); return; }
+      if (d.startnow) {
+        if (!confirm(`«${r.title}، دوره ${fa(r.number)}» از امروز شروع شود؟ ثبت‌نام این دوره بسته می‌شود.`)) return;
+        await rpc('chl_admin_start', { p_round: r.id }, true); await loadAdmin(); refresh(); return;
+      }
+      if (d.joinable) { await api(`chelleh_rounds?id=eq.${r.id}`, { method: 'PATCH', body: { joinable: !r.joinable }, auth: true, prefer: 'return=minimal' }); await loadAdmin(); refresh(); return; }
+      if (d.status) { await api(`chelleh_rounds?id=eq.${r.id}`, { method: 'PATCH', body: { status: r.status === 'open' ? 'closed' : 'open' }, auth: true, prefer: 'return=minimal' }); await loadAdmin(); refresh(); return; }
+      if (d.delround) {
+        if (!confirm(`«${r.title}${r.personal ? '' : '، دوره ' + fa(r.number)}» با همه شرکت‌کنندگان و روزهای ثبت‌شده‌اش حذف شود؟ این کار برگشت‌پذیر نیست. (برای پنهان کردن، «بایگانی» را بزنید.)`)) return;
+        await api(`chelleh_rounds?id=eq.${r.id}`, { method: 'DELETE', auth: true, prefer: 'return=minimal' }); if (openRound === r.id) openRound = null; await loadAdmin(); refresh(); return;
+      }
+      if (d.addmem) {
+        const input = $a('#chlAdd' + r.id), name = input.value.trim().replace(/\s+/g, ' ');
+        if (name.length < 2) return msgTo('chlMemMsg' + r.id, 'نام را بنویسید.');
+        await rpc('chl_admin_add', { p_round: r.id, p_name: name }, true);
+        input.value = ''; await loadAdmin(); msgTo('chlMemMsg' + r.id, `«${name}» اضافه شد.`, true); return;
+      }
+      if (d.delmem) {
+        if (!confirm(`«${d.name}» از چله حذف شود؟`)) return;
+        await api(`chelleh_members?id=eq.${d.delmem}`, { method: 'DELETE', auth: true, prefer: 'return=minimal' }); await loadAdmin(); return;
+      }
+      if (d.copy) return copy(reportText(r, $a('#chlMem' + r.id)._list || []), 'chlMemMsg' + r.id);
+    } catch (err) {
+      const id = d.addmem || d.copy || d.news || d.mails ? 'chlMemMsg' + (d.addmem || d.copy || d.news || d.mails) : d.tup || d.tdown || d.tdel ? 'chlTypeMsg' : 'chlAdminMsg';
+      msgTo(id, err.message);
+    }
+  }
+  document.addEventListener('change', e => { if (e.target.name === 'ctMode') { const box = pane && $a('#ctCapBox'); if (box) box.hidden = e.target.value !== 'cap'; } });
+
+  // ویرایش متن
+  let editing = null;
+  async function editText(key) {
+    $a('#chlTextForm').hidden = false; tmsg('');
+    if (!key) {
+      editing = { key: 'custom-' + Date.now().toString(36), builtin: false };
+      $a('#chlTextTitle').value = ''; $a('#chlTextAbout').value = ''; $a('#chlTextBody').value = '';
+      $a('#chlTextReset').hidden = true; $a('#chlTextTitle').focus(); return;
+    }
+    const info = texts.find(t => t.key === key) || { key };
+    delete textCache[key];
+    try {
+      const t = await getText(key);
+      editing = { key, builtin: !!info.builtin };
+      $a('#chlTextTitle').value = t.title || ''; $a('#chlTextAbout').value = t.about || ''; $a('#chlTextBody').value = toBlocks(t.sections || []);
+      $a('#chlTextReset').hidden = !info.edited;
+      tmsg(info.edited ? 'این متن در پایگاه داده ویرایش شده است.' : (info.builtin ? 'متن آماده سایت؛ با ذخیره، نسخه ویرایش‌شده جایگزین آن می‌شود.' : ''), true);
+    } catch (e) { tmsg(e.message); }
+  }
+  function formText() { return { title: $a('#chlTextTitle').value.trim(), about: $a('#chlTextAbout').value.trim(), sections: fromBlocks($a('#chlTextBody').value) }; }
+  async function saveText() {
+    if (!editing) return;
+    const t = formText();
+    if (!t.title) return tmsg('عنوان متن را بنویسید.');
+    if (!t.sections.length) return tmsg('متن خالی است.');
+    try {
+      await api('chelleh_texts', { method: 'POST', body: { key: editing.key, ...t, updated_at: new Date().toISOString() }, auth: true, prefer: 'resolution=merge-duplicates,return=minimal' });
+      delete textCache[editing.key]; await loadAdmin(); $a('#chlTextPick').value = editing.key;
+      $a('#chlTextReset').hidden = !editing.builtin;
+      tmsg(`ذخیره شد (${fa(t.sections.length)} بند).`, true);
+    } catch (e) { tmsg(e.message); }
+  }
+  async function resetText() {
+    if (!editing?.builtin || !confirm('ویرایش‌ها پاک شود و متن آماده سایت برگردد؟')) return;
+    try {
+      await api(`chelleh_texts?key=eq.${encodeURIComponent(editing.key)}`, { method: 'DELETE', auth: true, prefer: 'return=minimal' });
+      delete textCache[editing.key]; await loadAdmin(); await editText(editing.key); tmsg('متن اصلی برگشت.', true);
+    } catch (e) { tmsg(e.message); }
+  }
+
+  // ---------- راه‌اندازی ----------
+  document.addEventListener('admin:tab', e => { if (e.detail === 'chl') loadAdmin(); });
+  window.addEventListener('hashchange', () => renderPanel());
+  refresh().then(() => {
+    // لینک مستقیم ثبت‌نام: ?chelleh=<کلید>
+    const key = new URLSearchParams(location.search).get('chelleh');
+    if (key) {
+      // پارامتر از نشانی برداشته می‌شود تا با تازه‌سازی صفحه، صفحه ثبت‌نام دوباره باز نشود.
+      try { const u = new URL(location.href); u.searchParams.delete('chelleh'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch {}
+      openSheet(key);
+    }
+    if (document.getElementById('pane-chl') && !document.getElementById('pane-chl').hidden) loadAdmin();
+  });
+  // روز چله با اذان صبح عوض می‌شود؛ وقتی کاربر به صفحه برمی‌گردد، وضعیت تازه می‌شود.
+  let lastShow = Date.now();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - lastShow > 5 * 60000) refresh(); if (document.visibilityState === 'hidden') lastShow = Date.now(); });
+})();
