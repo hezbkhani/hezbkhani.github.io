@@ -954,7 +954,9 @@ ${r.status === 'open' ? `<div class="row" style="margin-top:8px"><input id="chlA
     const t = today || J.todayIso(), done = list.filter(m => m.chelleh_marks.some(x => x.day === t)), left = list.filter(m => !done.includes(m));
     const n = r.start_date ? isoDiff(t, r.start_date) + 1 : 0;
     const head = r.personal || !r.start_date ? `${r.title}\n${J.label(t)}` : `${r.title}، دوره ${fa(r.number)}\n${J.label(t)}، ${n < 1 ? `شروع از ${dateFa(r.start_date)}` : `روز ${fa(Math.min(n, r.days))} از ${fa(r.days)}`}`;
-    return `${head}\n\n✅ خوانده‌اند (${fa(done.length)} نفر):\n${done.map(m => '• ' + m.name).join('\n') || '—'}\n\n⏳ هنوز ثبت نکرده‌اند (${fa(left.length)} نفر):\n${left.map(m => '• ' + m.name).join('\n') || '—'}\n\nثبت روزانه: ${siteUrl()}`;
+    // جزءخوانی: جزء امروز هر نفر کنار نامش (نفر k در روز n جزء k+n-1).
+    const who = m => r.kind === 'juz' && n >= 1 ? `• ${m.name} (جزء ${fa(((list.indexOf(m)) + (n - 1)) % 30 + 1)})` : '• ' + m.name;
+    return `${head}\n\n✅ خوانده‌اند (${fa(done.length)} نفر):\n${done.map(who).join('\n') || '—'}\n\n⏳ هنوز ثبت نکرده‌اند (${fa(left.length)} نفر):\n${left.map(who).join('\n') || '—'}\n\nثبت روزانه: ${siteUrl()}`;
   }
   async function copy(text, msgId) {
     try { await navigator.clipboard.writeText(text); msgTo(msgId, 'کپی شد؛ در گروه بفرستید.', true); }
