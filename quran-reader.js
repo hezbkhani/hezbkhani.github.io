@@ -178,8 +178,10 @@ body.qr-lock{overflow:hidden}
       }).join('');
       return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small></div>${bism}<div class="qr-seg">${ayahs}</div>`;
     }).join('');
-    $('qrSub').textContent = `${typeof hizbLabel === 'function' && hizbLabel(current.index) ? `حزب ${toFa(current.index + 1)} · ` : ''}${toFa(count)} آیه`;
-    body.innerHTML = html + `<div class="qr-end"><p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>
+    $('qrSub').textContent = current.range ? `${current.sub ? current.sub + ' · ' : ''}${toFa(count)} آیه` : `${typeof hizbLabel === 'function' && hizbLabel(current.index) ? `حزب ${toFa(current.index + 1)} · ` : ''}${toFa(count)} آیه`;
+    const end = current.range ? `<p>${esc(current.endText || 'پایان. قبول باشد.')}</p>${current.onEnd ? `<button type="button" data-a="rangeEnd">${esc(current.endButton || 'خواندم')}</button>` : ''}`
+      : '<p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>';
+    body.innerHTML = html + `<div class="qr-end">${end}
 <p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net)<span class="qr-xi"> · صوت: everyayah.com و alquran.cloud</span></p></div>`;
     items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
     el.scrollTop = 0;
@@ -194,9 +196,15 @@ body.qr-lock{overflow:hidden}
     if (t === 'makarem') list = items.map(it => it.makarem ?? (it.makarem = it.e.querySelector('.qr-fa').lastChild.textContent));
     else {
       try {
+        if (current.range) list = (await Promise.all(current.parts.map(async pt => {
+          const r = await fetch(`quran/t/${t}/${pad3(pt.index + 1)}.json`); if (!r.ok) throw Error(r.status);
+          return (await r.json()).slice(pt.off, pt.off + pt.take);
+        }))).flat();
+        else {
         const r = await fetch(`quran/t/${t}/${pad3(current.index + 1)}.json`);
         if (!r.ok) throw Error(r.status);
         list = await r.json();
+        }
         items.forEach(it => { if (it.makarem == null) it.makarem = it.e.querySelector('.qr-fa').lastChild.textContent; });
       } catch { return; }
     }
@@ -205,8 +213,36 @@ body.qr-lock{overflow:hidden}
     const src = $('qrTrSrc'); if (src) src.textContent = trName();
   }
 
+  // بازه‌ای دلخواه از آیه‌ها (برای جزء، صفحه یا یک سوره)، با اندیس سراسری آیه‌ها (۰ تا ۶۲۳۵) از quran/index.json.
+  let qIndex = null;
+  const getIndex = async () => qIndex || (qIndex = await fetch('quran/index.json').then(r => { if (!r.ok) throw Error(r.status); return r.json(); }));
+  async function loadRange() {
+    const ix = await getIndex(), { from, to } = current.range, P = ix.portion;
+    const parts = [];
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i], b = i + 1 < P.length ? P[i + 1] : ix.total;
+      if (a < to && b > from) parts.push({ index: i, off: Math.max(0, from - a), take: Math.min(b, to) - Math.max(a, from) });
+    }
+    const files = await Promise.all(parts.map(pt => fetch(`quran/p/${pad3(pt.index + 1)}.json`).then(r => { if (!r.ok) throw Error(r.status); return r.json(); })));
+    const segs = [];
+    files.forEach((d, k) => {
+      const flat = d.segments.flatMap(seg => seg.ayahs.map((ay, j) => ({ seg, n: seg.from + j, ay })));
+      flat.slice(parts[k].off, parts[k].off + parts[k].take).forEach(x => {
+        let last = segs[segs.length - 1];
+        if (!last || last.s !== x.seg.s) segs.push(last = { s: x.seg.s, fa: x.seg.fa, ar: x.seg.ar, n: x.seg.n, from: x.n, ayahs: [] });
+        last.ayahs.push(x.ay);
+      });
+    });
+    current.parts = parts;
+    render({ segments: segs });
+  }
+
   async function load() {
     body.innerHTML = '<div class="qr-state">در حال بارگذاری متن…</div>';
+    if (current.range) {
+      try { await loadRange(); } catch { body.innerHTML = '<div class="qr-state">بارگذاری متن انجام نشد.<br><button type="button" data-a="retry">تلاش دوباره</button></div>'; }
+      return;
+    }
     try {
       const r = await fetch(`quran/p/${String(current.index + 1).padStart(3, '0')}.json`);
       if (!r.ok) throw Error(r.status);
@@ -269,6 +305,7 @@ body.qr-lock{overflow:hidden}
     if (a === 'close') return close();
     if (a === 'menu') { const s = menu.classList.toggle('show'); b.setAttribute('aria-expanded', s); return; }
     if (a === 'retry') return load();
+    if (a === 'rangeEnd') { const f = current.onEnd; return close(false, f); }
     if (a === 'apply') {
       // تغییرات همان لحظه اعمال می‌شوند؛ این دکمه منو را می‌بندد و اگر صوت در حال پخش است، آیه فعلی را با تنظیمات جدید از نو پخش می‌کند.
       menu.classList.remove('show');
@@ -393,6 +430,13 @@ body.qr-lock{overflow:hidden}
     items.forEach(it => it.e.classList.remove('playing'));
     if ($('qrPlayer')) { setPlayBtn(); setNow('پخش صوت', 'از اولین آیه، یا روی شماره یک آیه بزنید'); }
   }
+
+  // برای بخش‌های دیگر سایت (چله‌ها): باز کردن بازه‌ای از آیه‌ها با همین صفحه، ترجمه‌ها و پخش صوت.
+  // opts: { title, sub, from, to (اندیس سراسری، to خودش نیست), endText, endButton, onEnd }
+  window.quranReader = {
+    openRange(o) { open({ title: o.title, sub: o.sub || '', range: { from: o.from, to: o.to }, endText: o.endText, endButton: o.endButton, onEnd: o.onEnd }); },
+    index: getIndex
+  };
 
   const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/></svg>';
   document.addEventListener('task:shown', e => {
