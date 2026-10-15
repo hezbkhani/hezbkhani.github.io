@@ -50,7 +50,15 @@ jobs:
           PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           if [ -n "$KS" ] && [ -n "$PW" ]; then
-            echo "$KS" | base64 -d > android.keystore
+            # فاصله و شکست خط‌هایی که هنگام کپی کردن مقدار طولانی پیش می‌آید نادیده گرفته می‌شود.
+            if ! printf '%s' "$KS" | tr -d ' \t\r\n' | base64 -d > android.keystore 2>/dev/null; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not valid. Paste the whole long line from android-signing-key.txt again (only that line, nothing before or after it)."
+              exit 1
+            fi
+            if ! keytool -list -keystore android.keystore -storepass "$PW" -alias hezbkhani > /dev/null 2>&1; then
+              echo "::error::The keystore did not open. Check ANDROID_KEYSTORE_PASSWORD (the short line) and that ANDROID_KEYSTORE_BASE64 is the complete long line."
+              exit 1
+            fi
             echo "BUBBLEWRAP_KEYSTORE_PASSWORD=$PW" >> "$GITHUB_ENV"
             echo "BUBBLEWRAP_KEY_PASSWORD=$PW" >> "$GITHUB_ENV"
             echo "signed=true" >> "$GITHUB_OUTPUT"
