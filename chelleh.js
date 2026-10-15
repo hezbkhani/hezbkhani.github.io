@@ -527,14 +527,14 @@ ${t.reserve && !toReserve ? `<p class="chl-note">وقتی ${fa(t.capacity)} نف
   // «این نام قبلاً ثبت شده»: به‌جای بن‌بست، راه ورود به حساب یا افزودن با کد.
   const DUP_NOTE = 'اگر قبلاً با ایمیل در چله ثبت‌نام کرده‌اید، با همان ایمیل وارد شوید یا حساب بسازید؛ پس از تأیید ایمیل، چله‌هایتان خودکار به حساب اضافه می‌شود.';
   function dupHelp(msg, kind) {
-    const user = window.account?.user, chl = kind === 'chl';
+    const user = window.account?.user, chl = kind === 'chl', acc = !!window.account?.enabled;
     msg.insertAdjacentHTML('afterend', `<div class="chs-dup" id="chsDup"><b>این ثبت‌نام خود شماست؟</b>
-${user ? `<p>این ثبت‌نام هنوز به حساب شما وصل نیست. اگر کد ${chl ? 'چله' : 'پیگیری'} را دارید، اینجا بنویسید${chl ? '؛ اگر هنگام ثبت‌نام ایمیل همین حساب را نوشته بودید، پس از تأیید ایمیل حساب خودکار اضافه می‌شود' : ''}.</p>`
+${!acc ? `<p>اگر کد ${chl ? 'چله' : 'پیگیری'} را دارید، آن را بنویسید تا ثبت‌نامتان روی همین گوشی بیاید.</p>` : user ? `<p>این ثبت‌نام هنوز به حساب شما وصل نیست. اگر کد ${chl ? 'چله' : 'پیگیری'} را دارید، اینجا بنویسید${chl ? '؛ اگر هنگام ثبت‌نام ایمیل همین حساب را نوشته بودید، پس از تأیید ایمیل حساب خودکار اضافه می‌شود' : ''}.</p>`
   : `<p>وارد حساب کاربری شوید تا ثبت‌نام‌هایتان روی همین گوشی بیاید${chl ? '؛ اگر حساب ندارید و هنگام ثبت‌نام ایمیل نوشته بودید، با همان ایمیل حساب بسازید' : ''}. یا اگر کد ${chl ? 'چله' : 'پیگیری'} را دارید، آن را بنویسید.</p>
 <button type="button" class="chs-main" data-dup-acc="login">ورود به حساب کاربری</button><button type="button" class="chs-alt" data-dup-acc="signup">ساخت حساب کاربری</button>`}
 <button type="button" class="chs-alt" data-dup-code>کد ${chl ? 'چله' : 'پیگیری'} را دارم</button>
 <div id="chsDupForm" hidden><label for="chsDupCode">کد ۸ رقمی</label><input id="chsDupCode" inputmode="numeric" maxlength="12" dir="ltr"><button type="button" class="chs-main" data-dup-go="${kind}">افزودن به این گوشی</button><div class="chl-msg" id="chsDupMsg"></div></div>
-<p class="chl-note">اگر نه حساب دارید، نه کد و نه ایمیل، به مدیر گروه پیام دهید تا کدتان را بفرستد.</p></div>`);
+<p class="chl-note">${acc ? 'اگر نه حساب دارید، نه کد و نه ایمیل،' : 'اگر کد را ندارید،'} به مدیر گروه پیام دهید تا کدتان را بفرستد.</p></div>`);
   }
   async function dupCode(b) {
     const c = norm(sheet.querySelector('#chsDupCode').value).replace(/\D/g, ''), msg = sheet.querySelector('#chsDupMsg');

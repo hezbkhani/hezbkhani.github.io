@@ -18,6 +18,8 @@
   const siteUrl = () => location.origin + location.pathname;
   const latin = s => norm(String(s || '')).trim();
   const MIN_PASS = 8;
+  // تا مدیر در «تنظیمات › حساب کاربری» روشنش نکند، فقط در ‎#admin‎ (برای آزمایش) دیده می‌شود.
+  const enabled = () => location.hash === '#admin' || window.siteSettings?.accounts?.enabled === true;
 
   // ---------- Supabase Auth ----------
   const ERRS = {
@@ -363,6 +365,16 @@ ${extra?.email ? `<button type="button" class="acs-alt" data-do="resend" data-em
     if (!intro) return;
     // اطلاعیه «حساب کاربری بسازید» (index.html) دکمه ساختن حساب و ورود می‌گیرد؛ پس از ورود، جایش نام شخص می‌آید.
     const notice = intro.querySelector('.intro-notice'), p = read(PKEY, {}) || {};
+    if (notice && !notice.dataset.orig) notice.dataset.orig = notice.innerHTML;
+    if (!enabled()) {
+      document.getElementById('introAcc')?.remove();
+      if (notice && notice.dataset.acc) { notice.innerHTML = notice.dataset.orig; delete notice.dataset.acc; notice.hidden = false; }
+      return;
+    }
+    if (notice && !notice.dataset.acc) {
+      notice.dataset.acc = 1;
+      notice.innerHTML = '<b>حساب کاربری بسازید</b><p>با ساختن حساب (نام کاربری و رمز)، همه چله‌ها، دوره‌ها و گروه حزب‌خوانی‌ای که در آن‌ها عضو شده‌اید، در سایت و در هر برنامه‌ای که استفاده می‌کنید یک‌جا دیده می‌شود و دیگر لازم نیست کدی را به خاطر بسپارید.</p>' + notice.dataset.orig.replace(/^[\s\S]*?<\/p>/, '');
+    }
     let tools = document.getElementById('introAccTools'), bar = document.getElementById('introAcc');
     if (notice && !tools) {
       tools = document.createElement('div'); tools.id = 'introAccTools'; tools.className = 'intro-tools';
@@ -379,6 +391,7 @@ ${extra?.email ? `<button type="button" class="acs-alt" data-do="resend" data-em
   window.siteMenu?.section({
     id: 'account', order: -100,
     render(box) {
+      if (!enabled()) return;
       const p = read(PKEY, {}) || {};
       box.innerHTML = session.data
         ? `<button type="button" class="sm-item" data-acc-menu="me"><span class="sm-ic">👤</span><span>${esc(p.name || 'حساب من')}<small>${esc(p.username ? '@' + p.username : p.email || '')} · حساب من</small></span><span class="sm-go">‹</span></button>`
@@ -396,7 +409,13 @@ ${extra?.email ? `<button type="button" class="acs-alt" data-do="resend" data-em
   // گروه و شناسه حزب‌خوانی تازه (home.js) هم به حساب برود.
   document.addEventListener('me:changed', () => sync());
 
+  document.addEventListener('groups:loaded', render);
+  setTimeout(render, 6000); // تنظیمات تازه سایت پس از حافظه موقت می‌رسد
+  document.addEventListener('settings:changed', render);
+  window.addEventListener('hashchange', render);
+
   window.account = {
+    get enabled() { return enabled(); },
     get user() { return session.data ? Object.assign({ email: session.data.user?.email }, read(PKEY, {})) : null; },
     open, close, sync, unlink
   };
