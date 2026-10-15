@@ -236,6 +236,8 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 <label class="adm-opt"><input type="radio" name="setReg" value="auto"> <span>خودکار: فقط وقتی ثبت‌نامی باز یا اعلام‌شده هست نمایش داده شود</span></label>
 <label class="adm-opt"><input type="radio" name="setReg" value="hidden"> <span>پنهان برای همه (فقط مدیر در ‎#admin‎ می‌بیند)</span></label>
 <div class="adm-msg" id="setRegMsg"></div></div>
+<div class="adm-card"><h3>حساب کاربری</h3><p class="hint">ساختن حساب و ورود (نام کاربری و رمز) برای بازدیدکنندگان. پیش از روشن کردن، accounts.sql و تنظیمات Supabase (گام ۲۵ راهنمای backend) را انجام دهید. در ‎#admin‎ همیشه برای آزمایش دیده می‌شود.</p>
+<label class="adm-opt"><input type="checkbox" id="setAccOn"> <span>نمایش حساب کاربری به همه</span></label><div class="adm-msg" id="setAccMsg"></div></div>
 <div class="adm-card"><h3>منبع فهرست گروه‌ها</h3>
 <label class="adm-opt"><input type="radio" name="setSrc" value="db"> <span>پایگاه داده (پیشنهادی): همان فهرستی که در زبانه «گروه‌ها» ویرایش می‌کنید</span></label>
 <label class="adm-opt"><input type="radio" name="setSrc" value="files"> <span>فایل‌های پوشه groups در گیت‌هاب</span></label>
@@ -252,8 +254,9 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
       const t = e.target;
       try {
         if (t.name === 'setReg') { await saveSetting('registration', { mode: t.value }); m('setRegMsg', 'ذخیره شد.', true); document.dispatchEvent(new Event('settings:changed')); }
+        if (t.id === 'setAccOn') { await saveSetting('accounts', { enabled: t.checked }); m('setAccMsg', t.checked ? 'ذخیره شد؛ حساب کاربری برای همه نمایش داده می‌شود.' : 'ذخیره شد؛ فقط در ‎#admin‎ دیده می‌شود.', true); document.dispatchEvent(new Event('settings:changed')); }
         if (t.name === 'setSrc') { await saveSetting('groups_source', { source: t.value }); m('setSrcMsg', 'ذخیره شد. برای دیدن نتیجه، صفحه را تازه کنید.', true); document.dispatchEvent(new Event('settings:changed')); }
-      } catch (err) { m(t.name === 'setReg' ? 'setRegMsg' : 'setSrcMsg', err.message); }
+      } catch (err) { m(t.id === 'setAccOn' ? 'setAccMsg' : t.name === 'setReg' ? 'setRegMsg' : 'setSrcMsg', err.message); }
     });
     $('setAdminAdd').onclick = async () => {
       const email = $('setAdminNew').value.trim().toLowerCase();
@@ -274,6 +277,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
     const s = window.siteSettings || {};
     $('setNoticeOn').checked = !!s.notice?.enabled; $('setNoticeText').value = s.notice?.text || '';
     document.querySelectorAll('[name=setReg]').forEach(r => (r.checked = r.value === (s.registration?.mode || 'auto')));
+    $('setAccOn').checked = !!s.accounts?.enabled;
     document.querySelectorAll('[name=setSrc]').forEach(r => (r.checked = r.value === (s.groups_source?.source || 'db')));
     loadAdmins();
   }

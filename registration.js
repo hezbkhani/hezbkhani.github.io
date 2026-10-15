@@ -179,7 +179,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
       } catch (err) {
         msg.className = 'reg-msg reg-bad'; msg.textContent = err.message; b.disabled = false;
         // نام تکراری: شاید خود او قبلاً ثبت‌نام کرده؛ با ورود به حساب یا «کد پیگیری دارید؟» پایین همین بخش پیدا می‌شود.
-        if (err.message === window.sbErrors.duplicate_name && window.account && !window.account.user) msg.insertAdjacentHTML('beforeend', ' <button type="button" class="reg-light" data-acc-open>اگر خودتان هستید، وارد حساب شوید</button>');
+        if (err.message === window.sbErrors.duplicate_name && window.account?.enabled && !window.account.user) msg.insertAdjacentHTML('beforeend', ' <button type="button" class="reg-light" data-acc-open>اگر خودتان هستید، وارد حساب شوید</button>');
       }
     } else if (b.hasAttribute('data-acc-open')) { window.account?.open('login');
     } else if (b.dataset.unreg) {
