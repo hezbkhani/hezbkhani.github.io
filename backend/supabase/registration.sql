@@ -110,8 +110,14 @@ create policy "admin manages registrations" on public.registrations for all to a
 
 create or replace function public.reg_clean_name(n text) returns text
 language sql immutable as $$
-  select btrim(regexp_replace(translate(coalesce(n, ''), 'يىك', 'ییک'), '\s+', ' ', 'g'))
+  -- نویسه‌های نامرئی و جهت‌دهنده (جز نیم‌فاصله) حذف می‌شوند تا نام تکراری یا گمراه‌کننده ساخته نشود.
+  select btrim(regexp_replace(regexp_replace(translate(coalesce(n, ''), 'يىك', 'ییک'),
+           '[\u200B\u200D\u200E\u200F\u202A-\u202E\u2060-\u2069\uFEFF[:cntrl:]]', '', 'g'), '\s+', ' ', 'g'))
 $$;
+-- این تابع در فهرست یکتای نام چله‌ها به کار رفته؛ پس از تغییرش فهرست دوباره ساخته می‌شود.
+do $$ begin
+  if to_regclass('public.chelleh_members_name') is not null then reindex index public.chelleh_members_name; end if;
+end $$;
 
 -- محافظ حدس زدن کد: کدهای ۸ رقمی (پیگیری ثبت‌نام و چله) کلید دسترسی به نام و ایمیل هر نفرند. هر کدِ ناموجود یک «خطا» است؛
 -- بیش از ۳۰ خطا در ساعت از یک نشانی اینترنتی، یا ۱۵۰۰ خطا در ساعت از همه، تا پایان آن ساعت جستجوی کد را می‌بندد.
@@ -268,6 +274,9 @@ begin
   select * into g from registrations where id = p_id;
   if g.id is null then return; end if;
   select * into r from registration_rounds where id = g.round_id for update;
+  -- پس از گرفتن قفل دوره دوباره خوانده می‌شود: اگر همزمان دو بار انصراف زده شده باشد، بار دوم کاری نمی‌کند.
+  select * into g from registrations where id = p_id;
+  if g.id is null then return; end if;
   if r.status = 'closed' then raise exception 'round_closed'; end if;
   select count(*) into pos from registrations x where x.round_id = g.round_id and (x.created_at, x.id) <= (g.created_at, g.id);
   delete from registrations where id = p_id;
@@ -322,6 +331,8 @@ declare st text;
 begin
   select status into st from registration_rounds where id = p_round for update;
   if st not in ('full', 'assigned') then raise exception 'round_not_full'; end if;
+  -- اگر شناسه‌ها قبلاً داده شده، شناسه کسی عوض نمی‌شود (مثلاً جایگزینِ رزرو)؛ فقط جای خالی‌ها پر می‌شود.
+  if st = 'assigned' then perform public.reg_fill_slots(p_round, false); return; end if;
   update registrations set participant_id = null where round_id = p_round;
   update registrations g set participant_id = o.rn
     from (select id, row_number() over (order by created_at, id) as rn from registrations where round_id = p_round) o
@@ -373,6 +384,8 @@ begin
   if r.id is null or r.status <> 'full' or not r.auto_announce then return; end if;
   perform public.reg_do_assign(p_round);
   d := case when r.start_date is not null and r.start_date > today then r.start_date else today + greatest(r.start_after_days, 1) end;
+  -- دو دوره که همزمان پر شوند نباید یک شماره گروه بگیرند.
+  perform pg_advisory_xact_lock(hashtext('site_groups_number'));
   select coalesce(max(number), 0) + 1 into num from site_groups;
   perform public.reg_do_announce(p_round, d, num,
     'گروه ' || case r.platform when 'bale' then 'بله' else 'تلگرام' end || ' ' || translate(num::text, '0123456789', '۰۱۲۳۴۵۶۷۸۹'));

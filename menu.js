@@ -93,10 +93,12 @@ body.sm-lock{overflow:hidden}
   window.addEventListener('popstate', () => close(true));
   // هنگام پایین رفتن در صفحه دکمه کنار می‌رود تا روی محتوا نیفتد؛ با کمی بالا آمدن دوباره پیدا می‌شود.
   let lastY = scrollY;
+  // در بخش مدیریت، وقتی نوار زبانه‌ها بالای صفحه چسبیده، دکمه روی زبانه آخر می‌افتاد؛ آنجا کنار می‌رود.
+  const tabsUnder = () => { const t = document.querySelector('.adm-tabs'); if (!t || !t.offsetParent) return false; const r = t.getBoundingClientRect(); return r.top < 70 && r.bottom > 0; };
   addEventListener('scroll', () => {
     const y = scrollY, d = y - lastY;
     if (Math.abs(d) < 8) return;
-    btn.classList.toggle('away', d > 0 && y > 120 && !nav.classList.contains('show'));
+    btn.classList.toggle('away', (d > 0 && y > 120 || tabsUnder()) && !nav.classList.contains('show'));
     lastY = y;
   }, { passive: true });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
