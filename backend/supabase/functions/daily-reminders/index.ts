@@ -11,7 +11,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 import { type Group, isoToUtc, parseGroupText, portionFor, toFa } from './reminder.ts'
-import { type Item, type Msg, type Settings, compose, dueTypes, mergeSettings, tehranMinutes } from './notify.ts'
+import { type Item, type Msg, type Prefs, type Settings, compose, dueTypes, forDevice, mergeSettings, tehranMinutes } from './notify.ts'
 
 const env = (k: string) => Deno.env.get(k) || ''
 const SITE_URL = (env('SITE_URL') || 'https://hezbkhani.github.io').replace(/\/$/, '')
@@ -127,9 +127,25 @@ async function handle(req: Request): Promise<Response> {
     await db.rpc('push_autofollow')
   }
   // آزمایش: برنامه امروز (یا «از فردا شروع می‌شود») همین دستگاه، بی‌توجه به ساعت؛ بدون یادآوری‌های عصر و رویدادها.
-  let types = test ? Object.entries(settings.types).filter(([k, t]) => (t.on || k === 'chl_start') && !t.event && !k.endsWith('_evening')).map(([k]) => k) : dueTypes(settings, slot, tehranMinutes(new Date()))
-  if (types.includes('chl_daily') || types.includes('chl_start')) types = [...new Set([...types, 'chl_daily', 'chl_start'])]
+  const nowMin = tehranMinutes(new Date())
+  const typesOf = (s: Settings) => {
+    let t = test ? Object.entries(s.types).filter(([k, d]) => (d.on || k === 'chl_start') && !d.event && !k.endsWith('_evening')).map(([k]) => k) : dueTypes(s, slot, nowMin)
+    if (t.includes('chl_daily') || t.includes('chl_start')) t = [...new Set([...t, 'chl_daily', 'chl_start'])]
+    return t
+  }
+  // هر گوشی می‌تواند نوعی را خاموش کند یا ساعت دیگری بگذارد؛ بقیه همان تنظیم مدیر را دارند.
+  const custom = new Map<string, { s: Settings; types: string[] }>()
+  {
+    let q = db.from('push_subscriptions').select('endpoint,prefs').neq('prefs', '{}')
+    if (endpoint) q = q.eq('endpoint', endpoint)
+    const { data } = await q
+    for (const r of (data || []) as { endpoint: string; prefs: Prefs }[]) { const s = forDevice(settings, r.prefs); custom.set(r.endpoint, { s, types: typesOf(s) }) }
+  }
+  const general = { s: settings, types: typesOf(settings) }
+  const dev = (ep: string) => custom.get(ep) || general
+  const types = [...new Set([...general.types, ...[...custom.values()].flatMap(c => c.types)])]
   stats.types = types.join(',')
+  if (custom.size) stats.custom = custom.size
 
   // دستگاه → نوع → فهرست
   const out = new Map<string, { sub: Sub; byType: Map<string, (Item & { key: string })[]> }>()
@@ -148,9 +164,10 @@ async function handle(req: Request): Promise<Response> {
     if (error) return json({ error: error.message }, 500)
     for (const r of data as { endpoint: string; p256dh: string; auth: string; type: string; key: string; data: Record<string, unknown> }[]) {
       // «روز اول» خاموش باشد: همان «برنامه امروز».
+      const d = dev(r.endpoint)
       let type = r.type
-      if (type === 'chl_start' && !settings.types.chl_start.on) type = 'chl_daily'
-      if (!types.includes(type) || !settings.types[type]?.on) continue
+      if (type === 'chl_start' && !d.s.types.chl_start.on) type = 'chl_daily'
+      if (!d.types.includes(type) || !d.s.types[type]?.on) continue
       add({ endpoint: r.endpoint, p256dh: r.p256dh, auth: r.auth, group_number: null, participant_id: null }, type, r.key, r.data,
         type === 'chl_start' ? 'chl_daily' : type)
     }
@@ -182,7 +199,9 @@ async function handle(req: Request): Promise<Response> {
         if (!g) continue
         const base = { name: g.names[s.participant_id! - 1], group: g.name, group_number: s.group_number, id: s.participant_id }
         const task = (p: { portion: string; hizb: number }) => `${toFa(p.portion)} (حزب ${toFa(p.hizb)})`
+        const mine = dev(s.endpoint).types
         for (const type of hz) {
+          if (!mine.includes(type)) continue
           const d = type === 'hezb_tomorrow' ? tomorrow : day
           if (type === 'hezb_tomorrow' && isoToUtc(tomorrow) !== g.start) continue
           if (type === 'hezb_evening' && reported.has(`${s.group_number}:${s.participant_id}`)) continue

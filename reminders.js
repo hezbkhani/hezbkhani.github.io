@@ -3,10 +3,11 @@
 // - چله و دوره‌های قرآن (جزء، صفحه): کارت بالای «چله‌های من»؛ برنامه امروز (مثلاً «جزء ۷»)، شروع از فردا، یادآوری «خواندم»،
 //   رسیدن جا از فهرست رزرو و خبر تازه دوره. کدهای ثبت‌نام حزب‌خوانی هم همراهش می‌رود تا اعلام شناسه و گروه خبر داده شود.
 // ساعت‌ها و متن‌ها را مدیر در «مدیریت › اعلان‌ها» تنظیم می‌کند (پیش‌فرض‌ها در notifications.json).
+// هر کس با «تنظیم اعلان‌ها» می‌تواند روی گوشی خودش هر نوع اعلان را خاموش کند یا ساعت دیگری بگذارد (push_prefs).
 // برای همه روشن است، مگر مدیر «اعلان برای همه» را خاموش کند (آن‌وقت فقط ‎#admin‎ و برنامه نصب‌شده).
 // سمت سرور: backend/supabase/reminders.sql و تابع backend/supabase/functions/daily-reminders.
 (function () {
-  const cfg = window.APP_CONFIG || {}, LS = 'quranReminder', NO = 'quranReminderNo', CHL = 'pushChl', CHLNO = 'pushChlNo', SENT = 'pushCodesSent';
+  const cfg = window.APP_CONFIG || {}, LS = 'quranReminder', NO = 'quranReminderNo', CHL = 'pushChl', CHLNO = 'pushChlNo', SENT = 'pushCodesSent', PREFS = 'pushPrefs';
   const fa = '۰۱۲۳۴۵۶۷۸۹', toFa = x => String(x).replace(/\d/g, d => fa[d]);
   const esc = x => String(x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const store = { get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
@@ -27,6 +28,12 @@
 .rm-msg{min-height:0;margin-top:6px;font-weight:700}.rm-msg:empty{display:none}
 .rm-card ol,.rm-card ul{margin:4px 0 8px;padding-inline-start:22px}.rm-card ol{list-style-type:persian}
 .push-codes .rm-card{margin:0 0 12px}
+.rm-prefs{margin-top:10px;padding:10px 12px;background:#fff;border:1px solid var(--gold);border-radius:6px}
+.rm-prefs h4{margin:0 0 6px;font-size:16px}.rm-prefs h5{margin:10px 0 4px;font-size:15px;color:var(--deep)}
+.rm-prefs label.rm-t{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #d8e6e0;line-height:1.6}
+.rm-prefs label.rm-t span{flex:1}.rm-prefs input[type=checkbox]{width:20px;height:20px;flex:none;margin:0}
+.rm-prefs input[type=time]{width:112px;height:36px;font-size:15px;padding:0 6px;direction:ltr;flex:none}
+.rm-prefs .rm-row{margin-top:10px}
 @media(max-width:600px){.rm-card .rm-row{flex-direction:column}.rm-card .rm-row button{width:100%}}
 </style>`);
 
@@ -35,8 +42,9 @@
   const loadDefaults = () => defaults || (defaults = fetch('notifications.json').then(r => r.json()).catch(() => ({ types: {} })));
   async function timeOf(type) {
     const d = (await loadDefaults()).types || {}, s = window.siteSettings?.notify?.types || {};
-    const t = s[type]?.time || d[type]?.time || '';
-    return { on: s[type]?.on !== false && !!d[type], time: t ? toFa(+t.slice(0, 2)) + (t.slice(3) === '00' ? '' : ':' + toFa(t.slice(3))) : '' };
+    const p = store.get(PREFS) || {}, own = !d[type]?.event && !d[type]?.same && p.times?.[type];
+    const t = own || s[type]?.time || d[type]?.time || '';
+    return { on: s[type]?.on !== false && !!d[type] && !(p.off || []).includes(type), time: t ? toFa(+t.slice(0, 2)) + (t.slice(3) === '00' ? '' : ':' + toFa(t.slice(3))) : '' };
   }
 
   const b64 = s => { const p = '='.repeat((4 - s.length % 4) % 4), r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, c => c.charCodeAt(0)); };
@@ -64,7 +72,12 @@
     if (!store.get(CHL) && !store.get(SENT)) return; // این گوشی هرگز اعلان چله نداشته است.
     await rpc('push_join', { ...keys(sub), ...c });
     store.set(SENT, sig);
+    await restorePrefs(sub);
   }
+  // انتخاب‌های کاربر روی همین گوشی هم نگه داشته می‌شود تا اگر اشتراک دوباره ساخته شد، از دست نرود.
+  const hasPrefs = p => !!p && ((p.off || []).length || Object.keys(p.times || {}).length);
+  async function restorePrefs(sub) { const p = store.get(PREFS); if (hasPrefs(p)) await rpc('push_prefs', { p_endpoint: sub.endpoint, p_prefs: p }).catch(() => {}); }
+
   async function status() {
     const sub = await currentSub(); if (!sub) return null;
     try { return (await rpc('push_status', { p_endpoint: sub.endpoint }))?.[0] || null; } catch { return undefined; }
@@ -75,6 +88,7 @@
     const sub = await ensureSub();
     await rpc('push_subscribe', { ...keys(sub), p_group: t.g, p_participant: t.id });
     store.set(LS, t); store.set(NO, null);
+    await restorePrefs(sub);
   }
   async function unsubscribeHezb() {
     const sub = await currentSub();
@@ -112,6 +126,7 @@
     const msg = box.querySelector('.rm-msg');
     box.querySelectorAll('button[data-a]').forEach(b => b.onclick = async () => {
       const h = handlers[b.dataset.a]; if (!h) return;
+      if (h.panel) return h();
       if (h.quick) { await h(); return rerender(); }
       box.querySelectorAll('button').forEach(x => x.disabled = true);
       msg.style.color = ''; msg.textContent = 'لطفاً صبر کنید…';
@@ -140,7 +155,7 @@
     let html;
     if (active && same(saved, t)) {
       html = `<p>✓ یادآوری روزانه برای این شناسه فعال است: ${when}.</p>
-<div class="rm-row"><button type="button" data-a="off" class="rm-ghost">لغو یادآوری</button><button type="button" data-a="test" class="rm-ghost">ارسال اعلان آزمایشی</button></div>`;
+<div class="rm-row"><button type="button" data-a="prefs" class="rm-ghost">⚙ تنظیم اعلان‌ها</button><button type="button" data-a="test" class="rm-ghost">ارسال اعلان آزمایشی</button><button type="button" data-a="off" class="rm-ghost">لغو یادآوری</button></div>`;
     } else if (!supported) {
       html = unsupportedHtml('یادآوری روزانه با اعلان');
     } else if (Notification.permission === 'denied') {
@@ -148,7 +163,7 @@
     } else if (same(store.get(NO), t) && !active) {
       html = `<button type="button" data-a="ask" class="rm-link">یادآوری روزانه با اعلان</button>`;
     } else {
-      html = `<p><strong>یادآوری روزانه؟</strong> ${when} (به وقت ایران) با اعلان می‌آید؛ یک روز پیش از شروع گروه هم خبر می‌دهیم. هر زمان بخواهید می‌توانید لغو کنید.</p>
+      html = `<p><strong>یادآوری روزانه؟</strong> ${when} (به وقت ایران) با اعلان می‌آید؛ یک روز پیش از شروع گروه هم خبر می‌دهیم. بعداً می‌توانید هر کدام را خاموش کنید، ساعتش را عوض کنید یا همه را لغو کنید.</p>
 ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و با این شناسه جایگزین می‌شود.</p>` : ''}
 <div class="rm-row"><button type="button" data-a="on">بله، یادآوری کن</button><button type="button" data-a="no" class="rm-ghost">نه، ممنون</button></div>`;
     }
@@ -157,7 +172,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
       no: quick(async () => store.set(NO, t)), ask: quick(async () => store.set(NO, null)),
       on: async () => { await subscribe(t); return 'یادآوری فعال شد.'; },
       off: async () => { await unsubscribeHezb(); return 'یادآوری لغو شد.'; },
-      test: testBtn
+      test: testBtn, prefs: prefsBtn(box)
     }, () => render(box, t));
   }
 
@@ -168,12 +183,70 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     if (saved && !sub) store.set(LS, null);
     if (!enabled() || !saved || !sub) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.id = 'rmStatus'; el.className = 'rm-card'; document.getElementById('result').before(el); }
-    el.innerHTML = `<p style="margin:0">🔔 یادآوری روزانه روی این دستگاه فعال است (${who(saved)}) · <button type="button" class="rm-link">لغو یادآوری</button></p><div class="rm-msg" aria-live="polite"></div>`;
-    el.querySelector('button').onclick = async () => {
+    el.innerHTML = `<p style="margin:0">🔔 یادآوری روزانه روی این دستگاه فعال است (${who(saved)}) · <button type="button" class="rm-link" data-p>تنظیم اعلان‌ها</button> · <button type="button" class="rm-link" data-x>لغو یادآوری</button></p><div class="rm-msg" aria-live="polite"></div>`;
+    el.querySelector('[data-p]').onclick = () => togglePrefs(el);
+    el.querySelector('[data-x]').onclick = async () => {
       try { await unsubscribeHezb(); el.remove(); const c = document.querySelector('#result .rm-card'); if (c && c._t) render(c, c._t); }
       catch (e) { el.querySelector('.rm-msg').textContent = fail(e); }
     };
   }
+
+  // ---------- تنظیم اعلان‌های این گوشی ----------
+  // فهرست نوع‌هایی که برای این گوشی معنی دارد (حزب‌خوانی، چله و دوره قرآن)، هر کدام با کلید روشن/خاموش و ساعت.
+  // نوعی که مدیر خاموش کرده نشان داده نمی‌شود. پیش‌فرض همان تنظیم مدیر است.
+  const fmt = t => t ? toFa(t) : '';
+  async function prefsHtml() {
+    const st = await status();
+    if (!st) return `<p style="margin:0">${ERR.nosub}</p>`;
+    const d = (await loadDefaults()).types || {}, a = window.siteSettings?.notify?.types || {}, p = store.get(PREFS) || {};
+    const groups = [['hezb', 'حزب‌خوانی', st.group_number != null || st.reg > 0], ['chl', 'چله و دوره‌های قرآن', st.chl > 0]];
+    const rows = g => Object.entries(d).filter(([k, t]) => t.group === g && a[k]?.on !== false).map(([k, t]) => {
+      const base = a[k]?.time || t.time, timed = !t.event && !t.same && base, mine = p.times?.[k] || base;
+      const label = esc(String(t.label || k).replace(/^[^:]*:\s*/, ''));
+      return `<label class="rm-t"><input type="checkbox" data-k="${k}"${(p.off || []).includes(k) ? '' : ' checked'}><span>${label}${timed && mine !== base ? ` <small>(پیش‌فرض ${fmt(base)})</small>` : ''}</span>${timed ? `<input type="time" data-time="${k}" data-base="${base}" value="${mine}" aria-label="ساعت">` : ''}</label>`;
+    }).join('');
+    const body = groups.filter(g => g[2]).map(([g, title]) => `<h5>${title}</h5>${rows(g)}`).join('');
+    return `<h4>تنظیم اعلان‌های این گوشی</h4><p class="hint" style="margin:0">هر کدام را که نمی‌خواهید خاموش کنید یا ساعتش را عوض کنید (به وقت ایران).</p>${body || '<p>اعلانی برای تنظیم نیست.</p>'}
+<div class="rm-row"><button type="button" data-p="save">ذخیره</button><button type="button" data-p="reset" class="rm-ghost">بازگشت به پیش‌فرض</button><button type="button" data-p="close" class="rm-ghost">بستن</button></div><div class="rm-msg" aria-live="polite"></div>`;
+  }
+  async function savePrefs(next) {
+    const sub = await currentSub(); if (!sub) throw Error('nosub');
+    const saved = await rpc('push_prefs', { p_endpoint: sub.endpoint, p_prefs: next });
+    if (saved === null) throw Error('nosub');
+    store.set(PREFS, hasPrefs(saved) ? saved : null);
+  }
+  async function togglePrefs(card) {
+    const open = document.getElementById('rmPrefs');
+    if (open) { const same = open.parentElement === card; open.remove(); if (same) return; }
+    const box = document.createElement('div'); box.id = 'rmPrefs'; box.className = 'rm-prefs';
+    box.innerHTML = '<p style="margin:0">لطفاً صبر کنید…</p>';
+    card.appendChild(box);
+    box.innerHTML = await prefsHtml();
+    const msg = box.querySelector('.rm-msg');
+    const host = card.closest('[id]')?.id;
+    const done = async text => {
+      box.remove();
+      const r = document.querySelector('#result .rm-card');
+      await Promise.all([renderStatus(), renderCodes('chl'), renderCodes('reg'), r && r._t && render(r, r._t)]);
+      const m = (card.isConnected ? card : document.getElementById(host))?.querySelector('.rm-msg'); if (m) m.textContent = text;
+    };
+    const run = f => async () => {
+      box.querySelectorAll('button').forEach(x => x.disabled = true); msg.style.color = ''; msg.textContent = 'لطفاً صبر کنید…';
+      try { await f(); } catch (e) { msg.style.color = '#9b2636'; msg.textContent = fail(e); box.querySelectorAll('button').forEach(x => x.disabled = false); }
+    };
+    box.querySelector('[data-p=close]').onclick = () => box.remove();
+    box.querySelector('[data-p=reset]').onclick = run(async () => { await savePrefs({}); await done('اعلان‌ها به تنظیم پیش‌فرض برگشت.'); });
+    box.querySelector('[data-p=save]').onclick = run(async () => {
+      const prev = store.get(PREFS) || {}, off = (prev.off || []).filter(k => !box.querySelector(`[data-k="${k}"]`)), times = {};
+      box.querySelectorAll('[data-k]').forEach(c => { if (!c.checked) off.push(c.dataset.k); });
+      // ساعت نوع‌هایی که اینجا نیست (مثلاً حزب‌خوانی وقتی فقط چله دارد) دست نمی‌خورد.
+      Object.entries(prev.times || {}).forEach(([k, v]) => { if (!box.querySelector(`[data-time="${k}"]`)) times[k] = v; });
+      box.querySelectorAll('[data-time]').forEach(i => { if (/^\d\d:\d\d$/.test(i.value) && i.value !== i.dataset.base) times[i.dataset.time] = i.value; });
+      await savePrefs({ off, times });
+      await done('تنظیم اعلان‌ها ذخیره شد.');
+    });
+  }
+  const prefsBtn = box => Object.assign(async () => togglePrefs(box.classList.contains('rm-card') ? box : box.querySelector('.rm-card') || box), { panel: true });
 
   // ---------- چله، دوره‌های قرآن و ثبت‌نام حزب‌خوانی ----------
   // یک کارت در «چله‌های من» و یکی در «ثبت‌نام‌های من»؛ هر دو همان یک اشتراک (کدهای این گوشی) را روشن یا خاموش می‌کنند.
@@ -195,7 +268,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     let html;
     if (on) {
       const what = where === 'chl' ? `${d.on ? `: هر روز ساعت ${d.time} برنامه امروز` : ''}${e.on ? `، ساعت ${e.time} یادآوری «خواندم»` : ''}` : '';
-      html = `<div class="rm-card"><p style="margin:0">🔔 ${h.on}${what}. · <button type="button" class="rm-link" data-a="off">لغو</button>${where === 'chl' ? ' · <button type="button" class="rm-link" data-a="test">اعلان آزمایشی</button>' : ''}</p><div class="rm-msg" aria-live="polite"></div></div>`;
+      html = `<div class="rm-card"><p style="margin:0">🔔 ${h.on}${what}. · <button type="button" class="rm-link" data-a="prefs">تنظیم اعلان‌ها</button>${where === 'chl' ? ' · <button type="button" class="rm-link" data-a="test">اعلان آزمایشی</button>' : ''} · <button type="button" class="rm-link" data-a="off">لغو</button></p><div class="rm-msg" aria-live="polite"></div></div>`;
     } else if (!supported) {
       html = `<div class="rm-card">${unsupportedHtml(h.short)}</div>`;
     } else if (Notification.permission === 'denied') {
@@ -206,7 +279,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
       const items = where === 'chl'
         ? [d.on && `هر روز ساعت ${d.time}: برنامه امروز، مثلاً «روز ۵ از ۴۰» یا «جزء ۷ قرآن»`, e.on && `ساعت ${e.time}: اگر «خواندم» را نزده‌اید، یک یادآوری`, t.on && `شب پیش از شروع${t.time ? ` (ساعت ${t.time})` : ''}: «چله شما فردا شروع می‌شود»`, 'رسیدن جا از فهرست رزرو و خبرهای تازه دوره']
         : [r.on && 'وقتی گروه کامل شد: شناسه شما، نام گروه و تاریخ شروع', 'اگر از فهرست رزرو به گروه آمدید', 'سپس هر روز سهم امروز و یادآوری گزارش (قابل لغو)'];
-      html = `<div class="rm-card"><p><strong>${h.title}</strong></p><ul>${items.filter(Boolean).map(x => `<li>${x}</li>`).join('')}</ul>
+      html = `<div class="rm-card"><p><strong>${h.title}</strong></p><ul>${items.filter(Boolean).map(x => `<li>${x}</li>`).join('')}</ul><p>بعداً با «تنظیم اعلان‌ها» می‌توانید هر کدام را خاموش کنید یا ساعتش را عوض کنید.</p>
 <div class="rm-row"><button type="button" data-a="on">بله، خبرم کن</button><button type="button" data-a="no" class="rm-ghost">نه، ممنون</button></div><div class="rm-msg" aria-live="polite"></div></div>`;
     }
     box.innerHTML = html;
@@ -220,7 +293,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
         store.set(SENT, null);
         return 'اعلان لغو شد.';
       },
-      test: testBtn
+      test: testBtn, prefs: prefsBtn(box)
     }, both);
   }
   const renderChl = () => { renderCodes('chl'); renderCodes('reg'); };
@@ -239,7 +312,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
   document.addEventListener('settings:changed', () => { renderStatus(); renderChl(); });
   window.addEventListener('hashchange', () => { renderStatus(); renderChl(); });
   renderStatus();
-  window.sitePush = { syncCodes, status, enabled, supported };
+  window.sitePush = { syncCodes, status, enabled, supported, togglePrefs };
 
   // پیوند اعلان (?g=1&id=5): گروه و شناسه را خودکار پر می‌کند و سهم امروز و بخش گزارش را آماده می‌کند.
   const q = new URLSearchParams(location.search), qg = +q.get('g'), qid = +q.get('id');
