@@ -11,4 +11,5 @@ create table if not exists public.daily_reports (
 );
 alter table public.daily_reports enable row level security;
 -- سیاست ثبت گزارش (public may report completion) در update-day-start-azan.sql ساخته می‌شود؛ آن فایل را پس از این فایل اجرا کنید.
+drop policy if exists "authenticated admin reads reports" on public.daily_reports;
 create policy "authenticated admin reads reports" on public.daily_reports for select to authenticated using (auth.jwt() ->> 'email' = 'REPLACE_WITH_ADMIN_EMAIL');
