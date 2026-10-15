@@ -18,10 +18,10 @@
 
   document.head.insertAdjacentHTML('beforeend', `<style>
 .ins-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
-.ins-grid a{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:76px;padding:8px;background:rgba(255,255,255,.92);color:var(--deep);border:1px solid var(--gold);text-decoration:none;text-shadow:none;font-weight:700;line-height:1.5}
+.ins-grid a{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:76px;padding:8px;background:rgba(255,255,255,.92);color:var(--deep);border:1px solid var(--gold);border-radius:var(--r-card);text-decoration:none;text-shadow:none;font-weight:700;line-height:1.5}
 .ins-grid a small{font-weight:400;font-size:13px;color:var(--muted)}
-.ins-grid a.mine{background:#fff5d9;box-shadow:inset 0 0 0 2px var(--gold)}
-.ins-box{margin-top:12px;padding:10px 16px;background:#fff5d9;border:1px solid var(--gold);color:#000;text-shadow:none;line-height:1.8}
+.ins-grid a.mine{background:var(--cream);box-shadow:inset 0 0 0 2px var(--gold)}
+.ins-box{margin-top:12px;padding:10px 16px;border-radius:var(--r-card);background:var(--cream);border:1px solid var(--gold);color:#000;text-shadow:none;line-height:1.8}
 .ins-box ol{margin:4px 0;padding-inline-start:22px;list-style-type:persian}
 .ins-box p{margin:0}
 #insBtn{margin-top:4px}

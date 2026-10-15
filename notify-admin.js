@@ -22,7 +22,7 @@
 .ntf-type textarea{min-height:64px!important;margin-top:6px}
 .ntf-type.off .ntf-fields{opacity:.45}
 .ntf-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.ntf-tools button{height:34px;font-size:14px;padding:0 10px}
-.ntf-stat{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.ntf-stat span{background:#f6f1e4;border:1px solid #e8dcc0;padding:4px 10px}
+.ntf-stat{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.ntf-stat span{background:#f6f1e4;border:1px solid #e8dcc0;border-radius:var(--pill);padding:4px 12px}
 .ntf-runs{font-size:14px;max-height:220px;overflow:auto}.ntf-runs div{padding:3px 0;border-bottom:1px solid #f4eee0}
 .ntf-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.ntf-row input[type=time]{width:10em;min-width:150px;height:38px;direction:ltr;text-align:left}
 #ntfSave{position:sticky;bottom:8px}
