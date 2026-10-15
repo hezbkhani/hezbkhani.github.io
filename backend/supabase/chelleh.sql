@@ -367,8 +367,10 @@ create or replace function public.chl_set_email(p_code text, p_email text) retur
 language plpgsql security definer set search_path = public as $$
 declare e text := public.chl_clean_email(p_email);
 begin
+  perform public.code_guard();
   update chelleh_members set email = e where code = btrim(p_code);
-  if not found then raise exception 'chl_member_not_found'; end if;
+  -- کد ناموجود: به‌جای خطا (که ثبتِ تلاش را برمی‌گرداند) شمرده می‌شود و null برمی‌گردد.
+  if not found then perform public.code_guard(1); return null; end if;
   return e;
 end $$;
 
@@ -419,7 +421,10 @@ returns table (code text, name text, round_id bigint, type_key text, number inte
                times_per_day integer, members integer, done_today integer, today date, marked date[], email text, news text,
                kind text, slot integer, reserve boolean, reserve_pos integer, reserved integer, reserve_max integer,
                promoted_at timestamptz, replaced_name text, promoted_day date)
-language sql stable security definer set search_path = public as $$
+language plpgsql volatile security definer set search_path = public as $$
+begin
+  perform public.code_guard();
+  return query
   select m.code, m.name, r.id, r.type_key, r.number, r.title, r.text_key, r.description,
          coalesce(m.start_date, r.start_date), r.days, r.status, r.capacity, r.personal, r.times_per_day,
          (select count(*)::integer from chelleh_members x where x.round_id = r.id and not x.reserve),
@@ -437,16 +442,19 @@ language sql stable security definer set search_path = public as $$
          (select count(*)::integer from chelleh_members x where x.round_id = r.id and x.reserve),
          r.reserve, m.promoted_at, m.replaced_name, (m.promoted_at at time zone 'Asia/Tehran')::date
     from chelleh_members m join chelleh_rounds r on r.id = m.round_id
-   where m.code = any (p_codes[1:20])
-$$;
+   where m.code = any (p_codes[1:20]);
+  perform public.code_guard((select count(*)::integer from unnest(p_codes[1:20]) c
+                              where not exists (select 1 from chelleh_members x where x.code = c)));
+end $$;
 
 -- ثبت یا برداشتن «خواندم» برای امروز، یا دیروز اگر فراموش شده بود.
 create or replace function public.chl_mark(p_code text, p_day date, p_done boolean) returns date[]
 language plpgsql security definer set search_path = public as $$
 declare m chelleh_members; r chelleh_rounds; s date; t date := public.reading_day(); res date[];
 begin
+  perform public.code_guard();
   select * into m from chelleh_members where code = btrim(p_code);
-  if m.id is null then raise exception 'chl_member_not_found'; end if;
+  if m.id is null then perform public.code_guard(1); return null; end if;
   select * into r from chelleh_rounds where id = m.round_id;
   if r.status <> 'open' then raise exception 'chl_not_found'; end if;
   if m.reserve then raise exception 'chl_reserve'; end if;
@@ -494,8 +502,9 @@ create or replace function public.chl_leave(p_code text) returns boolean
 language plpgsql security definer set search_path = public as $$
 declare mid bigint;
 begin
+  perform public.code_guard();
   select id into mid from chelleh_members where code = btrim(p_code);
-  if mid is null then return false; end if;
+  if mid is null then perform public.code_guard(1); return false; end if;
   perform public.chl_remove(mid, false);
   return true;
 end $$;

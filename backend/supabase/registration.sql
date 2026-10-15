@@ -106,6 +106,36 @@ language sql immutable as $$
   select btrim(regexp_replace(translate(coalesce(n, ''), 'يىك', 'ییک'), '\s+', ' ', 'g'))
 $$;
 
+-- محافظ حدس زدن کد: کدهای ۸ رقمی (پیگیری ثبت‌نام و چله) کلید دسترسی به نام و ایمیل هر نفرند. هر کدِ ناموجود یک «خطا» است؛
+-- بیش از ۳۰ خطا در ساعت از یک نشانی اینترنتی، یا ۱۵۰۰ خطا در ساعت از همه، تا پایان آن ساعت جستجوی کد را می‌بندد.
+-- کاربر عادی کد خودش را دارد و تقریباً هیچ‌وقت به این حد نمی‌رسد؛ کسی که کدها را حدس می‌زند خیلی زود متوقف می‌شود.
+create table if not exists public.code_misses (
+  hour timestamptz not null,
+  ip text not null,
+  misses integer not null default 0,
+  primary key (hour, ip)
+);
+alter table public.code_misses enable row level security;
+revoke all on public.code_misses from anon, authenticated;
+
+create or replace function public.code_guard(p_misses integer default 0) returns void
+language plpgsql security definer set search_path = public as $$
+declare h json := coalesce(nullif(current_setting('request.headers', true), ''), '{}')::json;
+        v_ip text := left(coalesce(h ->> 'cf-connecting-ip', btrim(split_part(h ->> 'x-forwarded-for', ',', 1)), 'unknown'), 60);
+        hr timestamptz := date_trunc('hour', now());
+begin
+  if public.is_site_admin() then return; end if;
+  if p_misses > 0 then
+    insert into code_misses (hour, ip, misses) values (hr, v_ip, p_misses)
+    on conflict (hour, ip) do update set misses = code_misses.misses + excluded.misses;
+    delete from code_misses where hour < hr - interval '1 day';
+  elsif coalesce((select misses from code_misses where hour = hr and code_misses.ip = v_ip), 0) >= 30
+     or coalesce((select sum(misses) from code_misses where hour = hr), 0) >= 1500 then
+    raise exception 'too_many_attempts';
+  end if;
+end $$;
+revoke all on function public.code_guard(integer) from public, anon, authenticated;
+
 -- وقتی شمار ثبت‌نام‌ها به ۱۲۰ برسد دوره خودکار «تکمیل» می‌شود و اگر کسی انصراف دهد دوباره باز می‌شود.
 create or replace function public.reg_refresh_status(p_round bigint) returns void
 language plpgsql security definer set search_path = public as $$
@@ -153,10 +183,14 @@ begin
 end $$;
 
 -- وضعیت یک ثبت‌نام با کد پیگیری؛ شناسه فقط پس از اعلام نشان داده می‌شود.
+drop function if exists public.reg_lookup(text);
 create or replace function public.reg_lookup(p_code text)
 returns table (round_id bigint, platform text, title text, status text, name text, place integer,
                registered integer, participant_id integer, start_date date, group_number integer)
-language sql stable security definer set search_path = public as $$
+language plpgsql volatile security definer set search_path = public as $$
+begin
+  perform public.code_guard();
+  return query
   select r.id, r.platform, r.title, r.status, g.name,
          (select count(*)::integer from registrations x where x.round_id = g.round_id
              and (x.created_at, x.id) <= (g.created_at, g.id)),
@@ -165,16 +199,18 @@ language sql stable security definer set search_path = public as $$
          r.start_date,
          case when r.status = 'announced' then r.group_number end
     from registrations g join registration_rounds r on r.id = g.round_id
-   where g.code = btrim(p_code)
-$$;
+   where g.code = btrim(p_code);
+  if not found then perform public.code_guard(1); end if;
+end $$;
 
 -- انصراف: تا پیش از دادن شناسه‌ها ممکن است.
 create or replace function public.reg_unregister(p_code text) returns boolean
 language plpgsql security definer set search_path = public as $$
 declare rid bigint; st text;
 begin
+  perform public.code_guard();
   select round_id into rid from registrations where code = btrim(p_code);
-  if rid is null then return false; end if;
+  if rid is null then perform public.code_guard(1); return false; end if;
   select status into st from registration_rounds where id = rid for update;
   if st not in ('open', 'full') then raise exception 'ids_already_assigned'; end if;
   delete from registrations where code = btrim(p_code);
