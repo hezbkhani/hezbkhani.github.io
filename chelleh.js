@@ -545,6 +545,8 @@ ${has ? '' : '<p class="hint">هنوز در چله‌ای ثبت‌نام نکر
 ${active.map(card).join('')}${ended.length ? `<details class="chl-fold"${active.length ? '' : ' open'}><summary>چله‌های تمام‌شده (${fa(ended.length)})</summary>${ended.map(card).join('')}</details>` : ''}
 <details class="hint"><summary>کد چله دارید؟ (برای ادامه چله روی گوشی دیگر)</summary>
 <div class="row" style="margin-top:8px"><input id="chlCodeIn" inputmode="numeric" placeholder="کد ۸ رقمی"><button type="button" data-addcode>ادامه چله</button></div><div class="chl-msg" id="chlCodeMsg"></div></details>`;
+    // کارت اعلان (reminders.js) و کدهای اشتراک اعلان به‌روز می‌شود.
+    document.dispatchEvent(new Event('chl:panel'));
   }
   const readBtn = (key, code, label) => `<button type="button" class="reg-light chl-read" data-read="${esc(key)}"${code ? ` data-code="${code}"` : ''}>${ICON_BOOK}${label || 'خواندن متن'}</button>`;
 
@@ -1123,6 +1125,11 @@ ${r.status === 'open' ? `<div class="row" style="margin-top:8px"><input id="chlA
   window.addEventListener('hashchange', () => renderPanel());
   refresh().then(() => {
     // لینک مستقیم ثبت‌نام: ?chelleh=<کلید>
+    // پیوند اعلان‌های چله (?mine=1): رفتن به «چله‌های من».
+    if (new URLSearchParams(location.search).has('mine')) {
+      try { const u = new URL(location.href); u.searchParams.delete('mine'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch {}
+      if (!panel.hidden) setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
     const key = new URLSearchParams(location.search).get('chelleh');
     if (key) {
       // پارامتر از نشانی برداشته می‌شود تا با تازه‌سازی صفحه، صفحه ثبت‌نام دوباره باز نشود.
