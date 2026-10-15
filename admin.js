@@ -1,4 +1,4 @@
-// مدیریت سایت: ورود ماندگار مدیر، زبانه‌های «گزارش‌ها / گروه‌ها / ثبت‌نام / چله‌ها / تنظیمات»، تقویم شمسی،
+// مدیریت سایت: ورود ماندگار مدیر، زبانه‌های «گزارش‌ها / گروه‌ها / ثبت‌نام / چله‌ها / اعلان‌ها / تنظیمات»، تقویم شمسی،
 // و تنظیمات سایت (اطلاعیه بالای صفحه، نمایش بخش ثبت‌نام، منبع فهرست گروه‌ها، فهرست مدیران).
 // داده‌ها در Supabase هستند؛ جدول‌ها در backend/supabase/registration.sql.
 (function () {
@@ -116,7 +116,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
   window.adminSession = session;
 
   // ---------- پوسته مدیریت ----------
-  const TABS = [['reports', 'گزارش‌ها'], ['groups', 'گروه‌ها'], ['reg', 'ثبت‌نام'], ['chl', 'چله‌ها'], ['settings', 'تنظیمات']];
+  const TABS = [['reports', 'گزارش‌ها'], ['groups', 'گروه‌ها'], ['reg', 'ثبت‌نام'], ['chl', 'چله‌ها'], ['notify', 'اعلان‌ها'], ['settings', 'تنظیمات']];
   const TKEY = 'adminTab';
   const css = `
 .jd-row{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:6px}
@@ -129,7 +129,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .adm-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
 .adm-bar button{height:38px;font-size:15px}
 #adminPanel [hidden]{display:none!important}
-.adm-tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:0 -8px 12px;padding:6px 8px;background:rgba(40,26,17,.92);box-shadow:0 4px 10px #0004}
+.adm-tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:0 -8px 12px;padding:6px 8px;background:rgba(40,26,17,.92);box-shadow:0 4px 10px #0004}
 .adm-tabs button{height:44px;padding:0 4px;font-size:15px;background:rgba(255,255,255,.9);color:var(--deep);border-color:var(--gold)}
 .adm-tabs button.on{background:var(--deep);color:#fff}
 .adm-pane[hidden]{display:none!important}
@@ -145,7 +145,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .site-notice{background:#fff5d9;color:#2f241d;text-shadow:none;border:1px solid var(--gold);padding:12px 16px;margin:0 0 20px;white-space:pre-line;font-weight:500}
 .adm-ok{color:#006b50}.adm-bad{color:#9b2636}
 .adm-msg{min-height:22px;margin-top:6px;font-weight:700}
-@media(max-width:600px){.adm-tabs button{font-size:13.5px}}`;
+@media(max-width:600px){.adm-tabs button{font-size:12.5px;padding:0 2px}.adm-tabs{gap:3px}}`;
 
   const $ = id => document.getElementById(id);
   const ui = {

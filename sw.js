@@ -1,4 +1,4 @@
-// سرویس‌ورکر: اعلان یادآوری روزانه، و نسخه آفلاین برای حالت «برنامه» (نصب‌شده).
+// سرویس‌ورکر: اعلان‌های سایت (سهم امروز، برنامه چله، یادآوری‌ها و خبرها)، و نسخه آفلاین برای حالت «برنامه» (نصب‌شده).
 // همیشه اول از اینترنت می‌خواند تا تغییرات سایت فوراً دیده شود؛ فقط اگر اینترنت نبود از نسخه ذخیره‌شده استفاده می‌کند.
 self.window = self; importScripts('config.js');
 const cfg = self.APP_CONFIG || {};
@@ -46,7 +46,7 @@ self.addEventListener('push', e => {
   e.waitUntil(self.registration.showNotification(d.title || 'حزب‌خوانی قرآن کریم', {
     body: d.body || '', dir: 'rtl', lang: 'fa', tag: d.tag || 'quran', renotify: true,
     icon: 'icon-192.png', badge: 'icon-badge.png', data: { url: d.url || './' },
-    actions: [{ action: 'open', title: 'باز کردن سایت' }, { action: 'cancel', title: 'لغو یادآوری' }]
+    actions: [{ action: 'open', title: 'باز کردن سایت' }, { action: 'cancel', title: 'قطع اعلان‌ها' }]
   }));
 });
 
@@ -57,7 +57,7 @@ async function cancelReminders() {
     await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/push_unsubscribe`, { method: 'POST', headers: { apikey: cfg.SUPABASE_ANON_KEY, Authorization: `Bearer ${cfg.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_endpoint: sub.endpoint }) });
   } catch {}
   await sub.unsubscribe();
-  await self.registration.showNotification('یادآوری روزانه لغو شد', { body: 'دیگر اعلانی برای سهم روزانه دریافت نمی‌کنید. از سایت می‌توانید دوباره فعالش کنید.', dir: 'rtl', lang: 'fa', icon: 'icon-192.png', tag: 'quran-cancelled' });
+  await self.registration.showNotification('اعلان‌ها قطع شد', { body: 'دیگر اعلانی از سایت حزب‌خوانی روی این گوشی نمی‌آید. از سایت می‌توانید دوباره فعالش کنید.', dir: 'rtl', lang: 'fa', icon: 'icon-192.png', tag: 'quran-cancelled' });
 }
 
 self.addEventListener('notificationclick', e => {
