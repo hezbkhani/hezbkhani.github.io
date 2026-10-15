@@ -14,7 +14,9 @@
     fromIso(iso) { const [y, m, d] = iso.split('-').map(Number); return J.fromMs(Date.UTC(y, m - 1, d, 12)); },
     toMs(jy, jm, jd) {
       let t = Date.UTC(jy + 621, 2, 21, 12) + ord(jm, jd) * DAY;
-      for (let i = 0; i < 5; i++) { const p = J.fromMs(t), diff = (jy - p.y) * 365 + ord(jm, jd) - ord(p.m, p.d); if (!diff) return t; t += diff * DAY; }
+      const same = ms => { const p = J.fromMs(ms); return p.y === jy && p.m === jm && p.d === jd; };
+      for (let i = 0; i < 5; i++) { const p = J.fromMs(t), diff = (jy - p.y) * 365 + ord(jm, jd) - ord(p.m, p.d); if (!diff) break; t += diff * DAY; }
+      for (const k of [0, -1, 1, -2, 2]) if (same(t + k * DAY)) return t + k * DAY;
       return null;
     },
     toIso(jy, jm, jd) { const t = J.toMs(jy, jm, jd); return t == null ? '' : new Date(t).toISOString().slice(0, 10); },
@@ -104,7 +106,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
     async fresh() {
       const s = this.data; if (!s) return;
       if (s.expires_at - Date.now() / 1000 > 90) { adminToken = s.access_token; return; }
-      refreshing = refreshing || authCall('refresh_token', { refresh_token: s.refresh_token }).then(n => { n.email = n.email || s.email; this.save(n); }, () => this.expired()).finally(() => { refreshing = null; });
+      refreshing = refreshing || authCall('refresh_token', { refresh_token: s.refresh_token }).then(n => { n.email = n.email || s.email; this.save(n); }, e => { if (e.status === 400 || e.status === 401 || e.status === 403) this.expired(); }).finally(() => { refreshing = null; });
       await refreshing;
     },
     save(s) { this.data = s; store.set(s); adminToken = s.access_token; },
@@ -134,7 +136,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .adm-card{background:#fff;color:#000;text-shadow:none;border:1px solid var(--gold);padding:12px 14px;margin:12px 0}
 .adm-card h3{margin:0 0 6px;font-size:19px;color:var(--deep)}
 .adm-card label{font-weight:600;font-size:15px;margin:10px 0 4px}
-.adm-card .hint{color:var(--muted);text-shadow:none}
+.adm-card .hint,body.v2 .adm-card .hint{color:var(--muted);text-shadow:none}
 .adm-card textarea{width:100%;min-height:90px;font:inherit;font-size:16px;line-height:1.8;padding:8px;border:1px solid var(--gold);color:var(--ink);background:#fff}
 .adm-opt{display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-weight:500!important}
 .adm-opt input{flex:none;width:20px;height:20px;margin:5px 0 0}

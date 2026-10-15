@@ -244,7 +244,9 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
     const list = codes.all();
     if (!list.length) { mine = []; return mine; }
     try {
-      const a = (await rpc('chl_lookup', { p_codes: list })) || [];
+      // سرور در هر درخواست حداکثر ۲۰ کد را می‌خواند؛ برای بیشتر، چند درخواست فرستاده می‌شود تا کدی بی‌دلیل فراموش نشود.
+      const parts = []; for (let i = 0; i < list.length; i += 20) parts.push(list.slice(i, i + 20));
+      const a = (await Promise.all(parts.map(p => rpc('chl_lookup', { p_codes: p })))).flatMap(x => x || []);
       // کدِ چله‌های حذف‌شده یا بایگانی‌شده خودکار فراموش می‌شود.
       const found = new Set(a.filter(m => m.status === 'open').map(m => m.code));
       list.filter(c => !found.has(c)).forEach(c => codes.remove(c));
@@ -324,7 +326,11 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
   function pushState(s, replace) { try { if (replace && history.state?.sm) history.replaceState(s, ''); else history.pushState(s, ''); } catch {} }
 
   // حزب‌خوانی: ثبت‌نام همان دوره‌های registration.sql است (گروه ۱۲۰ نفره).
-  const hezbOpen = () => hezbRounds.filter(r => r.status === 'open');
+  // دوره‌ای که جای خالی دارد، یا ظرفیتش پر است ولی فهرست رزروش هنوز جا دارد (حتی پس از اعلام گروه).
+  const hezbFull = r => r.registered >= 120;
+  const hezbOpen = () => hezbRounds.filter(r => r.status !== 'closed' && (!hezbFull(r) || (r.reserved ?? 0) < (r.reserve_slots ?? 0)))
+    .sort((a, b) => hezbFull(a) - hezbFull(b));
+  let hezbAsReserve = false;
   const PLAT = { telegram: 'تلگرام', bale: 'بله' };
   function hezbLine() {
     const o = hezbOpen()[0];
@@ -333,26 +339,27 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
   function renderHezb(box, top, t, done) {
     if (done) {
       box.innerHTML = top(t.title) + `<div class="chs-ok"><div class="chs-check">✓</div><p class="chl-big">ثبت‌نام شد. قبول باشد.</p>
-<p>وقتی ظرفیت ۱۲۰ نفر کامل شد، شناسه شما (عددی از ۱ تا ۱۲۰) و تاریخ شروع در بخش «ثبت نام دوره جدید» همین سایت نشان داده می‌شود.</p>
+<p>${hezbAsReserve ? 'ظرفیت ۱۲۰ نفر کامل بود و شما در فهرست رزرو هستید. اگر کسی انصراف دهد، شناسه او به شما می‌رسد و در بخش «ثبت نام دوره جدید» همین سایت نشان داده می‌شود.' : 'وقتی ظرفیت ۱۲۰ نفر کامل شد، شناسه شما (عددی از ۱ تا ۱۲۰) و تاریخ شروع در بخش «ثبت نام دوره جدید» همین سایت نشان داده می‌شود.'}</p>
 <p class="chl-note">کد پیگیری: <span class="chs-code">${fa(done)}</span><br>این کد روی همین گوشی ذخیره شد.</p></div>
 <button type="button" class="chs-main" data-hz-go>دیدن ثبت‌نام من</button>`;
       return;
     }
     const open = hezbOpen();
-    const rounds = open.map((r, i) => `<label><input type="radio" name="hzRound" value="${r.id}"${i ? '' : ' checked'}><span><b>${esc(r.title)}</b> (${PLAT[r.platform] || esc(r.platform)})<br>${fa(r.registered)} از ۱۲۰ نفر ثبت‌نام کرده‌اند.<div class="chl-bar"><span style="width:${Math.min(100, r.registered / 1.2)}%"></span></div>${r.start_date ? `شروع: ${esc(dateFa(r.start_date))}` : `با ${fa(120 - r.registered)} نفر دیگر گروه تشکیل می‌شود.`}</span></label>`).join('');
+    const rounds = open.map((r, i) => `<label><input type="radio" name="hzRound" value="${r.id}"${i ? '' : ' checked'}><span><b>${esc(r.title)}</b> (${PLAT[r.platform] || esc(r.platform)})<br>${fa(Math.min(120, r.registered))} از ۱۲۰ نفر ثبت‌نام کرده‌اند.<div class="chl-bar"><span style="width:${Math.min(100, r.registered / 1.2)}%"></span></div>${hezbFull(r) ? `ظرفیت کامل است؛ ${fa((r.reserve_slots ?? 0) - (r.reserved ?? 0))} جا در فهرست رزرو مانده.` : r.start_date ? `شروع: ${esc(dateFa(r.start_date))}` : `با ${fa(120 - r.registered)} نفر دیگر گروه تشکیل می‌شود.`}</span></label>`).join('');
     box.innerHTML = top(t.title) + `<div class="chs-facts"><span>۱۲۰ نفر</span><span>هر روز یک حزب</span><span>هر روز یک ختم قرآن</span></div>
 ${t.description ? `<p class="chl-desc">${esc(t.description)}</p>` : ''}
 ${open.length ? `<div class="chs-state">${open.length > 1 ? 'یکی از گروه‌ها را انتخاب کنید:' : ''}<div class="chs-rounds">${rounds}</div></div>
 <label for="chsName">نام و نام خانوادگی</label><input id="chsName" maxlength="60" autocomplete="name" placeholder="مثلاً فاطمه رضایی" value="${esc(read('chlName', ''))}">
-<button type="button" class="chs-main" data-hz-join>ثبت‌نام</button><div class="chl-msg" id="chsMsg"></div>`
+<button type="button" class="chs-main" data-hz-join>${open.every(hezbFull) ? 'ثبت در فهرست رزرو' : 'ثبت‌نام'}</button><div class="chl-msg" id="chsMsg"></div>`
   : '<div class="chs-state">الان ثبت‌نامی باز نیست. زمان ثبت‌نام دوره بعد در گروه‌ها اعلام می‌شود و همین‌جا هم دیده می‌شود.</div>'}`;
   }
   async function hezbJoin(b) {
     const input = sheet.querySelector('#chsName'), msg = sheet.querySelector('#chsMsg'), name = input.value.trim().replace(/\s+/g, ' ');
     const id = +sheet.querySelector('[name=hzRound]:checked')?.value;
     if (name.length < 2) { msg.className = 'chl-msg chl-bad'; msg.textContent = 'نام خود را بنویسید (دست‌کم دو حرف).'; input.focus(); return; }
-    b.disabled = true; b.textContent = 'در حال ثبت…';
+    const label = b.textContent; b.disabled = true; b.textContent = 'در حال ثبت…';
     try {
+      hezbAsReserve = hezbFull(hezbRounds.find(r => r.id === id) || { registered: 0 });
       const a = await rpc('reg_register', { p_round: id, p_name: name });
       const code = a[0].code;
       try { const k = 'regCodes', l = JSON.parse(localStorage.getItem(k)) || []; localStorage.setItem(k, JSON.stringify([...new Set([code, ...l])])); } catch {}
@@ -360,7 +367,7 @@ ${open.length ? `<div class="chs-state">${open.length > 1 ? 'یکی از گرو�
       window.regReloadPublic?.();
       hezbRounds = (await rpc('reg_rounds').catch(() => hezbRounds)) || hezbRounds;
       renderSheet(code);
-    } catch (err) { msg.className = 'chl-msg chl-bad'; msg.textContent = err.message; b.disabled = false; b.textContent = 'ثبت‌نام'; }
+    } catch (err) { msg.className = 'chl-msg chl-bad'; msg.textContent = err.message; b.disabled = false; b.textContent = label; }
   }
 
   function typeLine(t) {
@@ -401,8 +408,9 @@ ${open.length ? `<div class="chs-state">${open.length > 1 ? 'یکی از گرو�
       onSheetClick(e);
     });
     sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'chsName') sheet.querySelector('[data-chs-join],[data-hz-join]')?.click(); });
-    window.addEventListener('popstate', () => { if (sheet.classList.contains('show')) closeSheet(true); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet.classList.contains('show') && !reader?.classList.contains('show')) closeSheet(); });
+    // فقط وقتی ردیف تاریخچه خودِ برگه رفته باشد بسته می‌شود؛ بستن متنِ بازشده روی برگه، برگه را نمی‌بندد.
+    window.addEventListener('popstate', () => { if (sheet.classList.contains('show') && !history.state?.chs) closeSheet(true); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && sheet.classList.contains('show') && !reader?.classList.contains('show') && !document.querySelector('.qr.show')) closeSheet(); });
   }
   async function openSheet(key, fromMenu) {
     buildSheet();
@@ -480,14 +488,14 @@ ${t.reserve && !toReserve ? `<p class="chl-note">وقتی ${fa(t.capacity)} نف
       const email = norm(sheet.querySelector('#chsEmail').value).trim(), pick = sheet.querySelector('[name=chsRound]:checked')?.value;
       if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.className = 'chl-msg chl-bad'; msg.textContent = window.sbErrors.chl_bad_email; sheet.querySelector('#chsEmail').focus(); return; }
       if (name.length < 2) { msg.className = 'chl-msg chl-bad'; msg.textContent = 'نام خود را بنویسید (دست‌کم دو حرف).'; input.focus(); return; }
-      b.disabled = true; b.textContent = 'در حال ثبت…';
+      const label = b.textContent; b.disabled = true; b.textContent = 'در حال ثبت…';
       try {
         const code = pick ? await rpc('chl_join', { p_round: +pick, p_name: name, p_email: email || null })
           : await rpc('chl_join_type', { p_type: sheetType, p_name: name, p_email: email || null });
         codes.add(code); write('chlName', name); write('chlEmail', email);
         await refresh();
         renderSheet(code);
-      } catch (err) { msg.className = 'chl-msg chl-bad'; msg.textContent = err.message; b.disabled = false; b.textContent = 'ثبت‌نام'; }
+      } catch (err) { msg.className = 'chl-msg chl-bad'; msg.textContent = err.message; b.disabled = false; b.textContent = label; }
       return;
     }
     if (b.hasAttribute('data-hz-join')) return hezbJoin(b);
@@ -679,7 +687,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
       const au = reader.querySelector('.cr-aud audio'), was = !au.paused; au.src = a.url; if (was) au.play().catch(() => {});
     });
     reader.addEventListener('scroll', () => { const h = reader.scrollHeight - reader.clientHeight; reader.querySelector('.cr-prog').style.width = (h > 0 ? reader.scrollTop / h * 100 : 0) + '%'; }, { passive: true });
-    window.addEventListener('popstate', () => { if (reader.classList.contains('show')) closeReader(true); });
+    window.addEventListener('popstate', () => { if (reader.classList.contains('show') && !history.state?.chl) closeReader(true); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && reader.classList.contains('show')) closeReader(); });
     return reader;
   }
@@ -1013,7 +1021,8 @@ ${r.status === 'open' ? `<div class="row" style="margin-top:8px"><input id="chlA
       }
       if (d.tup || d.tdown) {
         const i = +(d.tup ?? d.tdown), j = d.tup ? i - 1 : i + 1, a = adminTypes[i], c = adminTypes[j];
-        await Promise.all([[a, j], [c, i]].map(([t, s]) => api(`chelleh_types?key=eq.${encodeURIComponent(t.key)}`, { method: 'PATCH', body: { sort: s }, auth: true, prefer: 'return=minimal' })));
+        const sa = a.sort ?? i, sc = c.sort ?? j, [na, nc] = sa === sc ? [j, i] : [sc, sa];
+        await Promise.all([[a, na], [c, nc]].map(([t, s]) => api(`chelleh_types?key=eq.${encodeURIComponent(t.key)}`, { method: 'PATCH', body: { sort: s }, auth: true, prefer: 'return=minimal' })));
         await loadAdmin(); refresh(); return;
       }
       if (d.tdel) {
