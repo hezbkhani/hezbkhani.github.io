@@ -89,7 +89,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     try {
       const a = await rpc('reg_lookup', { p_code: c });
       if (!a?.length) { msg.className = 'reg-msg reg-bad'; msg.textContent = 'ثبت‌نامی با این کد پیدا نشد.'; return; }
-      codes.add(c); $p('#regCodeIn').value = ''; msg.textContent = ''; loadPublic();
+      codes.add(c); $p('#regCodeIn').value = ''; msg.textContent = ''; loadPublic(); window.account?.sync();
     } catch (e) { msg.className = 'reg-msg reg-bad'; msg.textContent = e.message; }
   };
   panel.addEventListener('click', onPublicClick);
@@ -171,11 +171,17 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
         const a = await rpc('reg_register', { p_round: id, p_name: name });
         codes.add(a[0].code);
         await loadPublic();
+        window.account?.sync();
         const m = $p('#regMine');
         m.insertAdjacentHTML('afterbegin', `<p class="reg-note">ثبت‌نام «${esc(name)}» انجام شد. کد پیگیری <span class="reg-code">${fa(a[0].code)}</span> را یادداشت کنید؛ برای انصراف یا دیدن شناسه از دستگاه دیگر لازم است.</p>`);
         m.scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (window.regAdminReload) window.regAdminReload();
-      } catch (err) { msg.className = 'reg-msg reg-bad'; msg.textContent = err.message; b.disabled = false; }
+      } catch (err) {
+        msg.className = 'reg-msg reg-bad'; msg.textContent = err.message; b.disabled = false;
+        // نام تکراری: شاید خود او قبلاً ثبت‌نام کرده؛ با ورود به حساب یا «کد پیگیری دارید؟» پایین همین بخش پیدا می‌شود.
+        if (err.message === window.sbErrors.duplicate_name && window.account && !window.account.user) msg.insertAdjacentHTML('beforeend', ' <button type="button" class="reg-light" data-acc-open>اگر خودتان هستید، وارد حساب شوید</button>');
+      }
+    } else if (b.hasAttribute('data-acc-open')) { window.account?.open('login');
     } else if (b.dataset.unreg) {
       const c = b.dataset.unreg, msg = $p('#regUn' + c);
       if (!confirm(b.dataset.ingroup ? 'از گروه انصراف می‌دهید؟ شناسه شما به نفر اول فهرست رزرو داده می‌شود و این کار برگشت ندارد.' : 'از ثبت‌نام در این دوره انصراف می‌دهید؟')) return;
