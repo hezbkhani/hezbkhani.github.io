@@ -3,7 +3,7 @@
 // - چله و دوره‌های قرآن (جزء، صفحه): کارت بالای «چله‌های من»؛ برنامه امروز (مثلاً «جزء ۷»)، شروع از فردا، یادآوری «خواندم»،
 //   رسیدن جا از فهرست رزرو و خبر تازه دوره. کدهای ثبت‌نام حزب‌خوانی هم همراهش می‌رود تا اعلام شناسه و گروه خبر داده شود.
 // ساعت‌ها و متن‌ها را مدیر در «مدیریت › اعلان‌ها» تنظیم می‌کند (پیش‌فرض‌ها در notifications.json).
-// تا مدیر «اعلان برای همه» را روشن نکرده، فقط در ‎#admin‎ و برنامه نصب‌شده دیده می‌شود.
+// برای همه روشن است، مگر مدیر «اعلان برای همه» را خاموش کند (آن‌وقت فقط ‎#admin‎ و برنامه نصب‌شده).
 // سمت سرور: backend/supabase/reminders.sql و تابع backend/supabase/functions/daily-reminders.
 (function () {
   const cfg = window.APP_CONFIG || {}, LS = 'quranReminder', NO = 'quranReminderNo', CHL = 'pushChl', CHLNO = 'pushChlNo', SENT = 'pushCodesSent';
@@ -13,8 +13,8 @@
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  // پیش از انتشار عمومی، نسخه نصب‌شده روی صفحه اصلی (که نشانی #admin ندارد) هم اعلان را نشان می‌دهد تا روی گوشی آزمایش شود.
-  const enabled = () => !!window.siteSettings?.notify?.public || location.hash === '#admin' || standalone;
+  // پیش‌فرض: برای همه. اگر مدیر «اعلان برای همه» را خاموش کند، فقط ‎#admin‎ و برنامه نصب‌شده (برای آزمایش روی گوشی).
+  const enabled = () => window.siteSettings?.notify?.public !== false || location.hash === '#admin' || standalone;
   // برنامه ویندوز و مک (WebView) سرویس اعلان ندارد؛ آنجا کارت اعلان نشان داده نمی‌شود.
   const desktopApp = (() => { try { return sessionStorage.getItem('hezbApp') === '1' || /[?&]app=desktop\b/.test(location.search); } catch { return /[?&]app=desktop\b/.test(location.search); } })();
   const supported = !desktopApp && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!cfg.VAPID_PUBLIC_KEY;
