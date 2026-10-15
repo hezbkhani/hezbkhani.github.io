@@ -147,6 +147,8 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
       s += `<button type="button" class="reg-danger" data-unreg="${c}" data-ingroup="${inGroup ? 1 : ''}">${r.reserve ? 'انصراف از فهرست رزرو' : inGroup ? 'انصراف از گروه' : 'انصراف از ثبت‌نام'}</button><div class="reg-msg" id="regUn${c}"></div>`;
       return s + '</div>';
     }).join('');
+    // کارت اعلان (reminders.js)
+    document.dispatchEvent(new Event('reg:mine'));
   }
 
   async function onPublicClick(e) {

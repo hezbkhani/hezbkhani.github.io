@@ -97,6 +97,16 @@ alter table public.chelleh_rounds drop constraint if exists chelleh_rounds_days_
   add constraint chelleh_rounds_days_check check (days between 1 and 1000);
 alter table public.chelleh_rounds add column if not exists news text not null default '' check (length(news) <= 1000);
 alter table public.chelleh_rounds add column if not exists reserve integer not null default 0 check (reserve between 0 and 50);
+-- زمان آخرین تغییر خبر دوره، تا اعلان «خبر تازه» فقط یک بار برای هر خبر فرستاده شود.
+alter table public.chelleh_rounds add column if not exists news_at timestamptz;
+create or replace function public.chl_news_stamp() returns trigger language plpgsql as $$
+begin
+  if new.news is distinct from old.news then new.news_at := case when btrim(new.news) = '' then null else now() end; end if;
+  return new;
+end $$;
+drop trigger if exists chelleh_rounds_news_at on public.chelleh_rounds;
+create trigger chelleh_rounds_news_at before update of news on public.chelleh_rounds
+  for each row execute function public.chl_news_stamp();
 create index if not exists chelleh_rounds_type on public.chelleh_rounds(type_key, status);
 
 create or replace function public.chl_new_code() returns text
