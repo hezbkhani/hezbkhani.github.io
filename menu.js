@@ -13,16 +13,16 @@
 .sm{position:fixed;top:0;bottom:0;left:0;z-index:46;width:min(88vw,380px);background:#fffaf0;color:var(--ink);text-shadow:none;box-shadow:6px 0 30px #0007;transform:translateX(-105%);transition:transform .25s ease;display:flex;flex-direction:column;font-size:16px}
 .sm.show{transform:none}
 .sm-head{display:flex;align-items:center;gap:10px;padding:12px 14px;padding-top:max(12px,env(safe-area-inset-top));background:var(--deep);color:#fff;border-bottom:2px solid var(--gold)}
-.sm-head img{width:40px;height:40px;object-fit:contain}
+.sm-head img{width:40px;height:40px;object-fit:contain;border-radius:10px}
 .sm-head b{flex:1;font:normal 26px/1.5 SiteFont,Tahoma,serif}
 .sm-head button{width:42px;height:42px;padding:0;background:transparent;border:0;font-size:24px;color:#fff}
 .sm-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:6px 0 calc(20px + env(safe-area-inset-bottom))}
 .sm-sec{padding:6px 0;border-bottom:1px solid #eadfca}
 .sm-sec:last-child{border-bottom:0}
 .sm-sec h3{margin:8px 16px 4px;font-size:14px;font-weight:700;color:var(--muted);letter-spacing:0}
-.sm-item{display:flex;align-items:center;gap:12px;width:100%;height:auto;min-height:52px;padding:8px 16px;background:transparent;border:0;color:var(--ink);text-align:right;font-weight:500;font-size:16px;white-space:normal;line-height:1.6}
-.sm-item:hover,.sm-item:focus-visible{background:#f3ead6}
-.sm-item .sm-ic{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:#e7f5f0;color:var(--deep);font-size:19px}
+.sm-item{display:flex;align-items:center;gap:12px;width:100%;height:auto;min-height:52px;padding:8px 16px;background:transparent;border:0;border-radius:0;color:var(--ink);text-align:right;font-weight:500;font-size:16px;white-space:normal;line-height:1.6}
+.sm-item:hover,.sm-item:focus-visible{background:var(--hover)}
+.sm-item .sm-ic{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--mint);color:var(--deep);font-size:19px}
 .sm-item span{flex:1;min-width:0}
 .sm-item small{display:block;color:var(--muted);font-size:13px;font-weight:400;line-height:1.6}
 .sm-item .sm-go{flex:none;color:var(--muted);font-size:18px}
@@ -57,7 +57,9 @@ body.sm-lock{overflow:hidden}
       if (box.childNodes.length) body.appendChild(box);
     });
     // بخش‌های حزب‌خوانی در صفحه اول فقط برای اعضا دیده می‌شوند (home.js)؛ در منو همیشه هستند و با زدن، باز می‌شوند.
-    const links = LINKS.filter(([id]) => id === 'registerPanel' ? window.regHasOpen || visible(document.getElementById(id)) : document.getElementById(id));
+    // اگر «قرآن حزب‌خوانی» در فهرست ثبت‌نام دوره‌ها هست، همان ثبت‌نام دوباره زیر حزب‌خوانی نمی‌آید.
+    const hezbListed = !!body.querySelector('[data-chl-type="hezb"]');
+    const links = LINKS.filter(([id]) => id === 'registerPanel' ? !hezbListed && (window.regHasOpen || visible(document.getElementById(id))) : document.getElementById(id));
     if (links.length) {
       const box = document.createElement('div'); box.className = 'sm-sec';
       box.innerHTML = '<h3>حزب‌خوانی قرآن</h3>' + links.map(([id, ic, t, s]) => `<button type="button" class="sm-item" data-sm-to="${id}"><span class="sm-ic">${ic}</span><span>${t}${s ? `<small>${s}</small>` : ''}</span><span class="sm-go">‹</span></button>`).join('');

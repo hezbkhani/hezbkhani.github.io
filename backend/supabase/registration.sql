@@ -25,9 +25,11 @@ end $$;
 insert into public.site_admins (email) select lower('REPLACE_WITH_ADMIN_EMAIL')
  where 'REPLACE_WITH_ADMIN_EMAIL' like '%@%' on conflict do nothing;
 
+-- مدیر: حسابی که ایمیلش در این فهرست است و آن ایمیل تأیید شده (چون هر کسی می‌تواند حساب کاربری بسازد؛ accounts.sql).
 create or replace function public.is_site_admin() returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists (select 1 from site_admins where email = lower(coalesce(auth.jwt() ->> 'email', '')))
+  select exists (select 1 from site_admins a join auth.users u on lower(u.email) = a.email
+                  where u.id = auth.uid() and u.email_confirmed_at is not null)
 $$;
 drop policy if exists "admins manage admins" on public.site_admins;
 create policy "admins manage admins" on public.site_admins for all to authenticated
