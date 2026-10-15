@@ -19,6 +19,8 @@ alter table public.push_subscriptions alter column group_number drop not null;
 alter table public.push_subscriptions alter column participant_id drop not null;
 alter table public.push_subscriptions add column if not exists chl_codes text[] not null default '{}';
 alter table public.push_subscriptions add column if not exists reg_codes text[] not null default '{}';
+-- انتخاب خود کاربر روی این گوشی: {"off": [نوع‌های خاموش], "times": {نوع: "HH:MM"}}. خالی = همان تنظیم مدیر.
+alter table public.push_subscriptions add column if not exists prefs jsonb not null default '{}';
 create index if not exists push_subscriptions_target on public.push_subscriptions (group_number, participant_id);
 -- بازدیدکنندگان مستقیم به این جدول دسترسی ندارند؛ فقط از راه تابع‌های زیر اشتراک می‌سازند یا لغو می‌کنند.
 alter table public.push_subscriptions enable row level security;
@@ -113,6 +115,25 @@ language sql security definer set search_path = public as $$
   select s.group_number, s.participant_id, cardinality(s.chl_codes), cardinality(s.reg_codes)
     from public.push_subscriptions s where s.endpoint = p_endpoint
 $$;
+
+-- تنظیم اعلان‌های این گوشی به انتخاب خود کاربر (کدام نوع خاموش، و ساعت دلخواه). p_prefs = null فقط می‌خواند.
+-- خروجی: تنظیم ذخیره‌شده، یا null اگر این گوشی اشتراک ندارد.
+create or replace function public.push_prefs(p_endpoint text, p_prefs jsonb default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v jsonb; off jsonb; times jsonb;
+begin
+  if p_prefs is null then return (select prefs from push_subscriptions where endpoint = p_endpoint); end if;
+  select coalesce(jsonb_agg(distinct x), '[]') into off
+    from jsonb_array_elements_text(case when jsonb_typeof(p_prefs->'off') = 'array' then p_prefs->'off' else '[]' end) x
+   where x ~ '^[a-z_]{3,30}$';
+  select coalesce(jsonb_object_agg(k, t), '{}') into times
+    from jsonb_each_text(case when jsonb_typeof(p_prefs->'times') = 'object' then p_prefs->'times' else '{}' end) e(k, t)
+   where k ~ '^[a-z_]{3,30}$' and t ~ '^([01]\d|2[0-3]):[0-5]\d$';
+  if jsonb_array_length(off) > 30 or (select count(*) from jsonb_object_keys(times)) > 30 then raise exception 'too_many'; end if;
+  v := case when off = '[]' and times = '{}' then '{}' else jsonb_build_object('off', off, 'times', times) end;
+  update push_subscriptions set prefs = v where endpoint = p_endpoint;
+  return case when found then v else null end;
+end $$;
 
 -- کسی که از گروه حزب‌خوانی انصراف داده: یادآوری شناسه‌اش (که حالا مال نفر دیگری است) از گوشی او برداشته می‌شود.
 create or replace function public.push_drop_target(p_group integer, p_participant integer) returns void
@@ -222,6 +243,7 @@ returns jsonb language sql stable security definer set search_path = public as $
     'hezb', (select count(*) from push_subscriptions where group_number is not null),
     'chl', (select count(*) from push_subscriptions where chl_codes <> '{}'),
     'reg', (select count(*) from push_subscriptions where reg_codes <> '{}'),
+    'custom', (select count(*) from push_subscriptions where prefs <> '{}'),
     'groups', (select coalesce(jsonb_agg(jsonb_build_object('group', group_number, 'devices', n) order by group_number), '[]')
                  from (select group_number, count(*) n from push_subscriptions where group_number is not null group by 1) g),
     'sent_today', (select count(*) from push_sent where at >= date_trunc('day', now() at time zone 'Asia/Tehran') at time zone 'Asia/Tehran'),
@@ -240,10 +262,10 @@ $$;
 revoke all on function public.push_check(text, text, text), public.push_drop_target(integer, integer), public.push_autofollow(),
   public.push_due(text[], date, text, boolean), public.push_cleanup() from public, anon, authenticated;
 revoke all on function public.push_subscribe(text, text, text, integer, integer), public.push_join(text, text, text, text[], text[]),
-  public.push_untarget(text), public.push_unsubscribe(text), public.push_status(text), public.push_stats() from public;
+  public.push_untarget(text), public.push_unsubscribe(text), public.push_status(text), public.push_prefs(text, jsonb), public.push_stats() from public;
 revoke all on function public.push_stats() from anon;
 grant execute on function public.push_subscribe(text, text, text, integer, integer), public.push_join(text, text, text, text[], text[]),
-  public.push_untarget(text), public.push_unsubscribe(text), public.push_status(text) to anon, authenticated;
+  public.push_untarget(text), public.push_unsubscribe(text), public.push_status(text), public.push_prefs(text, jsonb) to anon, authenticated;
 grant execute on function public.push_stats() to authenticated;
 grant execute on function public.push_due(text[], date, text, boolean), public.push_autofollow(), public.push_cleanup() to service_role;
 
