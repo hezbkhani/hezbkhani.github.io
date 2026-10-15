@@ -50,7 +50,35 @@ jobs:
           PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           if [ -n "$KS" ] && [ -n "$PW" ]; then
-            echo "$KS" | base64 -d > android.keystore
+            # مقدار طولانی را حتی اگر با فاصله، شکست خط، برچسب یا متن اضافه کپی شده باشد پیدا می‌کند.
+            if ! printf '%s' "$KS" | python3 -c '
+          import base64, re, sys
+          raw = sys.stdin.read()
+          cands = [re.sub(r"\s+", "", raw)]
+          toks = re.split(r"[\s\"\x27`]+", raw)
+          toks = [re.sub(r"^[A-Za-z0-9_]+[=:]", "", t) for t in toks]
+          cands += sorted(toks, key=len, reverse=True)
+          cands.append("".join(re.findall(r"[A-Za-z0-9+/=_-]{40,}", raw)))
+          for c in cands:
+              c = c.strip().replace("-", "+").replace("_", "/").rstrip("=")
+              if len(c) < 500: continue
+              try:
+                  b = base64.b64decode(c + "=" * (-len(c) % 4), validate=True)
+              except Exception:
+                  continue
+              if b[:4] in (b"\xfe\xed\xfe\xed",) or b[:1] == b"\x30":
+                  sys.stdout.buffer.write(b); sys.exit(0)
+          bad = sorted({hex(ord(ch)) for ch in raw if not re.match(r"[A-Za-z0-9+/=\s]", ch)})[:10]
+          print(f"secret length {len(raw)}, lines {raw.count(chr(10))+1}, other characters {bad}", file=sys.stderr)
+          sys.exit(1)
+          ' > android.keystore; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not valid. Paste the whole long line from android-signing-key.txt again (only that line, nothing before or after it)."
+              exit 1
+            fi
+            if ! keytool -list -keystore android.keystore -storepass "$PW" -alias hezbkhani > /dev/null 2>&1; then
+              echo "::error::The keystore did not open. Check ANDROID_KEYSTORE_PASSWORD (the short line) and that ANDROID_KEYSTORE_BASE64 is the complete long line."
+              exit 1
+            fi
             echo "BUBBLEWRAP_KEYSTORE_PASSWORD=$PW" >> "$GITHUB_ENV"
             echo "BUBBLEWRAP_KEY_PASSWORD=$PW" >> "$GITHUB_ENV"
             echo "signed=true" >> "$GITHUB_OUTPUT"
