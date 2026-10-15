@@ -123,17 +123,18 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .jd-row select{width:100%}
 .jd-quick{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
 .jd-quick button{height:36px;font-size:14px;padding:0 10px;background:#fff;color:var(--deep);border-color:var(--emerald)}
+.jd-quick button:hover{background:var(--hover)}
 .jd-label{font-size:15px;color:var(--deep);margin-top:4px;min-height:1.6em}
 .panel .jd-label{color:inherit}
 .reg-round .jd-label,.adm-card .jd-label{color:var(--deep)}
 .adm-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
 .adm-bar button{height:38px;font-size:15px}
 #adminPanel [hidden]{display:none!important}
-.adm-tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:0 -8px 12px;padding:6px 8px;background:rgba(40,26,17,.92);box-shadow:0 4px 10px #0004}
+.adm-tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:0 -8px 12px;padding:6px 8px;border-radius:var(--r-card);background:rgba(40,26,17,.92);box-shadow:0 4px 10px #0004}
 .adm-tabs button{height:44px;padding:0 4px;font-size:15px;background:rgba(255,255,255,.9);color:var(--deep);border-color:var(--gold)}
 .adm-tabs button.on{background:var(--deep);color:#fff}
 .adm-pane[hidden]{display:none!important}
-.adm-card{background:#fff;color:#000;text-shadow:none;border:1px solid var(--gold);padding:12px 14px;margin:12px 0}
+.adm-card{background:#fff;color:#000;text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:12px 14px;margin:12px 0}
 .adm-card h3{margin:0 0 6px;font-size:19px;color:var(--deep)}
 .adm-card label{font-weight:600;font-size:15px;margin:10px 0 4px}
 .adm-card .hint,body.v2 .adm-card .hint{color:var(--muted);text-shadow:none}
@@ -142,8 +143,8 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .adm-opt input{flex:none;width:20px;height:20px;margin:5px 0 0}
 .adm-list div{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0e8d6;direction:ltr}
 .adm-list button{height:34px;font-size:14px;padding:0 10px}
-.site-notice{background:#fff5d9;color:#2f241d;text-shadow:none;border:1px solid var(--gold);padding:12px 16px;margin:0 0 20px;white-space:pre-line;font-weight:500}
-.adm-ok{color:#006b50}.adm-bad{color:#9b2636}
+.site-notice{background:var(--cream);color:#2f241d;text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:12px 16px;margin:0 0 20px;white-space:pre-line;font-weight:500}
+.adm-ok{color:var(--ok)}.adm-bad{color:var(--danger)}
 .adm-msg{min-height:22px;margin-top:6px;font-weight:700}
 @media(max-width:600px){.adm-tabs button{font-size:12.5px;padding:0 2px}.adm-tabs{gap:3px}}`;
 
@@ -231,7 +232,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 <label class="adm-opt"><input type="checkbox" id="setNoticeOn"> نمایش اطلاعیه</label>
 <textarea id="setNoticeText" maxlength="1000" placeholder="متن اطلاعیه"></textarea>
 <div class="reg-tools"><button type="button" id="setNoticeSave">ذخیره اطلاعیه</button></div><div class="adm-msg" id="setNoticeMsg"></div></div>
-<div class="adm-card"><h3>بخش «ثبت نام دوره جدید»</h3>
+<div class="adm-card"><h3>بخش «ثبت‌نام دوره جدید»</h3>
 <label class="adm-opt"><input type="radio" name="setReg" value="auto"> <span>خودکار: فقط وقتی ثبت‌نامی باز یا اعلام‌شده هست نمایش داده شود</span></label>
 <label class="adm-opt"><input type="radio" name="setReg" value="hidden"> <span>پنهان برای همه (فقط مدیر در ‎#admin‎ می‌بیند)</span></label>
 <div class="adm-msg" id="setRegMsg"></div></div>
