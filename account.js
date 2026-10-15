@@ -146,7 +146,7 @@
 .acs-links{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;margin-top:12px}
 .acs-link{height:auto;padding:4px 0;background:none;border:0;color:var(--deep);text-decoration:underline;font-weight:600;font-size:15px}
 .acs-link:hover{background:none}
-.acs-note{background:#fff5d9;border:1px solid var(--gold);border-right:4px solid var(--deep);padding:8px 12px;margin:8px 0;font-size:15px;line-height:1.8}
+.acs-note{background:#fff5d9;border-radius:var(--r-card);border:1px solid var(--gold);border-right:4px solid var(--deep);padding:8px 12px;margin:8px 0;font-size:15px;line-height:1.8}
 .acs-why{margin:4px 0 0;padding:0 20px 0 0;font-size:15px;color:var(--muted)}
 .acs-msg{min-height:22px;margin-top:8px;font-weight:700}
 .acs-msg:empty{min-height:0}
@@ -155,18 +155,18 @@
 .acs-pass input{padding-left:64px}
 .acs-pass button{position:absolute;left:4px;top:50%;transform:translateY(-50%);height:38px;padding:0 10px;background:none;border:0;color:var(--deep);font-size:14px;font-weight:600}
 .acs-pass button:hover{background:none}
-.acs-me{background:#fff;border:1px solid var(--gold);padding:10px 14px;margin:8px 0}
+.acs-me{background:#fff;border-radius:var(--r-card);border:1px solid var(--gold);padding:10px 14px;margin:8px 0}
 .acs-me b{color:var(--deep);font-size:19px}
 .acs-me div{font-size:15px;color:var(--muted);direction:ltr;text-align:right}
 .acs-count{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
-.acs-count span{background:#e7f5f0;border:1px solid #cfe3da;padding:6px 4px;text-align:center;font-size:14px;color:var(--deep)}
+.acs-count span{background:var(--mint);border-radius:var(--r);border:1px solid #cfe3da;padding:6px 4px;text-align:center;font-size:14px;color:var(--deep)}
 .acs-count b{display:block;font-size:22px}
 .acs-sent{text-align:center;padding:6px 0}
 .acs-sent i{display:flex;width:64px;height:64px;margin:6px auto;border-radius:50%;background:var(--emerald);color:#fff;font-style:normal;font-size:30px;align-items:center;justify-content:center;border:2px solid var(--gold)}
 body.acs-lock{overflow:hidden}
 .intro-acc[hidden],.intro-notice[hidden]{display:none!important}
 #introAccTools{margin-top:10px}
-.intro-acc{margin:14px 0 0;padding:8px 12px;background:rgba(0,92,69,.75);border:1px solid var(--gold);font-size:15px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:space-between}
+.intro-acc{margin:14px 0 0;border-radius:var(--r-card);padding:8px 12px;background:rgba(0,92,69,.75);border:1px solid var(--gold);font-size:15px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:space-between}
 .intro-acc button{height:auto;padding:0;background:none;border:0;color:#ffe2a8;text-decoration:underline;font-weight:500;font-size:15px}
 .intro-acc button:hover{background:none}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }

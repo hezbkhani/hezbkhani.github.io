@@ -90,43 +90,43 @@
 
   const css = `
 @font-face{font-family:ChlArabic;src:url('quran/uthmanic-hafs.woff2') format('woff2');font-display:swap;unicode-range:U+0600-060B,U+060D-061E,U+0620-06FF,U+FB50-FDFF,U+FE70-FEFF}
-.chl-card{background:#fff;color:#000;text-shadow:none;border:1px solid var(--gold);padding:12px 14px;margin:12px 0;position:relative}
-.chl-card::before{content:"";position:absolute;inset:4px;border:1px solid rgba(215,170,91,.45);pointer-events:none}
+.chl-card{background:#fff;color:#000;text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:12px 14px;margin:12px 0;position:relative}
+.chl-card::before{content:"";position:absolute;inset:4px;border:1px solid rgba(215,170,91,.45);border-radius:calc(var(--r-card) - 4px);pointer-events:none}
 .chl-card h3{margin:0 0 2px;font:normal 26px/1.7 SiteFont,Tahoma,serif;color:var(--deep)}
 .chl-card .hint,.chl-card label,body.v2 .chl-card .hint{color:var(--muted);text-shadow:none}
 .chl-card label{color:var(--ink);font-weight:600;font-size:15px;margin:10px 0 4px}
 .chl-card.flash{animation:chlflash 1.6s ease}
 @keyframes chlflash{0%,40%{box-shadow:0 0 0 4px var(--gold)}100%{box-shadow:none}}
 .chl-meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:15px;color:var(--muted)}
-.chl-tag{display:inline-block;padding:0 10px;background:#e7f5f0;border:1px solid var(--gold);color:var(--deep);font-weight:600}
-.chl-tag.wait{background:#fff5d9}
+.chl-tag{display:inline-block;padding:0 12px;border-radius:var(--pill);background:var(--mint);border:1px solid var(--gold);color:var(--deep);font-weight:600}
+.chl-tag.wait{background:var(--cream)}
 .chl-desc{white-space:pre-line;margin:6px 0 0;font-size:15.5px;color:var(--ink)}
 .chl-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin:10px 0 4px;direction:rtl}
-.chl-grid i{display:flex;align-items:center;justify-content:center;aspect-ratio:1;font-style:normal;font-size:12px;border:1px solid #e3d6b8;color:#9a8b78;background:#fffaf0}
+.chl-grid i{display:flex;align-items:center;justify-content:center;aspect-ratio:1;font-style:normal;font-size:12px;border:1px solid #e3d6b8;border-radius:6px;color:#9a8b78;background:#fffaf0}
 .chl-grid i.d{background:var(--emerald);border-color:var(--deep);color:#fff;font-weight:700}
 .chl-grid i.m{background:#f6e3e3;border-color:#e5c3c3;color:#a35a5a}
 .chl-grid i.t{outline:2px solid var(--gold);outline-offset:1px;color:var(--deep);font-weight:700}
 .chl-grid i.n{opacity:.45}
 .chl-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted)}
-.chl-legend b{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-left:4px;border:1px solid #e3d6b8}
+.chl-legend b{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-left:4px;border:1px solid #e3d6b8;border-radius:3px}
 .chl-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .chl-actions button{height:50px}
-.chl-done{display:flex;align-items:center;justify-content:center;gap:6px;background:#e7f5f0!important;color:#00543f!important;border-color:var(--gold)!important}
+.chl-done{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--mint)!important;color:var(--deep)!important;border-color:var(--gold)!important}
 .chl-big{font-size:20px;font-weight:800;color:var(--deep)}
 .chl-msg{min-height:22px;margin-top:6px;font-weight:700}
 .chl-msg:empty{min-height:0;margin:0}
-.chl-ok{color:#006b50}.chl-bad{color:#9b2636}
+.chl-ok{color:var(--ok)}.chl-bad{color:var(--danger)}
 .chl-small{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:10px;font-size:14px}
 .chl-small button{height:auto;padding:0;background:none;border:0;color:var(--deep);text-decoration:underline;font-weight:500;font-size:14px}
-.chl-small button.chl-red{color:#9b2636}
-.chl-bar{height:10px;background:#eee4cf;margin:8px 0 4px;overflow:hidden;border-radius:5px}
+.chl-small button.chl-red{color:var(--danger)}
+.chl-bar{height:10px;background:#eee4cf;margin:8px 0 4px;overflow:hidden;border-radius:var(--pill)}
 .chl-bar span{display:block;height:100%;background:var(--emerald)}
 .chl-read{display:flex;align-items:center;justify-content:center;gap:8px}
 .chl-read svg{width:20px;height:20px}
 .chl-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .chl-head button{height:42px;font-size:15px}
 .chl-fold summary{cursor:pointer;margin:10px 0 0;color:#f4ead8;font-size:15px}
-.sm .chl-mi .sm-ic{background:#fff5d9}
+.sm .chl-mi .sm-ic{background:var(--cream)}
 .chs{position:fixed;inset:0;z-index:48;display:none;align-items:flex-end;justify-content:center;background:#0009}
 .chs.show{display:flex}
 .chs-box{width:100%;max-width:560px;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;background:#fffaf0;color:var(--ink);text-shadow:none;border-top:3px solid var(--gold);border-radius:18px 18px 0 0;padding:0 18px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px #0007;animation:chsup .22s ease}
@@ -136,31 +136,31 @@
 .chs-top h2{flex:1;margin:4px 0 0;font:normal 34px/1.6 SiteFont,Tahoma,serif;color:var(--deep)}
 .chs-top button{flex:none;width:42px;height:42px;padding:0;background:transparent;border:0;color:var(--muted);font-size:24px}
 .chs-facts{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
-.chs-facts span{padding:2px 10px;background:#e7f5f0;border:1px solid #cfe3da;color:var(--deep);font-size:14px;font-weight:600;border-radius:999px}
-.chs-state{background:#fff;border:1px solid var(--gold);padding:10px 14px;margin:10px 0;font-size:15.5px}
+.chs-facts span{padding:2px 10px;background:var(--mint);border:1px solid #cfe3da;color:var(--deep);font-size:14px;font-weight:600;border-radius:var(--pill)}
+.chs-state{background:#fff;border:1px solid var(--gold);border-radius:var(--r-card);padding:10px 14px;margin:10px 0;font-size:15.5px}
 .chs-state b{color:var(--deep)}
 .chs-box label{display:block;font-weight:700;margin:12px 0 6px;color:var(--ink);text-shadow:none}
 .chs-box input{width:100%}
 .chs-box .chs-main{width:100%;height:54px;margin-top:10px;font-size:18px}
-.chs-box .chs-alt{width:100%;height:48px;margin-top:8px;background:#fff;color:var(--deep);border-color:var(--emerald)}
+.chs-box .chs-alt{width:100%;height:48px;margin-top:8px}
 .chs-ok{text-align:center;padding:10px 0}
 .chs-ok .chs-check{width:64px;height:64px;margin:6px auto;border-radius:50%;background:var(--emerald);color:#fff;font-size:34px;display:flex;align-items:center;justify-content:center;border:2px solid var(--gold)}
 .chs-ok p{margin:6px 0}
-.chs-code{display:inline-block;direction:ltr;font-size:22px;letter-spacing:2px;font-weight:700;color:var(--deep);background:#fff5d9;padding:0 10px;border:1px dashed var(--gold)}
+.chs-code{display:inline-block;direction:ltr;font-size:22px;letter-spacing:2px;font-weight:700;color:var(--deep);background:var(--cream);padding:0 10px;border:1px dashed var(--gold);border-radius:6px}
 .chs-rounds{margin:10px 0}
-.chs-rounds label{display:flex;gap:10px;align-items:flex-start;margin:0 0 8px;padding:10px 12px;background:#fff;border:1px solid #d9cba9;font-weight:400;font-size:15px;cursor:pointer}
+.chs-rounds label{display:flex;gap:10px;align-items:flex-start;margin:0 0 8px;padding:10px 12px;border-radius:var(--r);background:#fff;border:1px solid #d9cba9;font-weight:400;font-size:15px;cursor:pointer}
 .chs-rounds label:has(input:checked){border:2px solid var(--emerald);background:#f2faf6}
 .chs-rounds input{width:auto;margin-top:6px;flex:none}
 .chs-rounds b{color:var(--deep)}
 .chl-note{margin:4px 0 0;font-size:14px;color:var(--muted);line-height:1.8}
-.chl-news{white-space:pre-line;margin:8px 0 0;padding:8px 12px;background:#fff5d9;border-right:4px solid var(--gold);font-size:15px;color:var(--ink)}
+.chl-news{white-space:pre-line;margin:8px 0 0;padding:8px 12px;border-radius:var(--r);background:var(--cream);border-right:4px solid var(--gold);font-size:15px;color:var(--ink)}
 .chl-mail{margin-top:8px;font-size:14px;color:var(--muted)}
 .chl-mail summary{cursor:pointer}
 .chl-mail input{direction:ltr;text-align:left}
-.chs-dup{background:#fff;border:1px solid var(--gold);border-right:4px solid var(--deep);padding:10px 14px;margin:10px 0}
+.chs-dup{background:#fff;border:1px solid var(--gold);border-right:4px solid var(--deep);border-radius:var(--r-card);padding:10px 14px;margin:10px 0}
 .chs-dup b{color:var(--deep)}
 .chs-dup p{margin:4px 0 0;font-size:15px}
-.chs-mine{background:#e7f5f0;border:1px solid var(--gold);padding:8px 12px;margin:10px 0;font-size:15px}
+.chs-mine{background:var(--mint);border:1px solid var(--gold);border-radius:var(--r-card);padding:8px 12px;margin:10px 0;font-size:15px}
 body.chl-lock{overflow:hidden}
 ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60;--line:#e6d9bd;--accent:#0b6b50;--gold:#c79a45;--qs:28px;
   position:fixed;inset:0;z-index:50;background:var(--bg);color:var(--text);text-shadow:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:none;font-family:Vazirmatn,Tahoma,sans-serif}
@@ -209,12 +209,12 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
 .chl-adm .chl-card h3{font:700 18px/1.6 Vazirmatn,Tahoma,sans-serif}
 .chl-adm .adm-card .hint,body.v2 #pane-chl .hint{color:var(--muted)}
 .chl-adm h4{margin:18px 0 6px;font-size:17px;color:#fff;text-shadow:var(--glow)}
-.chl-members{max-height:420px;overflow:auto;border:1px solid #e6dcc6;margin-top:8px}
+.chl-members{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:var(--r);margin-top:8px}
 .chl-members div{display:flex;gap:8px;align-items:center;padding:5px 8px;border-bottom:1px solid #f0e8d6}
 .chl-members span{flex:1;min-width:0;overflow-wrap:anywhere}
 .chl-members small{color:var(--muted)}
 .chl-members button{height:32px;padding:0 10px;font-size:13px}
-.chl-members a{flex:none;display:inline-flex;align-items:center;height:32px;padding:0 10px;font-size:13px;font-weight:700;text-decoration:none;border:1px solid var(--emerald);background:#fff;color:var(--deep)}
+.chl-members a{flex:none;display:inline-flex;align-items:center;height:32px;padding:0 10px;font-size:13px;font-weight:700;text-decoration:none;border:1px solid var(--emerald);border-radius:var(--r);background:#fff;color:var(--deep)}
 .chl-promo button{height:34px;padding:0 14px;font-size:14px;margin-inline-start:6px}
 .chl-mini{display:inline-flex;gap:1px;vertical-align:middle;direction:rtl;flex-wrap:wrap}
 .chl-mini i{display:block;width:4px;height:12px;background:#eadfca}
@@ -228,9 +228,10 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
 .chl-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chl-tools button{flex:1 1 auto;height:42px;font-size:15px}
 .chl-tools .chl-arr{flex:0 0 48px;padding:0}
-.chl-tools .chl-mailto{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 14px;font-size:15px;font-weight:700;text-decoration:none;border:1px solid var(--emerald);background:#fff;color:var(--deep)}
+.chl-tools .chl-mailto{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 14px;font-size:15px;font-weight:700;text-decoration:none;border:1px solid var(--emerald);border-radius:var(--r);background:#fff;color:var(--deep)}
 .chl-off{opacity:.6}
 .chl-edit textarea{min-height:260px;direction:rtl;font-size:15px}
+@media(min-width:700px){.chs{align-items:center;padding:24px}.chs-box{border:1px solid var(--gold);border-top-width:3px;border-radius:18px;max-height:88vh}.chs-grip{visibility:hidden}}
 @media(max-width:600px){.chl-actions{grid-template-columns:1fr}.cr-head h3{font-size:30px}.chl-form{grid-template-columns:1fr}.chs-top h2{font-size:30px}}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
 
@@ -343,7 +344,7 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
   function renderHezb(box, top, t, done) {
     if (done) {
       box.innerHTML = top(t.title) + `<div class="chs-ok"><div class="chs-check">✓</div><p class="chl-big">ثبت‌نام شد. قبول باشد.</p>
-<p>${hezbAsReserve ? 'ظرفیت ۱۲۰ نفر کامل بود و شما در فهرست رزرو هستید. اگر کسی انصراف دهد، شناسه او به شما می‌رسد و در بخش «ثبت نام دوره جدید» همین سایت نشان داده می‌شود.' : 'وقتی ظرفیت ۱۲۰ نفر کامل شد، شناسه شما (عددی از ۱ تا ۱۲۰) و تاریخ شروع در بخش «ثبت نام دوره جدید» همین سایت نشان داده می‌شود.'}</p>
+<p>${hezbAsReserve ? 'ظرفیت ۱۲۰ نفر کامل بود و شما در فهرست رزرو هستید. اگر کسی انصراف دهد، شناسه او به شما می‌رسد و در بخش «ثبت‌نام دوره جدید» همین سایت نشان داده می‌شود.' : 'وقتی ظرفیت ۱۲۰ نفر کامل شد، شناسه شما (عددی از ۱ تا ۱۲۰) و تاریخ شروع در بخش «ثبت‌نام دوره جدید» همین سایت نشان داده می‌شود.'}</p>
 <p class="chl-note">کد پیگیری: <span class="chs-code">${fa(done)}</span><br>این کد روی همین گوشی ذخیره شد.</p></div>
 <button type="button" class="chs-main" data-hz-go>دیدن ثبت‌نام من</button>`;
       return;
