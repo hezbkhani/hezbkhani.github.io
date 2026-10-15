@@ -12,7 +12,7 @@
     chl_duplicate_name: 'این نام قبلاً در این دوره ثبت شده است. اگر شخص دیگری هستید، نام خانوادگی یا نام پدر را هم بنویسید.',
     chl_member_not_found: 'این کد در چله‌ها پیدا نشد.',
     chl_not_started: 'چله شما هنوز شروع نشده است.',
-    chl_bad_day: 'فقط برای امروز (یا دیروز، اگر فراموش شده بود) می‌شود ثبت کرد.',
+    chl_bad_day: 'فقط برای امروز یا روزهای فراموش‌شده تا یک هفته گذشته می‌شود ثبت کرد.',
     chl_need_start: 'این نوع ظرفیت ندارد (همیشه باز است)؛ برای دوره تازه، تاریخ شروع را مشخص کنید.',
     chl_empty: 'این دوره هنوز شرکت‌کننده‌ای ندارد.',
     chl_bad_email: 'ایمیل درست نوشته نشده است. اگر نمی‌خواهید، خالیش بگذارید.'
@@ -564,6 +564,12 @@ ${active.map(card).join('')}${ended.length ? `<details class="chl-fold"${active.
 
   function card(m) {
     const s = state(m), n = dayNo(m), done = new Set(m.marked || []), count = done.size, yesterday = isoAdd(today, -1);
+    // روزهای جامانده تا LATE_DAYS روز گذشته (app.js) را می‌شود جداگانه ثبت کرد؛ chl_mark هم همین بازه را می‌پذیرد.
+    const lateBtns = () => {
+      const from = fromDay(m), a = [];
+      for (let i = typeof LATE_DAYS === 'number' ? LATE_DAYS : 1; i >= 1; i--) { const d = isoAdd(today, -i); if (d >= from && !done.has(d)) a.push(d); }
+      return a.length ? `<div class="chl-small"><span>خواندم ولی ثبت نکردم:</span>${a.map(d => `<button type="button" data-mark="${m.code}" data-day="${d}">${d === yesterday ? 'دیروز' : esc(typeof shortDayFa === 'function' ? shortDayFa(d) : dateFa(d))}</button>`).join('')}</div>` : '';
+    };
     const label = m.personal || !m.type_key ? '' : `<span>دوره ${fa(m.number)}</span>`;
     let body = '', tag = '';
     const promo = promoNew(m) ? `<div class="chl-news chl-promo"><b>از فهرست رزرو به گروه اصلی آمدید.</b> ${m.replaced_name ? `جای «${esc(m.replaced_name)}» که انصراف داد به شما رسید. ` : ''}${s === 'run' ? (m.kind === 'juz' ? `از امروز جزء ${fa(todaySpec(m).juz)} را بخوانید.` : 'از امروز همراه گروه بخوانید.') : s === 'soon' || s === 'wait' ? 'با شروع دوره همراه گروه می‌خوانید.' : ''} <button type="button" class="reg-light" data-promo="${m.code}">دیدم</button></div>` : '';
@@ -590,7 +596,7 @@ ${active.map(card).join('')}${ended.length ? `<details class="chl-fold"${active.
         : `<button type="button" data-mark="${m.code}" data-day="${today}">صفحه ${fa(pg)} را خواندم</button>`;
       body = `<p style="margin:8px 0 0">تا امروز ${fa(count)} صفحه از ${fa(m.days)} صفحه قرآن را خوانده‌اید.${done.has(today) ? ` فردا صفحه ${fa(Math.min(m.days, count + 1))}.` : ''}</p><div class="chl-bar"><span style="width:${Math.min(100, count / m.days * 100)}%"></span></div>
 <div class="chl-actions">${readBtn('quran', m.code, `خواندن صفحه ${fa(pg)}`)}${act}</div>
-${n > 1 && !done.has(yesterday) && !done.has(today) ? `<div class="chl-small"><button type="button" data-mark="${m.code}" data-day="${yesterday}">دیروز خواندم ولی ثبت نکردم</button></div>` : ''}`;
+${n > 1 && !done.has(today) ? lateBtns() : ''}`;
     } else if (s === 'run') {
       tag = `<span class="chl-tag">روز ${fa(n)} از ${fa(m.days)}</span>`;
       const act = done.has(today)
@@ -600,7 +606,7 @@ ${n > 1 && !done.has(yesterday) && !done.has(today) ? `<div class="chl-small"><b
       body = `<p style="margin:8px 0 0">${fa(count)} روز از ${fa(since)} روز ${since < n ? 'پس از آمدن به گروه' : 'گذشته'} را خوانده‌اید.${m.times_per_day > 1 ? ` هر روز ${fa(m.times_per_day)} بار بخوانید.` : ''}</p>${grid(m)}
 ${m.kind === 'juz' ? `<p class="chl-big" style="margin:8px 0 0">امروز: جزء ${fa(todaySpec(m).juz)}</p>` : ''}
 <div class="chl-actions">${readBtn(m.text_key, m.code, m.kind === 'juz' ? `خواندن جزء ${fa(todaySpec(m).juz)}` : '')}${act}</div>
-${since > 1 && !done.has(yesterday) ? `<div class="chl-small"><button type="button" data-mark="${m.code}" data-day="${yesterday}">دیروز خواندم ولی ثبت نکردم</button></div>` : ''}`;
+${since > 1 ? lateBtns() : ''}`;
     } else {
       tag = '<span class="chl-tag">تمام شد</span>';
       body = m.kind === 'page' ? `<p class="chl-big">${fa(count)} صفحه، یک ختم کامل قرآن. قبول باشد.</p>` : `<p class="chl-big">${fa(count)} روز از ${fa(m.days)} روز را خواندید. قبول باشد.</p>${grid(m)}
@@ -637,7 +643,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
       const code = d.mark || d.unmark;
       if (d.unmark && !confirm('ثبت «خواندم» برای امروز برداشته شود؟')) return;
       b.disabled = true;
-      try { await mark(code, d.day, !!d.mark); if (d.mark) toast(d.day === today ? 'ثبت شد. قبول باشد.' : 'روز دیروز هم ثبت شد.'); }
+      try { await mark(code, d.day, !!d.mark); if (d.mark) toast(d.day === today ? 'ثبت شد. قبول باشد.' : d.day === isoAdd(today, -1) ? 'روز دیروز هم ثبت شد.' : `${typeof shortDayFa === 'function' ? shortDayFa(d.day) : 'آن روز'} هم ثبت شد.`); }
       catch (err) { const m = panel.querySelector('#chlM' + code); if (m) { m.className = 'chl-msg chl-bad'; m.textContent = err.message; } b.disabled = false; }
       return;
     }
