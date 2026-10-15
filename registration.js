@@ -11,6 +11,7 @@
     duplicate_name: 'این نام قبلاً در این دوره ثبت شده است. اگر شخص دیگری هستید، نام خانوادگی یا نام پدر را هم بنویسید.',
     bad_name: 'نام باید بین ۲ تا ۶۰ حرف باشد و نشانه‌هایی مثل < > نداشته باشد.',
     ids_already_assigned: 'شناسه‌ها داده شده است و انصراف از سایت دیگر ممکن نیست؛ لطفاً به مدیر گروه پیام دهید.',
+    round_closed: 'این دوره بسته شده است؛ برای انصراف به مدیر گروه پیام دهید.',
     round_not_full: 'دوره هنوز به ۱۲۰ نفر نرسیده است.',
     ids_not_assigned: 'ابتدا شناسه‌ها را بدهید.',
     already_announced: 'این دوره اعلام شده است؛ برای تغییر نام‌ها از زبانه «گروه‌ها» استفاده کنید.',
@@ -113,11 +114,14 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
   function roundCard(r) {
     const pct = Math.min(100, Math.round(r.registered / CAPACITY * 100));
     const start = r.start_date ? `<p class="hint">${r.status === 'announced' ? 'تاریخ شروع' : 'تاریخ شروع (پیش‌بینی)'}: <strong>${esc(dateFa(r.start_date))}</strong></p>` : '';
+    const slots = r.reserve_slots ?? 0, res = r.reserved ?? 0, mainFull = r.registered >= CAPACITY;
+    const form = label => `<label for="regName${r.id}">نام و نام خانوادگی</label><div class="row"><input id="regName${r.id}" maxlength="60" autocomplete="name" placeholder="مثلاً فاطمه رضایی"><button type="button" data-reg="${r.id}">${label}</button></div><div class="reg-msg" id="regMsg${r.id}"></div>`;
     let body = '';
-    if (r.status === 'open') body = `<label for="regName${r.id}">نام و نام خانوادگی</label><div class="row"><input id="regName${r.id}" maxlength="60" autocomplete="name" placeholder="مثلاً فاطمه رضایی"><button type="button" data-reg="${r.id}">ثبت نام</button></div><div class="reg-msg" id="regMsg${r.id}"></div>`;
+    if (!mainFull) body = (r.status === 'open' ? '' : '<p class="hint">یک جای خالی در گروه هست؛ با ثبت‌نام، همان شناسه به شما داده می‌شود.</p>') + form('ثبت نام');
+    else if (res < slots) body = `<p class="hint">ظرفیت ${fa(CAPACITY)} نفر تکمیل شد. ${fa(slots - res)} جا در فهرست رزرو مانده است؛ اگر کسی انصراف دهد، نفرات رزرو به ترتیب جای او و شناسه‌اش را می‌گیرند.</p>` + form('ثبت در فهرست رزرو');
     else if (r.status === 'announced') body = '<p class="hint">گروه تشکیل شد. اگر ثبت‌نام کرده‌اید، شناسه شما در «ثبت‌نام‌های من» یا با کد پیگیری دیده می‌شود.</p>';
     else body = '<p class="hint">ظرفیت تکمیل شد. شناسه‌ها به‌زودی اعلام می‌شود.</p>';
-    return `<div class="reg-round"><h3>${esc(r.title)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform] || esc(r.platform)}</span><span>${fa(r.registered)} از ${fa(CAPACITY)} نفر</span><span>${STATUS[r.status]}</span></div><div class="reg-bar"><span style="width:${pct}%"></span></div>${start}${body}</div>`;
+    return `<div class="reg-round"><h3>${esc(r.title)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform] || esc(r.platform)}</span><span>${fa(r.registered)} از ${fa(CAPACITY)} نفر</span>${mainFull && slots ? `<span>رزرو: ${fa(res)} از ${fa(slots)}</span>` : ''}<span>${STATUS[r.status]}</span></div><div class="reg-bar"><span style="width:${pct}%"></span></div>${start}${body}</div>`;
   }
 
   // ثبت‌نام‌های این دستگاه؛ کدِ دوره‌های حذف‌شده یا بسته‌شده خودکار فراموش می‌شود.
@@ -132,10 +136,14 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     box.innerHTML = '<h3 class="reg-sub">ثبت‌نام‌های من</h3>' + items.map(({ c, r }) => {
       if (r === undefined) return `<div class="reg-round"><span class="hint">کد ${fa(c)}: دریافت وضعیت انجام نشد.</span></div>`;
       let s = `<div class="reg-round"><h3>${esc(r.name)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform] || esc(r.platform)}</span><span>${esc(r.title)}</span><span>${STATUS[r.status]}</span></div>`;
+      if (r.promoted) s += '<p class="reg-note">یک نفر انصراف داد و شما از فهرست رزرو به گروه اضافه شدید.</p>';
       s += `<p class="hint">کد پیگیری: <span class="reg-code">${fa(c)}</span></p>`;
-      if (r.status === 'announced' && r.participant_id) s += `<p>شناسه شما: <span class="reg-id">${fa(r.participant_id)}</span><br>تاریخ شروع: <strong>${esc(dateFa(r.start_date))}</strong></p><p class="hint">از روز شروع، با همین شناسه در بخش «شناسه و سهم روزانه» سهم خود را ببینید.</p>`;
-      else if (r.status === 'open' || r.status === 'full') s += `<p class="hint">شما نفر ${fa(r.place)} از ${fa(r.registered)} ثبت‌نام‌کننده هستید.${r.start_date ? ` شروع دوره (پیش‌بینی): ${esc(dateFa(r.start_date))}.` : ''} پس از تکمیل ظرفیت، شناسه شما همین‌جا نشان داده می‌شود.</p><button type="button" class="reg-danger" data-unreg="${c}">انصراف از ثبت‌نام</button><div class="reg-msg" id="regUn${c}"></div>`;
+      if (r.reserve) s += `<p class="hint">شما نفر ${fa(r.reserve_place)} فهرست رزرو هستید. اگر یکی از ${fa(CAPACITY)} نفر انصراف دهد، نفرات رزرو به ترتیب جای او را می‌گیرند و شناسه شما همین‌جا نشان داده می‌شود.</p>`;
+      else if (r.status === 'announced' && r.participant_id) s += `<p>شناسه شما: <span class="reg-id">${fa(r.participant_id)}</span><br>تاریخ شروع: <strong>${esc(dateFa(r.start_date))}</strong></p><p class="hint">از روز شروع، با همین شناسه در بخش «شناسه و سهم روزانه» سهم خود را ببینید.</p>`;
+      else if (r.status === 'open' || r.status === 'full') s += `<p class="hint">شما نفر ${fa(r.place)} از ${fa(r.registered)} ثبت‌نام‌کننده هستید.${r.start_date ? ` شروع دوره (پیش‌بینی): ${esc(dateFa(r.start_date))}.` : ''} پس از تکمیل ظرفیت، شناسه شما همین‌جا نشان داده می‌شود.</p>`;
       else if (r.status === 'assigned') s += '<p class="hint">شناسه‌ها داده شده و به‌زودی اعلام می‌شود.</p>';
+      const inGroup = !r.reserve && (r.status === 'assigned' || r.status === 'announced');
+      s += `<button type="button" class="reg-danger" data-unreg="${c}" data-ingroup="${inGroup ? 1 : ''}">${r.reserve ? 'انصراف از فهرست رزرو' : inGroup ? 'انصراف از گروه' : 'انصراف از ثبت‌نام'}</button><div class="reg-msg" id="regUn${c}"></div>`;
       return s + '</div>';
     }).join('');
   }
@@ -158,7 +166,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
       } catch (err) { msg.className = 'reg-msg reg-bad'; msg.textContent = err.message; b.disabled = false; }
     } else if (b.dataset.unreg) {
       const c = b.dataset.unreg, msg = $p('#regUn' + c);
-      if (!confirm('از ثبت‌نام در این دوره انصراف می‌دهید؟')) return;
+      if (!confirm(b.dataset.ingroup ? 'از گروه انصراف می‌دهید؟ شناسه شما به نفر اول فهرست رزرو داده می‌شود و این کار برگشت ندارد.' : 'از ثبت‌نام در این دوره انصراف می‌دهید؟')) return;
       b.disabled = true;
       try { await rpc('reg_unregister', { p_code: c }); codes.remove(c); await loadPublic(); if (window.regAdminReload) window.regAdminReload(); }
       catch (err) { msg.className = 'reg-msg reg-bad'; msg.textContent = err.message; b.disabled = false; }
@@ -172,11 +180,12 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     pane = document.getElementById('pane-reg'); if (!pane || pane.dataset.built) return;
     pane.dataset.built = 1;
     pane.innerHTML = `<div class="reg-round"><h3>شروع ثبت‌نام جدید</h3>
-<p class="hint">ثبت‌نام بلافاصله باز می‌شود و با رسیدن به ۱۲۰ نفر خودکار بسته می‌شود. تاریخ شروع دوره را می‌توانید همین حالا بگذارید (به ثبت‌نام‌کنندگان نشان داده می‌شود) یا بعداً هنگام اعلام.</p>
+<p class="hint">ثبت‌نام بلافاصله باز می‌شود و با رسیدن به ۱۲۰ نفر تکمیل می‌شود؛ پس از آن ۵ نفر دیگر در فهرست رزرو ثبت می‌شوند و اگر کسی انصراف دهد، نفر اول رزرو خودکار جای او و شناسه‌اش را می‌گیرد. با گزینه «خودکار»، بقیه کارها (شناسه، ساختن گروه، اعلام و حتی باز کردن دوره بعد) هم خودکار انجام می‌شود.</p>
 <div class="reg-grid"><div><label for="regNewPlat">پیام‌رسان</label><select id="regNewPlat"><option value="telegram">تلگرام</option><option value="bale">بله</option></select></div>
 <div><label for="regNewTitle">عنوان دوره</label><input id="regNewTitle" maxlength="80"></div></div>
 <label class="adm-opt"><input type="checkbox" id="regNewHasStart"> تاریخ شروع دوره را الان مشخص می‌کنم</label>
 <div id="regNewStartBox" hidden><input id="regNewStart"></div>
+<div id="regNewAuto">${autoOpts()}</div>
 <div class="reg-tools"><button type="button" id="regNewBtn">شروع ثبت‌نام</button></div><div class="reg-msg" id="regAdminMsg"></div></div>
 <div class="adm-bar"><strong>دوره‌ها</strong><button type="button" class="reg-light" id="regReload">تازه‌سازی</button></div>
 <div id="regAdminRounds"><p class="hint">در حال دریافت…</p></div>`;
@@ -186,9 +195,20 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     $('#regNewPlat').onchange = syncTitle; syncTitle();
     $('#regNewHasStart').onchange = e => { $('#regNewStartBox').hidden = !e.target.checked; };
     $('#regNewBtn').onclick = createRound;
+    pane.addEventListener('change', e => { if (e.target.matches('[data-o=auto]')) { const box = e.target.closest('.reg-round').querySelector('[data-o-box]'); if (box) box.hidden = !e.target.checked; } });
     $('#regReload').onclick = loadAdmin;
     pane.addEventListener('click', onAdminClick);
   }
+  // گزینه‌های «ثبت‌نام خودکار» (برای ساختن دوره و ویرایش آن)
+  const DAYS = [1, 2, 3, 7];
+  function autoOpts(r) {
+    const on = r ? r.auto_announce : true, next = r ? r.auto_next : true, days = r ? r.start_after_days : 1;
+    return `<label class="adm-opt"><input type="checkbox" data-o="auto" ${on ? 'checked' : ''}> <span><b>خودکار:</b> با رسیدن به ۱۲۰ نفر، شناسه‌ها داده شود و گروه ساخته و اعلام شود (بدون نیاز به مدیر)</span></label>
+<div data-o-box ${on ? '' : 'hidden'}><label>اگر تاریخ شروع مشخص نشده باشد، دوره شروع شود:</label><select data-o="days">${DAYS.map(d => `<option value="${d}" ${d === days ? 'selected' : ''}>${d === 1 ? 'فردای روزی که ظرفیت کامل شد' : `${fa(d)} روز پس از تکمیل ظرفیت`}</option>`).join('')}</select>
+<label class="adm-opt"><input type="checkbox" data-o="next" ${next ? 'checked' : ''}> سپس ثبت‌نام دوره بعدِ همین پیام‌رسان خودکار باز شود</label></div>`;
+  }
+  const readAuto = el => { const on = el.querySelector('[data-o=auto]').checked; return { auto_announce: on, auto_next: on && el.querySelector('[data-o=next]').checked, start_after_days: +el.querySelector('[data-o=days]').value }; };
+  const autoText = r => r.auto_announce ? `خودکار: با رسیدن به ${fa(CAPACITY)} نفر، شناسه‌ها و گروه ساخته و اعلام می‌شود؛ شروع ${r.start_date ? esc(dateFa(r.start_date)) : (r.start_after_days === 1 ? 'فردای تکمیل ظرفیت' : `${fa(r.start_after_days)} روز پس از تکمیل ظرفیت`)}${r.auto_next ? '، و ثبت‌نام دوره بعد خودکار باز می‌شود' : ''}.` : '';
   const amsg = (t, ok) => { const m = pane.querySelector('#regAdminMsg'); m.className = 'reg-msg ' + (ok ? 'reg-ok' : 'reg-bad'); m.textContent = t; };
 
   async function createRound() {
@@ -199,7 +219,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     if (busy && !confirm(`ثبت‌نام «${busy.title}» برای ${PLATFORMS[platform]} هنوز در جریان است. دوره دیگری هم شروع شود؟`)) return;
     $('#regNewBtn').disabled = true;
     try {
-      await api('registration_rounds', { method: 'POST', body: { platform, title, start_date }, auth: true, prefer: 'return=minimal' });
+      await api('registration_rounds', { method: 'POST', body: { platform, title, start_date, ...readAuto($('#regNewAuto')) }, auth: true, prefer: 'return=minimal' });
       amsg('ثبت‌نام جدید باز شد. «کپی متن دعوت» را بزنید و در گروه بفرستید.', true); await loadAdmin(); loadPublic();
     } catch (e) { amsg(e.message); }
     $('#regNewBtn').disabled = false;
@@ -210,7 +230,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     try {
       [adminRounds, adminRegs] = await Promise.all([
         api('registration_rounds?select=*&order=created_at.desc', { auth: true }),
-        api('registrations?select=id,round_id,name,code,participant_id,created_at&order=created_at,id', { auth: true })
+        api('registrations?select=id,round_id,name,code,participant_id,created_at,promoted_at&order=created_at,id', { auth: true })
       ]);
     } catch (e) { pane.querySelector('#regAdminRounds').innerHTML = `<p class="reg-msg reg-bad">${esc(e.message)}</p>`; return; }
     renderAdmin();
@@ -228,39 +248,45 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
   }
 
   function adminCard(r) {
-    const regs = regsOf(r.id), n = regs.length, pct = Math.min(100, Math.round(n / CAPACITY * 100)), expanded = openRound === r.id;
+    const regs = regsOf(r.id), ided = r.status === 'assigned' || r.status === 'announced';
+    const mains = ided ? regs.filter(x => x.participant_id).sort((a, b) => a.participant_id - b.participant_id) : regs.slice(0, CAPACITY);
+    const reserves = ided ? regs.filter(x => !x.participant_id) : regs.slice(CAPACITY);
+    const n = mains.length, pct = Math.min(100, Math.round(n / CAPACITY * 100)), expanded = openRound === r.id;
     const step = (k, t) => `<div class="reg-step"><b>${fa(k)}.</b> ${t}</div>`;
-    let s = `<div class="reg-round" data-round="${r.id}"><h3>${esc(r.title)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform]}</span><span>${fa(n)} از ${fa(CAPACITY)} نفر</span><span>${STATUS[r.status]}</span>${r.start_date ? `<span>شروع: ${esc(dateFa(r.start_date))}</span>` : ''}</div><div class="reg-bar"><span style="width:${pct}%"></span></div>`;
+    let s = `<div class="reg-round" data-round="${r.id}"><h3>${esc(r.title)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform]}</span><span>${fa(n)} از ${fa(CAPACITY)} نفر</span>${n >= CAPACITY || reserves.length ? `<span>رزرو: ${fa(reserves.length)} از ${fa(r.reserve_slots ?? 0)}</span>` : ''}<span>${STATUS[r.status]}</span>${r.auto_announce && ['open', 'full'].includes(r.status) ? '<span class="reg-plat">خودکار</span>' : ''}${r.start_date ? `<span>شروع: ${esc(dateFa(r.start_date))}</span>` : ''}</div><div class="reg-bar"><span style="width:${pct}%"></span></div>`;
     if (editRound === r.id) {
       s += `<label>عنوان دوره</label><input data-f="title" maxlength="80" value="${esc(r.title)}"><label>تاریخ شروع دوره</label><input data-f="start" value="${esc(r.start_date || '')}">
+${['open', 'full'].includes(r.status) ? autoOpts(r) : ''}
 <div class="reg-tools"><button type="button" data-a="saveEdit">ذخیره</button><button type="button" class="reg-light" data-a="cancelEdit">انصراف</button></div>`;
     } else {
       s += '<div class="reg-tools">';
-      s += `<button type="button" class="reg-light" data-a="toggle">${expanded ? 'بستن فهرست نام‌ها' : `نام‌ها (${fa(n)})`}</button>`;
-      if (r.status !== 'announced' && r.status !== 'closed') s += '<button type="button" class="reg-light" data-a="edit">ویرایش عنوان و تاریخ</button>';
+      s += `<button type="button" class="reg-light" data-a="toggle">${expanded ? 'بستن فهرست نام‌ها' : `نام‌ها (${fa(regs.length)})`}</button>`;
+      if (r.status !== 'announced' && r.status !== 'closed') s += '<button type="button" class="reg-light" data-a="edit">ویرایش دوره</button>';
       if (r.status === 'open') s += '<button type="button" class="reg-light" data-a="invite">کپی متن دعوت</button>';
       if (r.status === 'announced') s += '<button type="button" data-a="copyAnn">کپی متن اعلام</button>';
       s += '</div>';
-      if (r.status === 'open') s += step(1, `ثبت‌نام باز است. با رسیدن به ${fa(CAPACITY)} نفر خودکار بسته می‌شود.`);
+      if (r.status === 'open') s += step(1, r.auto_announce ? autoText(r) : `ثبت‌نام باز است. با رسیدن به ${fa(CAPACITY)} نفر خودکار بسته می‌شود.`);
       if (r.status === 'full' || r.status === 'assigned') s += step(2, `${r.status === 'assigned' ? 'شناسه‌ها به ترتیب ثبت‌نام داده شد.' : 'ظرفیت کامل شد. شناسه‌ها را به ترتیب ثبت‌نام بدهید.'}`) + `<div class="reg-tools"><button type="button" data-a="assign">${r.status === 'assigned' ? 'دادن دوباره شناسه‌ها' : 'دادن شناسه ۱ تا ۱۲۰'}</button></div>`;
       if (r.status === 'assigned' || r.status === 'announced') {
         const gs = allGroups(), next = Math.max(0, ...gs.map(g => g.number)) + 1;
         const gnum = r.group_number || next, same = gs.find(g => g.number === gnum);
         const gname = (r.status === 'announced' && same?.name) || `گروه ${PLATFORMS[r.platform]} ${fa(gnum)}`;
-        s += step(3, 'تاریخ شروع و گروه را مشخص و اعلام کنید. گروه با همین ۱۲۰ نام در زبانه «گروه‌ها» ساخته می‌شود و هر نفر شناسه‌اش را در سایت می‌بیند.');
+        s += step(3, r.status === 'announced' ? `اعلام شد${r.auto_announce ? ' (خودکار)' : ''}. گروه در زبانه «گروه‌ها» ساخته شد و هر نفر شناسه‌اش را در سایت می‌بیند. «کپی متن اعلام» را در گروه بفرستید. برای تغییر، تاریخ یا نام را عوض کنید و «به‌روزرسانی اعلام» را بزنید.` : 'تاریخ شروع و گروه را مشخص و اعلام کنید. گروه با همین ۱۲۰ نام در زبانه «گروه‌ها» ساخته می‌شود و هر نفر شناسه‌اش را در سایت می‌بیند.');
         s += `<label>تاریخ شروع دوره</label><input data-f="start" value="${esc(r.start_date || J.addDays(J.todayIso(), 1))}">
 <div class="reg-grid"><div><label>شماره گروه</label><input type="number" min="1" data-f="num" value="${gnum}"></div><div><label>نام گروه در سایت</label><input data-f="gname" maxlength="80" value="${esc(gname)}"></div></div>`;
         if (same && r.status !== 'announced') s += `<p class="reg-bad">گروه شماره ${fa(gnum)} («${esc(same.name)}») وجود دارد و جایگزین می‌شود. اگر نمی‌خواهید، شماره دیگری بگذارید.</p>`;
         s += `<div class="reg-tools"><button type="button" data-a="announce">${r.status === 'announced' ? 'به‌روزرسانی اعلام' : 'اعلام شناسه‌ها و تاریخ شروع'}</button></div>`;
       }
+      const moved = regs.filter(x => x.promoted_at && (ided ? x.participant_id : regs.indexOf(x) < CAPACITY));
+      if (moved.length) s += `<p class="hint">جایگزین‌شده از رزرو: ${moved.map(x => `${esc(x.name)}${x.participant_id ? ` (شناسه ${fa(x.participant_id)})` : ''}`).join('، ')}</p>`;
       s += '<div class="reg-tools">' + (r.status !== 'closed' ? `<button type="button" class="reg-light" data-a="close">${r.status === 'announced' ? 'بایگانی دوره' : 'بستن این ثبت‌نام'}</button>` : '') + '<button type="button" class="reg-danger" data-a="delete">حذف کامل دوره</button></div>';
     }
     s += '<div class="reg-msg" data-msg></div>';
     if (expanded) {
-      if (r.status === 'open') s += '<div class="row" style="margin-top:8px"><input data-f="add" maxlength="60" placeholder="افزودن نام توسط مدیر"><button type="button" data-a="add">افزودن</button></div>';
-      const ordered = r.status === 'assigned' || r.status === 'announced' ? [...regs].sort((a, b) => a.participant_id - b.participant_id) : regs;
-      s += `<div class="reg-list">${ordered.length ? ordered.map((x, i) => `<div><span class="reg-n">${fa(x.participant_id || i + 1)}</span><span>${esc(x.name)}</span>${r.status === 'announced' || r.status === 'closed' ? '' : `<button type="button" class="reg-light" data-a="rename" data-id="${x.id}">ویرایش</button><button type="button" class="reg-danger" data-a="remove" data-id="${x.id}">حذف</button>`}</div>`).join('') : '<div><span>هنوز کسی ثبت‌نام نکرده است.</span></div>'}</div>`;
-      if (ordered.length) s += '<div class="reg-tools"><button type="button" class="reg-light" data-a="copyNames">کپی فهرست نام‌ها</button></div>';
+      if (r.status !== 'closed' && (n < CAPACITY || reserves.length < (r.reserve_slots ?? 0))) s += `<div class="row" style="margin-top:8px"><input data-f="add" maxlength="60" placeholder="${n < CAPACITY ? 'افزودن نام توسط مدیر' : 'افزودن به فهرست رزرو'}"><button type="button" data-a="add">افزودن</button></div>`;
+      const row = (x, label) => `<div><span class="reg-n">${label}</span><span>${esc(x.name)}${x.promoted_at ? ' <small class="reg-ok">(جایگزین)</small>' : ''}</span>${r.status === 'closed' ? '' : `${r.status === 'announced' ? '' : `<button type="button" class="reg-light" data-a="rename" data-id="${x.id}">ویرایش</button>`}<button type="button" class="reg-danger" data-a="remove" data-id="${x.id}">حذف</button>`}</div>`;
+      s += `<div class="reg-list">${regs.length ? mains.map((x, i) => row(x, fa(x.participant_id || i + 1))).join('') + reserves.map((x, i) => row(x, 'رزرو ' + fa(i + 1))).join('') : '<div><span>هنوز کسی ثبت‌نام نکرده است.</span></div>'}</div>`;
+      if (regs.length) s += '<div class="reg-tools"><button type="button" class="reg-light" data-a="copyNames">کپی فهرست نام‌ها</button></div>';
     }
     return s + '</div>';
   }
@@ -297,7 +323,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     try {
       if (a === 'saveEdit') {
         const title = f('title').value.trim(); if (!title) return fail(Error('عنوان را بنویسید.'));
-        await api(`registration_rounds?id=eq.${id}`, { method: 'PATCH', body: { title, start_date: f('start').value || null }, auth: true, prefer: 'return=minimal' });
+        await api(`registration_rounds?id=eq.${id}`, { method: 'PATCH', body: { title, start_date: f('start').value || null, ...(card.querySelector('[data-o=auto]') ? readAuto(card) : {}) }, auth: true, prefer: 'return=minimal' });
         editRound = null;
       } else if (a === 'close') {
         if (!confirm(r.status === 'announced' ? 'این دوره بایگانی شود؟ (گروه ساخته‌شده در سایت می‌ماند.)' : 'ثبت‌نام این دوره بسته شود؟ ثبت‌نام‌کنندگان دیگر نمی‌توانند ثبت‌نام یا انصراف دهند.')) { b.disabled = false; return; }
@@ -320,7 +346,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
         await rpc('reg_admin_add', { p_round: id, p_name: f('add').value }, true);
       } else if (a === 'remove') {
         const x = adminRegs.find(y => y.id === +b.dataset.id);
-        if (!confirm(`«${x.name}» از این دوره حذف شود؟${r.status === 'assigned' ? ' شناسه‌ها پاک می‌شوند و باید دوباره داده شوند.' : ''}`)) { b.disabled = false; return; }
+        if (!confirm(`«${x.name}» از این دوره حذف شود؟${x.participant_id || (!['assigned', 'announced'].includes(r.status) && regsOf(id).indexOf(x) < CAPACITY) ? ' اگر کسی در فهرست رزرو باشد، نفر اول رزرو جای او را می‌گیرد.' : ''}`)) { b.disabled = false; return; }
         await rpc('reg_admin_remove', { p_id: x.id }, true);
       } else if (a === 'rename') {
         const x = adminRegs.find(y => y.id === +b.dataset.id), name = prompt('نام درست را بنویسید:', x.name);
