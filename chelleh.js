@@ -157,6 +157,9 @@
 .chl-mail{margin-top:8px;font-size:14px;color:var(--muted)}
 .chl-mail summary{cursor:pointer}
 .chl-mail input{direction:ltr;text-align:left}
+.chs-dup{background:#fff;border:1px solid var(--gold);border-right:4px solid var(--deep);padding:10px 14px;margin:10px 0}
+.chs-dup b{color:var(--deep)}
+.chs-dup p{margin:4px 0 0;font-size:15px}
 .chs-mine{background:#e7f5f0;border:1px solid var(--gold);padding:8px 12px;margin:10px 0;font-size:15px}
 body.chl-lock{overflow:hidden}
 ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60;--line:#e6d9bd;--accent:#0b6b50;--gold:#c79a45;--qs:28px;
@@ -255,6 +258,7 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
     } catch { /* اینترنت قطع: فهرست قبلی می‌ماند */ }
     return mine;
   }
+  window.chlRefresh = async () => { await refresh(); if (sheet?.classList.contains('show') && sheetType) renderSheet(); };
   async function refresh() {
     await Promise.all([loadTypes(), loadMine()]);
     today = today || isoIran();
@@ -357,7 +361,7 @@ ${open.length ? `<div class="chs-state">${open.length > 1 ? 'یکی از گرو�
     const input = sheet.querySelector('#chsName'), msg = sheet.querySelector('#chsMsg'), name = input.value.trim().replace(/\s+/g, ' ');
     const id = +sheet.querySelector('[name=hzRound]:checked')?.value;
     if (name.length < 2) { msg.className = 'chl-msg chl-bad'; msg.textContent = 'نام خود را بنویسید (دست‌کم دو حرف).'; input.focus(); return; }
-    const label = b.textContent; b.disabled = true; b.textContent = 'در حال ثبت…';
+    const label = b.textContent; b.disabled = true; b.textContent = 'در حال ثبت…'; sheet.querySelector('#chsDup')?.remove();
     try {
       hezbAsReserve = hezbFull(hezbRounds.find(r => r.id === id) || { registered: 0 });
       const a = await rpc('reg_register', { p_round: id, p_name: name });
@@ -367,7 +371,8 @@ ${open.length ? `<div class="chs-state">${open.length > 1 ? 'یکی از گرو�
       window.regReloadPublic?.();
       hezbRounds = (await rpc('reg_rounds').catch(() => hezbRounds)) || hezbRounds;
       renderSheet(code);
-    } catch (err) { msg.className = 'chl-msg chl-bad'; msg.textContent = err.message; b.disabled = false; b.textContent = label; }
+      window.account?.sync();
+    } catch (err) { msg.className = 'chl-msg chl-bad'; msg.textContent = err.message; b.disabled = false; b.textContent = label; if (err.message === window.sbErrors.duplicate_name) dupHelp(msg, 'reg'); }
   }
 
   function typeLine(t) {
@@ -488,16 +493,27 @@ ${t.reserve && !toReserve ? `<p class="chl-note">وقتی ${fa(t.capacity)} نف
       const email = norm(sheet.querySelector('#chsEmail').value).trim(), pick = sheet.querySelector('[name=chsRound]:checked')?.value;
       if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.className = 'chl-msg chl-bad'; msg.textContent = window.sbErrors.chl_bad_email; sheet.querySelector('#chsEmail').focus(); return; }
       if (name.length < 2) { msg.className = 'chl-msg chl-bad'; msg.textContent = 'نام خود را بنویسید (دست‌کم دو حرف).'; input.focus(); return; }
-      const label = b.textContent; b.disabled = true; b.textContent = 'در حال ثبت…';
+      const label = b.textContent; b.disabled = true; b.textContent = 'در حال ثبت…'; sheet.querySelector('#chsDup')?.remove();
       try {
         const code = pick ? await rpc('chl_join', { p_round: +pick, p_name: name, p_email: email || null })
           : await rpc('chl_join_type', { p_type: sheetType, p_name: name, p_email: email || null });
         codes.add(code); write('chlName', name); write('chlEmail', email);
         await refresh();
         renderSheet(code);
-      } catch (err) { msg.className = 'chl-msg chl-bad'; msg.textContent = err.message; b.disabled = false; b.textContent = label; }
+        window.account?.sync();
+      } catch (err) { msg.className = 'chl-msg chl-bad'; msg.textContent = err.message; b.disabled = false; b.textContent = label; if (err.message === window.sbErrors.chl_duplicate_name) dupHelp(msg, 'chl'); }
       return;
     }
+    if (b.hasAttribute('data-dup-acc')) {
+      const m = b.dataset.dupAcc, key = sheetType;
+      const prefill = { name: sheet.querySelector('#chsName')?.value.trim() || '', email: norm(sheet.querySelector('#chsEmail')?.value || '').trim() };
+      // پس از ورود، چله‌های حساب روی گوشی می‌آیند و همین برگه دوباره نشان می‌دهد «شما با نام … در این چله هستید».
+      closeSheet();
+      setTimeout(() => window.account?.open(m, { note: DUP_NOTE, prefill, after: () => openSheet(key) }), 250);
+      return;
+    }
+    if (b.hasAttribute('data-dup-code')) { const f = sheet.querySelector('#chsDupForm'); f.hidden = false; f.querySelector('input').focus(); return; }
+    if (b.hasAttribute('data-dup-go')) return dupCode(b);
     if (b.hasAttribute('data-hz-join')) return hezbJoin(b);
     if (b.hasAttribute('data-hz-go')) {
       closeSheet();
@@ -506,6 +522,37 @@ ${t.reserve && !toReserve ? `<p class="chl-note">وقتی ${fa(t.capacity)} نف
     }
     if (b.dataset.chsGo) { const c = b.dataset.chsGo; closeSheet(); setTimeout(() => flash(c), 250); return; }
     if (b.hasAttribute('data-chs-share')) share(typeOf(sheetType));
+  }
+  // «این نام قبلاً ثبت شده»: به‌جای بن‌بست، راه ورود به حساب یا افزودن با کد.
+  const DUP_NOTE = 'اگر قبلاً با ایمیل در چله ثبت‌نام کرده‌اید، با همان ایمیل وارد شوید یا حساب بسازید؛ پس از تأیید ایمیل، چله‌هایتان خودکار به حساب اضافه می‌شود.';
+  function dupHelp(msg, kind) {
+    const user = window.account?.user, chl = kind === 'chl';
+    msg.insertAdjacentHTML('afterend', `<div class="chs-dup" id="chsDup"><b>این ثبت‌نام خود شماست؟</b>
+${user ? `<p>این ثبت‌نام هنوز به حساب شما وصل نیست. اگر کد ${chl ? 'چله' : 'پیگیری'} را دارید، اینجا بنویسید${chl ? '؛ اگر هنگام ثبت‌نام ایمیل همین حساب را نوشته بودید، پس از تأیید ایمیل حساب خودکار اضافه می‌شود' : ''}.</p>`
+  : `<p>وارد حساب کاربری شوید تا ثبت‌نام‌هایتان روی همین گوشی بیاید${chl ? '؛ اگر حساب ندارید و هنگام ثبت‌نام ایمیل نوشته بودید، با همان ایمیل حساب بسازید' : ''}. یا اگر کد ${chl ? 'چله' : 'پیگیری'} را دارید، آن را بنویسید.</p>
+<button type="button" class="chs-main" data-dup-acc="login">ورود به حساب کاربری</button><button type="button" class="chs-alt" data-dup-acc="signup">ساخت حساب کاربری</button>`}
+<button type="button" class="chs-alt" data-dup-code>کد ${chl ? 'چله' : 'پیگیری'} را دارم</button>
+<div id="chsDupForm" hidden><label for="chsDupCode">کد ۸ رقمی</label><input id="chsDupCode" inputmode="numeric" maxlength="12" dir="ltr"><button type="button" class="chs-main" data-dup-go="${kind}">افزودن به این گوشی</button><div class="chl-msg" id="chsDupMsg"></div></div>
+<p class="chl-note">اگر نه حساب دارید، نه کد و نه ایمیل، به مدیر گروه پیام دهید تا کدتان را بفرستد.</p></div>`);
+  }
+  async function dupCode(b) {
+    const c = norm(sheet.querySelector('#chsDupCode').value).replace(/\D/g, ''), msg = sheet.querySelector('#chsDupMsg');
+    if (c.length !== 8) { msg.className = 'chl-msg chl-bad'; msg.textContent = 'کد ۸ رقم است.'; return; }
+    b.disabled = true;
+    try {
+      if (b.dataset.dupGo === 'reg') {
+        const a = await rpc('reg_lookup', { p_code: c });
+        if (!a?.length) throw Error('ثبت‌نامی با این کد پیدا نشد.');
+        const l = read('regCodes', []); write('regCodes', [...new Set([c, ...(Array.isArray(l) ? l : [])])]);
+        window.regReloadPublic?.(); window.account?.sync();
+        closeSheet(); setTimeout(() => window.regOpenPublic?.(), 300);
+      } else {
+        const a = await rpc('chl_lookup', { p_codes: [c] });
+        if (!a?.length) throw Error('چله‌ای با این کد پیدا نشد.');
+        codes.add(c); await refresh(); window.account?.sync();
+        closeSheet(); setTimeout(() => flash(c), 250);
+      }
+    } catch (e) { msg.className = 'chl-msg chl-bad'; msg.textContent = e.message; b.disabled = false; }
   }
   async function share(t) {
     if (!t) return;
@@ -632,7 +679,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     if (d.read) return openReader(d.read, d.code ? mine.find(m => m.code === d.code) : null);
     if (d.share !== undefined) return share(typeOf(d.share));
     if (d.again) return openSheet(d.again);
-    if (d.forget) { codes.remove(d.forget); mine = mine.filter(m => m.code !== d.forget); renderPanel(); return; }
+    if (d.forget) { codes.remove(d.forget); window.account?.unlink('chl', d.forget); mine = mine.filter(m => m.code !== d.forget); renderPanel(); return; }
     if (b.hasAttribute('data-addcode')) return addCode();
     if (d.promo) { write('chlPromoSeen', [...read('chlPromoSeen', []).slice(-50), d.promo]); renderPanel(); updateDot(); return; }
     if (d.email) {
@@ -663,7 +710,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     try {
       const a = await rpc('chl_lookup', { p_codes: [c] });
       if (!a?.length) { msg.className = 'chl-msg chl-bad'; msg.textContent = 'چله‌ای با این کد پیدا نشد.'; return; }
-      codes.add(c); await refresh(); flash(c);
+      codes.add(c); await refresh(); flash(c); window.account?.sync();
     } catch (e) { msg.className = 'chl-msg chl-bad'; msg.textContent = e.message; }
   }
   async function mark(code, day, done) {
