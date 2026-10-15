@@ -36,26 +36,25 @@
   };
 
   const css = `
-.reg-round{background:#fff;color:#000;text-shadow:none;border:1px solid var(--gold);padding:12px 14px;margin:12px 0}
+.reg-round{background:#fff;color:#000;text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:12px 14px;margin:12px 0}
 .reg-round h3{margin:0 0 4px;font-size:19px;color:var(--deep)}
 .reg-round .hint,.reg-round label{color:var(--muted);text-shadow:none}
 .reg-round label{color:var(--ink);font-weight:600;font-size:15px;margin:10px 0 4px}
 .reg-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:15px;color:var(--muted)}
-.reg-plat{display:inline-block;padding:0 10px;background:#e7f5f0;border:1px solid var(--gold);color:var(--deep);font-weight:600}
-.reg-bar{height:8px;background:#eee4cf;margin:8px 0 10px;overflow:hidden}
+.reg-plat{display:inline-block;padding:0 12px;border-radius:var(--pill);background:var(--mint);border:1px solid var(--gold);color:var(--deep);font-weight:600}
+.reg-bar{height:8px;background:#eee4cf;margin:8px 0 10px;overflow:hidden;border-radius:var(--pill)}
 .reg-bar span{display:block;height:100%;background:var(--emerald)}
 .reg-round .row{margin-top:6px}
 .reg-msg{min-height:22px;margin-top:6px;font-weight:700}
-.reg-note{background:#e7f5f0;color:#00563f;text-shadow:none;border:1px solid var(--gold);padding:10px 14px;margin:12px 0;font-weight:600}
-.reg-ok{color:#006b50}.reg-bad{color:#9b2636}
-.reg-code{display:inline-block;direction:ltr;font-size:24px;letter-spacing:2px;font-weight:700;color:var(--deep);background:#fff5d9;padding:0 10px;border:1px dashed var(--gold)}
+.reg-note{background:var(--mint);color:var(--deep);text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:10px 14px;margin:12px 0;font-weight:600}
+.reg-ok{color:var(--ok)}.reg-bad{color:var(--danger)}
+.reg-code{display:inline-block;direction:ltr;font-size:24px;letter-spacing:2px;font-weight:700;color:var(--deep);background:var(--cream);padding:0 10px;border:1px dashed var(--gold);border-radius:6px}
 .reg-id{font-size:30px;font-weight:800;color:var(--deep)}
 .reg-sub{margin:16px 0 4px;font-size:18px}
-button.reg-light{background:#fff;color:var(--deep);border-color:var(--emerald)}
-button.reg-danger{background:#9b2636}
+button.reg-danger{background:var(--danger)}
 .reg-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .reg-tools button{flex:1 1 auto}
-.reg-list{max-height:360px;overflow:auto;border:1px solid #e6dcc6;margin-top:8px}
+.reg-list{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:var(--r);margin-top:8px}
 .reg-list div{display:flex;gap:8px;align-items:center;padding:4px 8px;border-bottom:1px solid #f0e8d6}
 .reg-list div span{flex:1;min-width:0;overflow-wrap:anywhere}
 .reg-list button{height:34px;padding:0 10px;font-size:14px}
@@ -63,7 +62,7 @@ button.reg-danger{background:#9b2636}
 .reg-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
 .reg-step{margin:12px 0 0;padding-top:10px;border-top:1px dashed var(--gold)}
 .reg-step b{color:var(--deep)}
-pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fffaf0;border:1px solid #e6dcc6;padding:8px;font:inherit;font-size:15px;margin:8px 0}
+pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fffaf0;border:1px solid var(--line);border-radius:var(--r);padding:8px;font:inherit;font-size:15px;margin:8px 0}
 @media(max-width:600px){.reg-grid{grid-template-columns:1fr}}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
   window.regDownload = function (name, text) {
@@ -74,7 +73,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
   // ---------- بخش عمومی ----------
   const panel = document.createElement('section');
   panel.className = 'panel'; panel.id = 'registerPanel'; panel.hidden = true;
-  panel.innerHTML = `<h2>ثبت نام دوره جدید</h2>
+  panel.innerHTML = `<h2>ثبت‌نام دوره جدید</h2>
 <div id="regRounds"></div>
 <div id="regMine"></div>
 <details class="hint"><summary>کد پیگیری دارید؟ (برای دیدن شناسه یا انصراف از دستگاه دیگر)</summary>
@@ -107,7 +106,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     // بازدیدکنندگان عادی: ثبت‌نام‌های خودشان، و دوره‌های باز فقط وقتی از منو خواسته باشند (و مدیر پنهانش نکرده باشد).
     const showRounds = isAdminView() || (expanded && !hidden);
     panel.hidden = !isAdminView() && (hidden || !showRounds && !mine.length);
-    panel.querySelector('h2').textContent = showRounds ? 'ثبت نام دوره جدید' : 'ثبت‌نام‌های حزب‌خوانی من';
+    panel.querySelector('h2').textContent = showRounds ? 'ثبت‌نام دوره جدید' : 'ثبت‌نام‌های حزب‌خوانی من';
     if (panel.hidden) return;
     if (!showRounds) { box.innerHTML = ''; renderMine(mine, false); return; }
     let note = '';
@@ -128,7 +127,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     const slots = r.reserve_slots ?? 0, res = r.reserved ?? 0, mainFull = r.registered >= CAPACITY;
     const form = label => `<label for="regName${r.id}">نام و نام خانوادگی</label><div class="row"><input id="regName${r.id}" maxlength="60" autocomplete="name" placeholder="مثلاً فاطمه رضایی"><button type="button" data-reg="${r.id}">${label}</button></div><div class="reg-msg" id="regMsg${r.id}"></div>`;
     let body = '';
-    if (!mainFull) body = (r.status === 'open' ? '' : '<p class="hint">یک جای خالی در گروه هست؛ با ثبت‌نام، همان شناسه به شما داده می‌شود.</p>') + form('ثبت نام');
+    if (!mainFull) body = (r.status === 'open' ? '' : '<p class="hint">یک جای خالی در گروه هست؛ با ثبت‌نام، همان شناسه به شما داده می‌شود.</p>') + form('ثبت‌نام');
     else if (res < slots) body = `<p class="hint">ظرفیت ${fa(CAPACITY)} نفر تکمیل شد. ${fa(slots - res)} جا در فهرست رزرو مانده است؛ اگر کسی انصراف دهد، نفرات رزرو به ترتیب جای او و شناسه‌اش را می‌گیرند.</p>` + form('ثبت در فهرست رزرو');
     else if (r.status === 'announced') body = '<p class="hint">گروه تشکیل شد. اگر ثبت‌نام کرده‌اید، شناسه شما در «ثبت‌نام‌های من» یا با کد پیگیری دیده می‌شود.</p>';
     else body = '<p class="hint">ظرفیت تکمیل شد. شناسه‌ها به‌زودی اعلام می‌شود.</p>';

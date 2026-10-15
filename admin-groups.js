@@ -8,8 +8,8 @@
 .grp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .grp-head h3{margin:0}
 .grp-meta{font-size:15px;color:var(--muted)}
-.grp-badge{display:inline-block;padding:0 8px;margin-inline-start:6px;background:#f6e3e5;color:#9b2636;border:1px solid #e3b5bb;font-size:14px}
-.grp-names{max-height:380px;overflow:auto;border:1px solid #e6dcc6;margin-top:6px}
+.grp-badge{display:inline-block;padding:0 8px;margin-inline-start:6px;background:#f6e3e5;color:var(--danger);border:1px solid #e3b5bb;border-radius:var(--pill);font-size:14px}
+.grp-names{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:var(--r);margin-top:6px}
 .grp-names div{display:flex;align-items:center;gap:6px;padding:2px 6px;border-bottom:1px solid #f3ecdc}
 .grp-names span{flex:0 0 2.6em;color:var(--muted);font-size:15px}
 .grp-names input{height:40px;font-size:16px;border-color:#e6dcc6}
@@ -103,7 +103,7 @@ ${fresh ? '' : '<div class="reg-tools"><button type="button" class="reg-light" d
   };
   function countNames(el) {
     const c = el.querySelector('[data-count]'); if (!c) return;
-    const n = getNames(el).length; c.textContent = `${fa(n)} از ۱۲۰ نام`; c.style.color = n === 120 ? '#006b50' : '#9b2636';
+    const n = getNames(el).length; c.textContent = `${fa(n)} از ۱۲۰ نام`; c.style.color = n === 120 ? 'var(--ok)' : 'var(--danger)';
   }
 
   function onInput(e) {
