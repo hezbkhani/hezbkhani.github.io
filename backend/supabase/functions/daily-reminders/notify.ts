@@ -16,6 +16,20 @@ export function mergeSettings(defaults: Settings, saved: Partial<Settings> | nul
   const q = s.quiet || {} as { from?: string; to?: string }
   return { public: !!s.public, quiet: { from: valid(q.from) ? q.from! : defaults.quiet.from, to: valid(q.to) ? q.to! : defaults.quiet.to }, types }
 }
+// انتخاب خود کاربر روی گوشی‌اش (push_subscriptions.prefs): نوع‌هایی که خاموش کرده و ساعت دلخواهش.
+// نوعی که مدیر خاموش کرده با این روشن نمی‌شود؛ ساعت فقط برای نوع‌های زمان‌دار (نه رویدادها و نه «روز اول» که ساعت «برنامه امروز» را دارد).
+export type Prefs = { off?: unknown; times?: unknown }
+export function forDevice(s: Settings, p: Prefs | null | undefined): Settings {
+  const off = Array.isArray(p?.off) ? p!.off as unknown[] : []
+  const times = p?.times && typeof p.times === 'object' ? p.times as Record<string, unknown> : {}
+  if (!off.length && !Object.keys(times).length) return s
+  const types: Record<string, TypeDef> = {}
+  for (const [k, t] of Object.entries(s.types)) {
+    const mine = times[k]
+    types[k] = { ...t, on: !!t.on && !off.includes(k), time: !t.event && !t.same && valid(mine) ? mine : t.time }
+  }
+  return { ...s, types }
+}
 const valid = (t: unknown): t is string => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t)
 export const minutes = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5)
 

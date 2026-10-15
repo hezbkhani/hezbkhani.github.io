@@ -55,6 +55,7 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
 <p class="hint">پیش‌فرض روشن است. اگر هنوز مراحل «اعلان» راهنمای راه‌اندازی (Supabase) انجام نشده، فعلاً خاموشش کنید تا کسی با خطا روبه‌رو نشود.</p><div class="adm-msg" id="ntfPublicMsg"></div></div>
 <div class="adm-card"><h3>این گوشی</h3><p class="hint" id="ntfMine">…</p><div class="reg-tools"><button type="button" id="ntfMineOn">فعال کردن اعلان روی این گوشی</button></div><div class="adm-msg" id="ntfMineMsg"></div></div>
 <div class="adm-card"><h3>وضعیت ارسال</h3><div id="ntfStats" class="hint">…</div><div class="reg-tools"><button type="button" class="reg-light" id="ntfReload">تازه کردن</button></div></div>
+<p class="hint" style="margin:0 0 10px">ساعت‌ها و روشن/خاموش بودن این‌جا پیش‌فرض همه است. هر کس روی گوشی خودش با «تنظیم اعلان‌ها» می‌تواند نوعی را خاموش کند یا ساعت دیگری بگذارد؛ نوعی که این‌جا خاموش باشد برای هیچ‌کس نمی‌رود.</p>
 <div class="adm-card"><h3>اعلان‌های حزب‌خوانی</h3><p class="hint">جای‌نگهدارها: ${esc(VARS.hezb)}</p>${group('hezb')}</div>
 <div class="adm-card"><h3>اعلان‌های چله و دوره‌های قرآن</h3><p class="hint">جای‌نگهدارها: ${esc(VARS.chl)}. اگر یک نفر چند چله روی یک گوشی داشته باشد، برنامه همه در یک اعلان می‌آید.</p>${group('chl')}</div>
 <div class="adm-card"><h3>ساعت سکوت شب</h3><p class="hint">اعلان‌های لحظه‌ای (اعلام شناسه، رزرو، خبر) در این ساعت‌ها نمی‌روند و صبح فرستاده می‌شوند.</p>
@@ -153,7 +154,7 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
       if (!s) { box.textContent = 'آمار در دسترس نیست.'; return; }
       const SL = { auto: 'خودکار', morning: 'صبح', evening: 'عصر', broadcast: 'پیام همگانی' };
       const t = iso => new Intl.DateTimeFormat('fa-IR', { timeZone: 'Asia/Tehran', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
-      box.innerHTML = `<div class="ntf-stat"><span>گوشی‌ها: <b>${toFa(s.devices)}</b></span><span>حزب‌خوانی: <b>${toFa(s.hezb)}</b></span><span>چله و دوره: <b>${toFa(s.chl)}</b></span><span>ثبت‌نام: <b>${toFa(s.reg)}</b></span><span>فرستاده‌شده امروز: <b>${toFa(s.sent_today)}</b></span></div>
+      box.innerHTML = `<div class="ntf-stat"><span>گوشی‌ها: <b>${toFa(s.devices)}</b></span><span>حزب‌خوانی: <b>${toFa(s.hezb)}</b></span><span>چله و دوره: <b>${toFa(s.chl)}</b></span><span>ثبت‌نام: <b>${toFa(s.reg)}</b></span>${s.custom ? `<span>با تنظیم دلخواه: <b>${toFa(s.custom)}</b></span>` : ''}<span>فرستاده‌شده امروز: <b>${toFa(s.sent_today)}</b></span></div>
 ${(s.groups || []).length ? `<p class="hint" style="margin:4px 0">${s.groups.map(g => `گروه ${toFa(g.group)}: ${toFa(g.devices)}`).join(' · ')}</p>` : ''}
 <div class="ntf-runs">${(s.runs || []).length ? s.runs.map(r => `<div>${t(r.at)} · ${SL[r.slot] || esc(r.slot)}: ${toFa(r.stats.sent || 0)} فرستاده${r.stats.failed ? `، <span class="adm-bad">${toFa(r.stats.failed)} ناموفق</span>` : ''}${r.stats.removed ? `، ${toFa(r.stats.removed)} منقضی` : ''}${r.stats.title ? ` («${esc(r.stats.title)}»)` : ''}</div>`).join('') : '<p class="hint">هنوز اعلانی فرستاده نشده است. اگر زمان‌بندی (cron) را ساخته‌اید و مشترک دارید، پس از ساعت اعلان‌ها اینجا دیده می‌شود.</p>'}</div>`;
     } catch (e) { box.innerHTML = `<span class="adm-bad">${esc(e.message)}</span>`; }
