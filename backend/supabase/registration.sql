@@ -290,7 +290,9 @@ begin
     if g.participant_id is not null and r.status = 'announced' then
       update site_groups set names[g.participant_id] = 'جای خالی', updated_at = now() where number = r.group_number;
       -- یادآوری روزانه‌ای که برای این شناسه فعال بود به گوشی کسی که رفته است؛ برداشته می‌شود تا سهم نفر جایگزین برای او نرود.
-      if to_regclass('public.push_subscriptions') is not null then
+      if to_regprocedure('public.push_drop_target(integer,integer)') is not null then
+        execute 'select public.push_drop_target($1, $2)' using r.group_number, g.participant_id;
+      elsif to_regclass('public.push_subscriptions') is not null then
         execute 'delete from public.push_subscriptions where group_number = $1 and participant_id = $2' using r.group_number, g.participant_id;
       end if;
     end if;
