@@ -14,17 +14,20 @@
     ['gharaati', 'قرائتی'], ['khorramshahi', 'خرمشاهی'], ['ayati', 'آیتی'], ['bahrampour', 'بهرام‌پور'],
     ['mojtabavi', 'مجتبوی'], ['safavi', 'صفوی'], ['sadeqi', 'صادقی تهرانی'], ['khorramdel', 'خرمدل'], ['moezzi', 'معزی']
   ];
-  // فایل صوتی هر آیه: اول از everyayah.com، اگر نشد از cdn.islamic.network (alquran.cloud).
+  // فایل صوتی هر آیه از چند سرور: everyayah.com، verses.quran.com، cdn.islamic.network (alquran.cloud)
+  // و آینه quranicaudio. اگر یکی جواب نداد یا کند بود سراغ بعدی می‌رود.
+  // نسخه‌های ۶۴ کیلوبیتی تا جای ممکن، تا با اینترنت کند هم زود شروع شود.
+  // [کلید، نام، پوشه everyayah، نسخه alquran.cloud، مسیر verses.quran.com]
   const RECITERS = [
-    ['abdulbasit', 'عبدالباسط (ترتیل)', 'Abdul_Basit_Murattal_192kbps', 'ar.abdulsamad'],
-    ['abdulbasit_mj', 'عبدالباسط (تحقیق)', 'Abdul_Basit_Mujawwad_128kbps', ''],
-    ['minshawi', 'منشاوی (ترتیل)', 'Minshawy_Murattal_128kbps', 'ar.minshawi'],
-    ['minshawi_mj', 'منشاوی (تحقیق)', 'Minshawy_Mujawwad_192kbps', 'ar.minshawimujawwad'],
-    ['husary', 'محمود خلیل الحصری', 'Husary_128kbps', 'ar.husary'],
+    ['abdulbasit', 'عبدالباسط (ترتیل)', 'Abdul_Basit_Murattal_64kbps', 'ar.abdulsamad', 'AbdulBaset/Murattal'],
+    ['abdulbasit_mj', 'عبدالباسط (تحقیق)', 'Abdul_Basit_Mujawwad_128kbps', '', 'AbdulBaset/Mujawwad'],
+    ['minshawi', 'منشاوی (ترتیل)', 'Minshawy_Murattal_128kbps', 'ar.minshawi', 'Minshawi/Murattal'],
+    ['minshawi_mj', 'منشاوی (تحقیق)', 'Minshawy_Mujawwad_64kbps', 'ar.minshawimujawwad', 'Minshawi/Mujawwad'],
+    ['husary', 'محمود خلیل الحصری', 'Husary_64kbps', 'ar.husary'],
     ['parhizgar', 'شهریار پرهیزگار', 'Parhizgar_48kbps', ''],
     ['mansoori', 'کریم منصوری', 'Karim_Mansoori_40kbps', ''],
-    ['alafasy', 'مشاری العفاسی', 'Alafasy_128kbps', 'ar.alafasy'],
-    ['sudais', 'عبدالرحمن السدیس', 'Abdurrahmaan_As-Sudais_192kbps', 'ar.abdurrahmaansudais'],
+    ['alafasy', 'مشاری العفاسی', 'Alafasy_64kbps', 'ar.alafasy', 'Alafasy'],
+    ['sudais', 'عبدالرحمن السدیس', 'Abdurrahmaan_As-Sudais_64kbps', 'ar.abdurrahmaansudais', 'Sudais'],
     ['muaiqly', 'ماهر المعیقلی', 'Maher_AlMuaiqly_64kbps', 'ar.mahermuaiqly'],
     ['ghamadi', 'سعد الغامدی', 'Ghamadi_40kbps', '']
   ];
@@ -182,7 +185,7 @@ body.qr-lock{overflow:hidden}
     const end = current.range ? `<p>${esc(current.endText || 'پایان. قبول باشد.')}</p>${current.onEnd ? `<button type="button" data-a="rangeEnd">${esc(current.endButton || 'خواندم')}</button>` : ''}`
       : '<p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>';
     body.innerHTML = html + `<div class="qr-end">${end}
-<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net)<span class="qr-xi"> · صوت: everyayah.com و alquran.cloud</span></p></div>`;
+<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net)<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud</span></p></div>`;
     items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
     el.scrollTop = 0;
     onScroll();
@@ -342,7 +345,12 @@ body.qr-lock{overflow:hidden}
   // ---------- پخش صوت ----------
   const audio = new Audio(), nextAudio = new Audio();
   audio.preload = 'auto'; nextAudio.preload = 'auto';
-  let pos = -1, step = 0, playing = false, queue = [], qi = 0, srcIdx = 0;
+  let pos = -1, step = 0, playing = false, queue = [], qi = 0, srcIdx = 0, wait = 0;
+  // سرورهایی که در این بازدید جواب ندادند به آخر صف می‌روند تا آیه‌های بعدی معطل‌شان نشوند.
+  const failed = {};
+  const host = u => { try { return new URL(u).host; } catch { return ''; } };
+  const byHealth = u => u.map((x, i) => [x, i]).sort((a, b) => ((failed[host(a[0])] || 0) - (failed[host(b[0])] || 0)) || a[1] - b[1]).map(x => x[0]);
+  const LOAD_TIMEOUT = 12000;
 
   ['qrTr', 'qrReciter', 'qrVoice'].forEach(id => $(id).addEventListener('change', e => {
     const key = { qrTr: 'tr', qrReciter: 'reciter', qrVoice: 'voice' }[id];
@@ -351,14 +359,16 @@ body.qr-lock{overflow:hidden}
   }));
 
   function arUrls(s, n) {
-    const r = RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0];
-    const u = [`https://everyayah.com/data/${r[2]}/${pad3(s)}${pad3(n)}.mp3`];
+    const r = RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0], f = pad3(s) + pad3(n);
+    const u = [`https://everyayah.com/data/${r[2]}/${f}.mp3`];
+    if (r[4]) u.push(`https://verses.quran.com/${r[4]}/mp3/${f}.mp3`);
     if (r[3]) u.push(`https://cdn.islamic.network/quran/audio/128/${r[3]}/${SURAH_START[s - 1] + n}.mp3`);
+    u.push(`https://mirrors.quranicaudio.com/everyayah/${r[2]}/${f}.mp3`);
     return u;
   }
   function faUrls(s, n) {
-    const v = VOICES.find(x => x[0] === prefs.voice) || VOICES[0];
-    return [`https://everyayah.com/data/${v[2]}/${pad3(s)}${pad3(n)}.mp3`];
+    const v = VOICES.find(x => x[0] === prefs.voice) || VOICES[0], f = pad3(s) + pad3(n);
+    return [`https://everyayah.com/data/${v[2]}/${f}.mp3`, `https://mirrors.quranicaudio.com/everyayah/${v[2]}/${f}.mp3`];
   }
   // صف پخش یک آیه: بسم‌الله برای آیه اول سوره (جز حمد و توبه)، تلاوت، سپس ترجمه گویا.
   function tracksFor(it) {
@@ -379,42 +389,54 @@ body.qr-lock{overflow:hidden}
     const r = it.e.getBoundingClientRect(), top = el.querySelector('.qr-bar').offsetHeight, bottom = el.clientHeight - $('qrPlayer').offsetHeight;
     if (r.top < top || r.bottom > bottom) it.e.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-  function label() {
+  function label(sub) {
     const it = items[pos];
     if (!it) return;
     const who = prefs.mode === 'fa' ? (VOICES.find(x => x[0] === prefs.voice) || VOICES[0])[1] : (RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0])[1];
-    setNow(`سوره ${FA_NAME[it.s] || ''} · آیه ${toFa(it.n)}`, who);
+    setNow(`سوره ${FA_NAME[it.s] || ''} · آیه ${toFa(it.n)}`, sub || who);
   }
   const FA_NAME = {};
 
   function playAt(i) {
     if (i < 0 || !items[i]) return;
     pos = i; queue = tracksFor(items[i]); qi = 0; srcIdx = 0; playing = true;
-    highlight(); label(); setPlayBtn(); playTrack(); preloadNext();
+    highlight(); label(); setPlayBtn(); playTrack();
   }
   function playTrack() {
+    if (!queue[qi]) return advance();
+    if (srcIdx === 0) queue[qi] = byHealth(queue[qi]);
     const urls = queue[qi];
-    if (!urls) return advance();
     audio.src = urls[srcIdx];
-    audio.play().catch(err => { if (err && err.name === 'NotAllowedError') { playing = false; setPlayBtn(); } });
+    label('در حال بارگیری صوت…');
+    // سروری که جواب نمی‌دهد (نه خطا، فقط معطلی) هم بعد از چند ثانیه کنار گذاشته می‌شود.
+    clearTimeout(wait);
+    wait = setTimeout(() => { if (playing && audio.currentTime === 0) fail(); }, LOAD_TIMEOUT);
+    audio.play().catch(err => {
+      if (err && err.name === 'NotAllowedError') { clearTimeout(wait); playing = false; setPlayBtn(); label('برای پخش، دکمه ▶ را بزنید'); }
+    });
   }
+  // فایل آیه بعد فقط وقتی آیه فعلی شروع شد گرفته می‌شود تا با اینترنت کند پهنای باند آیه فعلی را نگیرد.
   function preloadNext() {
-    const it = items[pos + 1];
-    if (it) nextAudio.src = tracksFor(it)[0][0];
+    const it = items[pos + 1], u = it && byHealth(tracksFor(it)[0])[0];
+    if (u && nextAudio.src !== u) nextAudio.src = u;
+  }
+  function fail() {
+    clearTimeout(wait);
+    const h = host(audio.src); failed[h] = (failed[h] || 0) + 1;
+    srcIdx++;
+    if (queue[qi] && srcIdx < queue[qi].length) return playTrack();
+    playing = false; setPlayBtn();
+    setNow('پخش این آیه ممکن نشد', 'اتصال اینترنت را بررسی کنید یا قاری دیگری انتخاب کنید');
   }
   function advance() {
     if (pos + 1 < items.length) playAt(pos + 1);
     else { stopAudio(); setNow('پایان سهم امروز', 'قبول باشد'); }
   }
   audio.addEventListener('ended', () => { qi++; srcIdx = 0; if (qi < queue.length) playTrack(); else advance(); });
-  audio.addEventListener('error', () => {
-    if (!playing || !audio.getAttribute('src')) return;
-    srcIdx++;
-    if (queue[qi] && srcIdx < queue[qi].length) return playTrack();
-    playing = false; setPlayBtn();
-    setNow('پخش این آیه ممکن نشد', 'اتصال اینترنت را بررسی کنید یا قاری دیگری انتخاب کنید');
-  });
-  function pauseAudio() { audio.pause(); playing = false; setPlayBtn(); }
+  audio.addEventListener('error', () => { if (playing && audio.getAttribute('src')) fail(); });
+  audio.addEventListener('playing', () => { clearTimeout(wait); failed[host(audio.src)] = 0; label(); preloadNext(); });
+  audio.addEventListener('waiting', () => { if (playing) label('در حال بارگیری صوت…'); });
+  function pauseAudio() { clearTimeout(wait); audio.pause(); playing = false; setPlayBtn(); }
   function resumeOrStart() {
     if (pos >= 0 && audio.getAttribute('src') && !audio.ended && audio.currentTime > 0) { playing = true; setPlayBtn(); audio.play().catch(() => {}); }
     else {
@@ -425,6 +447,7 @@ body.qr-lock{overflow:hidden}
     }
   }
   function stopAudio() {
+    clearTimeout(wait);
     audio.pause(); audio.removeAttribute('src'); audio.load();
     playing = false; pos = -1; queue = [];
     items.forEach(it => it.e.classList.remove('playing'));
