@@ -56,7 +56,8 @@ body.sm-lock{overflow:hidden}
       try { s.render(box); } catch (e) { console.error(e); }
       if (box.childNodes.length) body.appendChild(box);
     });
-    const links = LINKS.filter(([id]) => visible(document.getElementById(id)));
+    // بخش‌های حزب‌خوانی در صفحه اول فقط برای اعضا دیده می‌شوند (home.js)؛ در منو همیشه هستند و با زدن، باز می‌شوند.
+    const links = LINKS.filter(([id]) => id === 'registerPanel' ? window.regHasOpen || visible(document.getElementById(id)) : document.getElementById(id));
     if (links.length) {
       const box = document.createElement('div'); box.className = 'sm-sec';
       box.innerHTML = '<h3>حزب‌خوانی قرآن</h3>' + links.map(([id, ic, t, s]) => `<button type="button" class="sm-item" data-sm-to="${id}"><span class="sm-ic">${ic}</span><span>${t}${s ? `<small>${s}</small>` : ''}</span><span class="sm-go">‹</span></button>`).join('');
@@ -86,6 +87,8 @@ body.sm-lock{overflow:hidden}
     const to = e.target.closest('[data-sm-to]');
     if (to) {
       close();
+      if (to.dataset.smTo === 'registerPanel' && window.regOpenPublic) { setTimeout(() => window.regOpenPublic(), 280); return; }
+      window.hezbReveal?.();
       const el = document.getElementById(to.dataset.smTo), panel = el && (el.closest('.panel') || el);
       setTimeout(() => { if (!panel) return; panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (el.tagName === 'INPUT') setTimeout(() => el.focus({ preventScroll: true }), 400); }, 280);
     }
