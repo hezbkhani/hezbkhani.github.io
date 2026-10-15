@@ -501,7 +501,7 @@ ${t.reserve && !toReserve ? `<p class="chl-note">وقتی ${fa(t.capacity)} نف
     if (b.hasAttribute('data-hz-join')) return hezbJoin(b);
     if (b.hasAttribute('data-hz-go')) {
       closeSheet();
-      setTimeout(() => { const p = document.getElementById('registerPanel'); if (p) { p.hidden = false; window.regReloadPublic?.(); p.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 300);
+      setTimeout(() => window.regOpenPublic?.(), 300);
       return;
     }
     if (b.dataset.chsGo) { const c = b.dataset.chsGo; closeSheet(); setTimeout(() => flash(c), 250); return; }

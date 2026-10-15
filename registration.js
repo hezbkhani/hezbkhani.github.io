@@ -1,5 +1,6 @@
 // ثبت‌نام دوره جدید (تلگرام یا بله): بخش عمومی برای ثبت‌نام و انصراف، و زبانه «ثبت‌نام» در بخش مدیریت.
-// بخش عمومی فقط وقتی ثبت‌نامی باز یا اعلام‌شده هست دیده می‌شود (یا مدیر در «تنظیمات» آن را پنهان کرده باشد، اصلاً).
+// در صفحه اول فقط «ثبت‌نام‌های من» دیده می‌شود؛ دوره‌های باز با زدن «ثبت‌نام دوره حزب‌خوانی» در منو (window.regOpenPublic) نشان داده می‌شوند.
+// اگر مدیر در «تنظیمات» بخش ثبت‌نام را پنهان کرده باشد، دوره‌ها اصلاً نشان داده نمی‌شوند.
 // داده‌ها در Supabase هستند؛ جدول‌ها و تابع‌ها در backend/supabase/registration.sql. به admin.js نیاز دارد.
 (function () {
   const CAPACITY = 120;
@@ -94,6 +95,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
   };
   panel.addEventListener('click', onPublicClick);
 
+  let expanded = false; // دوره‌های باز از منو خواسته شده
   async function loadPublic() {
     const box = $p('#regRounds');
     let rounds = null, error = '';
@@ -101,16 +103,24 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     const live = (rounds || []).filter(r => r.status !== 'closed');
     const hidden = (window.siteSettings?.registration?.mode || 'auto') === 'hidden';
     const mine = error ? [] : await lookupMine();
-    // بازدیدکنندگان عادی: فقط وقتی ثبت‌نامی هست (یا خودشان در دوره‌ای جاری ثبت‌نام کرده‌اند) و مدیر آن را پنهان نکرده است.
-    panel.hidden = !isAdminView() && (hidden || error || (!live.length && !mine.length));
+    window.regHasOpen = !hidden && !error && live.length > 0; window.siteMenu?.refresh();
+    // بازدیدکنندگان عادی: ثبت‌نام‌های خودشان، و دوره‌های باز فقط وقتی از منو خواسته باشند (و مدیر پنهانش نکرده باشد).
+    const showRounds = isAdminView() || (expanded && !hidden);
+    panel.hidden = !isAdminView() && (hidden || !showRounds && !mine.length);
+    panel.querySelector('h2').textContent = showRounds ? 'ثبت نام دوره جدید' : 'ثبت‌نام‌های حزب‌خوانی من';
     if (panel.hidden) return;
+    if (!showRounds) { box.innerHTML = ''; renderMine(mine, false); return; }
     let note = '';
     if (isAdminView() && hidden) note = '<p class="reg-note">این بخش اکنون برای بازدیدکنندگان پنهان است (تنظیمات › بخش ثبت‌نام).</p>';
     if (error) box.innerHTML = note + `<p class="reg-msg reg-bad">${esc(error)}</p>`;
     else box.innerHTML = note + (live.length ? live.map(roundCard).join('') : '<p class="hint">در حال حاضر ثبت‌نامی باز نیست. زمان ثبت‌نام دوره بعد در گروه‌ها اعلام می‌شود.</p>');
-    renderMine(mine);
+    renderMine(mine, true);
   }
   window.regReloadPublic = loadPublic;
+  window.regOpenPublic = async () => {
+    expanded = true; await loadPublic();
+    if (!panel.hidden) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   function roundCard(r) {
     const pct = Math.min(100, Math.round(r.registered / CAPACITY * 100));
@@ -131,10 +141,10 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
     items.filter(x => x.r === null || x.r?.status === 'closed').forEach(x => codes.remove(x.c));
     return items.filter(x => x.r !== null && x.r?.status !== 'closed');
   }
-  function renderMine(items) {
+  function renderMine(items, withTitle) {
     const box = $p('#regMine');
     if (!items.length) { box.innerHTML = ''; return; }
-    box.innerHTML = '<h3 class="reg-sub">ثبت‌نام‌های من</h3>' + items.map(({ c, r }) => {
+    box.innerHTML = (withTitle ? '<h3 class="reg-sub">ثبت‌نام‌های من</h3>' : '') + items.map(({ c, r }) => {
       if (r === undefined) return `<div class="reg-round"><span class="hint">کد ${fa(c)}: دریافت وضعیت انجام نشد.</span></div>`;
       let s = `<div class="reg-round"><h3>${esc(r.name)}</h3><div class="reg-meta"><span class="reg-plat">${PLATFORMS[r.platform] || esc(r.platform)}</span><span>${esc(r.title)}</span><span>${STATUS[r.status]}</span></div>`;
       if (r.promoted) s += '<p class="reg-note">یک نفر انصراف داد و شما از فهرست رزرو به گروه اضافه شدید.</p>';
