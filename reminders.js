@@ -21,14 +21,14 @@
   const supported = !desktopApp && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!cfg.VAPID_PUBLIC_KEY;
 
   document.head.insertAdjacentHTML('beforeend', `<style>
-.rm-card{margin-top:14px;padding:12px 16px;background:#e7f5f0;border:1px solid var(--gold);color:#000;text-shadow:none;line-height:1.8}
+.rm-card{margin-top:14px;padding:12px 16px;border-radius:var(--r-card);background:var(--mint);border:1px solid var(--gold);color:#000;text-shadow:none;line-height:1.8}
 .rm-card p{margin:0 0 8px}.rm-card .rm-row{display:flex;gap:8px;flex-wrap:wrap}
-.rm-card button{height:42px;font-size:16px}.rm-card .rm-ghost{background:#fff;color:var(--deep)}
+.rm-card button{height:42px;font-size:16px}
 .rm-card .rm-link{height:auto;padding:0;border:0;background:none;color:var(--deep);text-decoration:underline;font-weight:600}
 .rm-msg{min-height:0;margin-top:6px;font-weight:700}.rm-msg:empty{display:none}
 .rm-card ol,.rm-card ul{margin:4px 0 8px;padding-inline-start:22px}.rm-card ol{list-style-type:persian}
 .push-codes .rm-card{margin:0 0 12px}
-.rm-prefs{margin-top:10px;padding:10px 12px;background:#fff;border:1px solid var(--gold);border-radius:6px}
+.rm-prefs{margin-top:10px;padding:10px 12px;background:#fff;border:1px solid var(--gold);border-radius:var(--r)}
 .rm-prefs h4{margin:0 0 6px;font-size:16px}.rm-prefs h5{margin:10px 0 4px;font-size:15px;color:var(--deep)}
 .rm-prefs label.rm-t{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #d8e6e0;line-height:1.6}
 .rm-prefs label.rm-t span{flex:1}.rm-prefs input[type=checkbox]{width:20px;height:20px;flex:none;margin:0}
@@ -136,7 +136,7 @@
         await rerender(); renderStatus();
         const m2 = box.querySelector('.rm-msg'); if (m2 && done) m2.textContent = done;
       } catch (e) {
-        msg.style.color = '#9b2636'; msg.textContent = fail(e);
+        msg.style.color = 'var(--danger)'; msg.textContent = fail(e);
         box.querySelectorAll('button').forEach(x => x.disabled = false);
       }
     });
@@ -232,7 +232,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     };
     const run = f => async () => {
       box.querySelectorAll('button').forEach(x => x.disabled = true); msg.style.color = ''; msg.textContent = 'لطفاً صبر کنید…';
-      try { await f(); } catch (e) { msg.style.color = '#9b2636'; msg.textContent = fail(e); box.querySelectorAll('button').forEach(x => x.disabled = false); }
+      try { await f(); } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = fail(e); box.querySelectorAll('button').forEach(x => x.disabled = false); }
     };
     box.querySelector('[data-p=close]').onclick = () => box.remove();
     box.querySelector('[data-p=reset]').onclick = run(async () => { await savePrefs({}); await done('اعلان‌ها به تنظیم پیش‌فرض برگشت.'); });
