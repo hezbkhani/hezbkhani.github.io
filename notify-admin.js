@@ -51,8 +51,8 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
     const group = g => Object.entries(d.types).filter(([, t]) => t.group === g).map(typeCard).join('');
     p.innerHTML = `
 <div class="adm-card"><h3>اعلان برای همه</h3>
-<label class="adm-opt"><input type="checkbox" id="ntfPublic"> <span>پیشنهاد اعلان به همه بازدیدکنندگان (در غیر این صورت فقط در ‎#admin‎ و برنامه نصب‌شده دیده می‌شود)</span></label>
-<p class="hint">پیش از روشن کردن، مراحل «اعلان» راهنمای راه‌اندازی (Supabase) را انجام دهید و یک «نمونه روی گوشی من» بفرستید تا مطمئن شوید می‌رسد.</p><div class="adm-msg" id="ntfPublicMsg"></div></div>
+<label class="adm-opt"><input type="checkbox" id="ntfPublic"> <span>پیشنهاد اعلان به همه بازدیدکنندگان (اگر خاموش باشد، فقط در ‎#admin‎ و برنامه نصب‌شده دیده می‌شود)</span></label>
+<p class="hint">پیش‌فرض روشن است. اگر هنوز مراحل «اعلان» راهنمای راه‌اندازی (Supabase) انجام نشده، فعلاً خاموشش کنید تا کسی با خطا روبه‌رو نشود.</p><div class="adm-msg" id="ntfPublicMsg"></div></div>
 <div class="adm-card"><h3>این گوشی</h3><p class="hint" id="ntfMine">…</p><div class="reg-tools"><button type="button" id="ntfMineOn">فعال کردن اعلان روی این گوشی</button></div><div class="adm-msg" id="ntfMineMsg"></div></div>
 <div class="adm-card"><h3>وضعیت ارسال</h3><div id="ntfStats" class="hint">…</div><div class="reg-tools"><button type="button" class="reg-light" id="ntfReload">تازه کردن</button></div></div>
 <div class="adm-card"><h3>اعلان‌های حزب‌خوانی</h3><p class="hint">جای‌نگهدارها: ${esc(VARS.hezb)}</p>${group('hezb')}</div>
@@ -132,7 +132,7 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
 
   function fillForm() {
     const s = saved(), d = defaults;
-    $('ntfPublic').checked = !!s.public;
+    $('ntfPublic').checked = s.public !== false;
     $('ntfQuietFrom').value = s.quiet?.from || d.quiet.from; $('ntfQuietTo').value = s.quiet?.to || d.quiet.to;
     document.querySelectorAll('#pane-notify .ntf-type').forEach(c => {
       const k = c.dataset.type, t = d.types[k], o = (s.types || {})[k] || {}, v = f => c.querySelector(`[data-f=${f}]`);
