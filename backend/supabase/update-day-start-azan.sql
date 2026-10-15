@@ -37,4 +37,5 @@ $$;
 
 drop policy if exists "public may report completion" on public.daily_reports;
 create policy "public may report completion" on public.daily_reports for insert to anon
-  with check (completed = true and report_date = public.reading_day(now()));
+  with check (completed = true and report_date = public.reading_day(now())
+              and length(participant_name) <= 80 and length(portion) <= 120);

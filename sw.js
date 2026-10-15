@@ -3,12 +3,21 @@
 self.window = self; importScripts('config.js');
 const cfg = self.APP_CONFIG || {};
 
-const CACHE = 'hezb-v1';
+const CACHE = 'hezb-v2';
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'portions.json', 'Vazirmatn.woff2', 'IranNastaliq2.woff2', 'background.jpg'];
 
+// اسکریپت‌های صفحه (با شماره نسخه‌شان، مثل app.js?v=7) هم از همان index.html برداشته و ذخیره می‌شوند
+// تا برنامه نصب‌شده از همان اولین بار بدون اینترنت هم باز شود.
+async function precache() {
+  const c = await caches.open(CACHE);
+  await c.addAll(SHELL);
+  const html = await (await c.match('index.html')).text();
+  const scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m => m[1]).filter(u => !/^https?:/.test(u));
+  await Promise.all(scripts.map(u => c.add(u).catch(() => {})));
+}
 self.addEventListener('install', e => {
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}));
+  e.waitUntil(precache().catch(() => {}));
 });
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('hezb-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())
@@ -19,9 +28,16 @@ self.addEventListener('fetch', e => {
   // فقط فایل‌های خود سایت؛ درخواست‌های پایگاه داده و سایت‌های دیگر دست‌نخورده می‌مانند.
   if (req.method !== 'GET' || url.origin !== self.location.origin || req.headers.has('range')) return;
   e.respondWith(fetch(req).then(res => {
-    if (res.status === 200 && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {}); }
+    if (res.status === 200 && res.type === 'basic') {
+      const copy = res.clone();
+      // نسخه‌های قدیمیِ همین فایل (?v= دیگر) پاک می‌شوند تا بدون اینترنت همیشه آخرین نسخه به کار رود.
+      caches.open(CACHE).then(async c => {
+        await c.put(req, copy);
+        if (url.search) for (const k of await c.keys()) { const u = new URL(k.url); if (u.pathname === url.pathname && u.search !== url.search) c.delete(k); }
+      }).catch(() => {});
+    }
     return res;
-  }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || (req.mode === 'navigate' ? caches.match('./') : Response.error()))));
+  }).catch(() => caches.match(req).then(r => r || caches.match(req, { ignoreSearch: true })).then(r => r || (req.mode === 'navigate' ? caches.match('./') : Response.error()))));
 });
 
 self.addEventListener('push', e => {
