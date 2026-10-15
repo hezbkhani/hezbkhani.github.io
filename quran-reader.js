@@ -278,11 +278,11 @@ body.qr-lock{overflow:hidden}
   }
 
   window.addEventListener('popstate', () => {
-    if (el.classList.contains('show')) close(true);
+    if (el.classList.contains('show') && !history.state?.qr) close(true);
     const f = afterClose; afterClose = null;
     if (f) setTimeout(f, 50);
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el.classList.contains('show')) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el.classList.contains('show')) { e.preventDefault(); close(); } });
 
   function onScroll() {
     const max = el.scrollHeight - el.clientHeight;

@@ -12,7 +12,9 @@
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   // در پیش‌نمایش، نسخه نصب‌شده روی صفحه اصلی (که نشانی #admin ندارد) هم یادآوری را نشان می‌دهد تا روی آیفون آزمایش شود.
   const enabled = () => !PREVIEW_ONLY || location.hash === '#admin' || standalone;
-  const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!cfg.VAPID_PUBLIC_KEY;
+  // برنامه ویندوز و مک (WebView) سرویس اعلان ندارد؛ آنجا کارت یادآوری نشان داده نمی‌شود.
+  const desktopApp = (() => { try { return sessionStorage.getItem('hezbApp') === '1' || /[?&]app=desktop\b/.test(location.search); } catch { return /[?&]app=desktop\b/.test(location.search); } })();
+  const supported = !desktopApp && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!cfg.VAPID_PUBLIC_KEY;
 
   document.head.insertAdjacentHTML('beforeend', `<style>
 .rm-card{margin-top:14px;padding:12px 16px;background:#e7f5f0;border:1px solid var(--gold);color:#000;text-shadow:none;line-height:1.8}
@@ -66,6 +68,7 @@
 
   // کارت زیر سهم امروز. t = {g, id, name, groupName}
   async function render(box, t) {
+    if (desktopApp) { box.innerHTML = ''; box.hidden = true; return; }
     const saved = store.get(LS), sub = await currentSub();
     if (saved && !sub) store.set(LS, null); // در خود اعلان لغو شده بود.
     const active = sub && saved;
