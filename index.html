@@ -1,66 +1,76 @@
 <!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><link rel="preload" href="IranNastaliq2.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="Vazirmatn.woff2" as="font" type="font/woff2" crossorigin><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#006b50"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="حزب‌خوانی"><meta name="description" content="حزب‌خوانی گروهی قرآن کریم: سهم روزانه هر نفر، متن و صوت قرآن، و ثبت گزارش قرائت."><meta property="og:type" content="website"><meta property="og:site_name" content="حزب‌خوانی قرآن کریم"><meta property="og:title" content="حزب‌خوانی قرآن کریم"><meta property="og:description" content="سهم قرائت امروز خود را ببینید، متن و صوت آن را بخوانید و گزارش قرائت را ثبت کنید."><meta property="og:url" content="https://hezbkhani.github.io/"><meta property="og:image" content="https://hezbkhani.github.io/quran-logo.png"><meta property="og:locale" content="fa_IR"><meta name="twitter:card" content="summary"><title>حزب‌خوانی قرآن کریم</title><style>
 @font-face{font-family:SiteFont;src:url('IranNastaliq2.woff2') format('woff2'),url('IranNastaliq2.ttf') format('truetype');font-display:swap}
 @font-face{font-family:Vazirmatn;src:url('Vazirmatn.woff2') format('woff2');font-weight:100 900;font-display:swap}
-:root{--emerald:#007f5f;--deep:#005c45;--gold:#d7aa5b;--paper:#fffaf0;--ink:#2f241d;--muted:#5d524b;--glow:0 1px 3px #000,0 0 12px #000c}
+:root{--emerald:#007f5f;--deep:#005c45;--gold:#d7aa5b;--paper:#fffaf0;--ink:#2f241d;--muted:#5d524b;--glow:0 1px 3px #000,0 0 12px #000c;
+  /* رنگ‌ها و گردی گوشه‌های مشترک همه بخش‌ها (منو، برگه‌ها، چله‌ها، مدیریت) */
+  --mint:#e7f5f0;--cream:#fff5d9;--line:#e6dcc6;--hover:#f3ead6;--danger:#9b2636;--ok:#006b50;--r:8px;--r-card:12px;--r-panel:16px;--pill:999px}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;font:17px/1.9 Vazirmatn,Tahoma,sans-serif;color:#fff;background:linear-gradient(#1d120b99,#1d120b99),url('background.jpg') center/cover fixed;padding:18px}
 .shell{width:100%;max-width:680px;margin:0 auto}
 header{padding-top:12vh;text-align:center;text-shadow:var(--glow);margin:0 0 22px}
 h1{margin:0;font:normal clamp(38px,7vw,58px)/1.7 SiteFont,Tahoma,serif}
 .today{margin:0;font-size:18px;font-weight:500}
-.panel{background:rgba(255,250,240,.28);backdrop-filter:blur(3px);padding:20px 24px 24px;margin:0 0 28px;box-shadow:0 12px 35px #0005;text-shadow:var(--glow)}
+.panel{border-radius:var(--r-panel);background:rgba(255,250,240,.28);backdrop-filter:blur(3px);padding:20px 24px 24px;margin:0 0 28px;box-shadow:0 12px 35px #0005;text-shadow:var(--glow)}
 .panel h2{margin:0 0 6px;font:normal 34px/1.8 SiteFont,Tahoma,serif}
 .lead{margin:0 0 12px}
 .hint{margin:8px 0 0;font-size:15px}
 label{display:block;font-weight:700;margin:8px 0 6px}
 .groups{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .row{display:flex;gap:10px}
-input,select,button{font:inherit;font-size:17px;height:48px;padding:0 14px;border:1px solid var(--gold);min-width:0;text-shadow:none}
+input,select,button{font:inherit;font-size:17px;height:48px;padding:0 14px;border:1px solid var(--gold);border-radius:var(--r);min-width:0;text-shadow:none}
+textarea{border-radius:var(--r)}
+input[type=checkbox],input[type=radio]{accent-color:var(--emerald)}
 input,select{flex:1;width:100%;background:#fff;color:var(--ink)}
 button{flex:0 0 auto;white-space:nowrap;background:var(--emerald);color:#fff;font-weight:600;cursor:pointer}
 button:hover,.group.active{background:var(--deep)}
+/* دکمه دوم (سفید با حاشیه سبز) در همه بخش‌ها یک شکل است */
+button:is(.intro-light,.reg-light,.chs-alt,.rm-ghost){background:#fff;color:var(--deep);border-color:var(--emerald)}
+button:is(.intro-light,.reg-light,.chs-alt,.rm-ghost):hover:not(:disabled){background:var(--hover)}
+/* متن راهنما روی کارت‌های روشن (به‌جای رنگ روشن روی پس‌زمینه تیره) */
+:is(.adm-card,.reg-round,.chl-card,.rm-card,.ins-box,.task,.identity-card) .hint{color:var(--muted)!important;text-shadow:none}
 .group.active{box-shadow:inset 0 0 0 2px var(--gold)}
 button:disabled,input:disabled{opacity:.5;cursor:not-allowed}
 .error{min-height:24px;margin-top:6px;font-weight:700}
-.current-group{display:inline-block;margin:0 0 6px;padding:2px 12px;border:1px solid var(--gold);background:rgba(0,92,69,.75);font-weight:600}
+.current-group{display:inline-block;margin:0 0 6px;padding:2px 12px;border-radius:var(--pill);border:1px solid var(--gold);background:rgba(0,92,69,.75);font-weight:600}
 .result{display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--gold)}
 .result.show,.show{display:block}
 .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .panel .name{margin:14px 0 8px;font:normal 42px/1.9 SiteFont,Tahoma,serif}
 .badge,.task,.search-item,.identity-card,.admin-summary,.report-row{border:1px solid var(--gold);color:#000;text-shadow:none}
-.badge{background:#e7f5f0;padding:2px 10px}
-.task{background:#fff5d9;padding:12px 16px}
+.badge{background:var(--mint);padding:2px 12px;border-radius:var(--pill)}
+.task{background:var(--cream);padding:12px 16px;border-radius:var(--r-card)}
 .task small{display:block;font-size:15px;color:var(--muted)}
 .task strong{display:block;font-size:26px;line-height:1.7;color:var(--deep)}
-.hizb{display:inline-block;margin-right:10px;padding:0 10px;font-size:15px;font-weight:600;line-height:1.9;vertical-align:middle;color:#fff;background:var(--deep);border:1px solid var(--gold)}
+.hizb{display:inline-block;margin-right:10px;padding:0 10px;font-size:15px;font-weight:600;line-height:1.9;vertical-align:middle;color:#fff;background:var(--deep);border:1px solid var(--gold);border-radius:var(--pill)}
 .identity-card .hizb{display:inline;margin:0;padding:0;font-size:inherit;line-height:inherit;color:var(--deep);background:none;border:0}.identity-card .hizb::before{content:" · "}
-.identity-card{display:none;background:#fff5d9;padding:12px 16px;margin:12px 0}
+.identity-card{display:none;background:var(--cream);padding:12px 16px;margin:12px 0;border-radius:var(--r-card)}
 .identity-card.show{display:block}
 .identity-card strong{font-size:20px;color:var(--deep)}
 .identity-card span{display:block;color:var(--muted)}
 .search-results,.admin-results{display:grid;gap:8px;margin-top:12px}
-.search-item,.report-row{background:#fff;padding:6px 14px;line-height:1.7}
-.report-days:empty{display:none}.report-days{margin:4px 0 0}.rd-title{display:block;font-size:15px}.rd-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.rd-list .rd{height:auto;min-height:36px;padding:2px 12px;font-size:15px;font-weight:500;background:#fffaf0;color:var(--ink)}.rd-list .rd.miss{background:#f6e3e3;border-color:#d9a3a3;color:#8a2c2c}.rd-list .rd.done{background:#e7f5f0;color:var(--deep)}.rd-list .rd:not(.on):hover{background:#f3e6c4;color:var(--ink)}.rd-list .rd.on{background:var(--emerald);color:#fff;box-shadow:inset 0 0 0 2px var(--gold)}
+.search-item,.report-row{background:#fff;padding:6px 14px;line-height:1.7;border-radius:var(--r)}
+.report-days:empty{display:none}.report-days{margin:4px 0 0}.rd-title{display:block;font-size:15px}.rd-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.rd-list .rd{height:auto;min-height:36px;padding:2px 12px;font-size:15px;font-weight:500;background:#fffaf0;color:var(--ink)}.rd-list .rd.miss{background:#f6e3e3;border-color:#d9a3a3;color:#8a2c2c}.rd-list .rd.done{background:var(--mint);color:var(--deep)}.rd-list .rd:not(.on):hover{background:var(--hover);color:var(--ink)}.rd-list .rd.on{background:var(--emerald);color:#fff;box-shadow:inset 0 0 0 2px var(--gold)}
 .checkline{display:flex;align-items:center;gap:10px;margin:14px 0;font-weight:500}
 .checkline input{flex:none;width:22px;height:22px;margin:0}
 .admin-section[hidden]{display:none!important}
 .admin-panel{display:block}
 .admin-filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
-.admin-summary{background:#e7f5f0;padding:10px 14px;margin:12px 0}
+.admin-summary{background:var(--mint);padding:10px 14px;margin:12px 0;border-radius:var(--r-card)}
 @media(max-width:600px){
   body{padding:10px;font-size:16px}
   header{padding-top:8vh}
   .panel{padding:16px 16px 20px;margin-bottom:20px}
   .panel h2{font-size:30px}
   .row{flex-direction:column}
+  .row>input,.row>select{flex:none}
   .groups,.admin-filters{grid-template-columns:1fr}
   .panel .name{font-size:36px}
 }
 </style></head><body><main class="shell"><header><h1>حزب‌خوانی قرآن کریم</h1><p class="today" id="todayHead"></p></header>
-<section class="panel intro" id="introPanel"><h2>به حزب‌خوانی خوش آمدید</h2><p class="lead">در این سایت قرآن و ادعیه را گروهی و هر روز می‌خوانیم:</p><ul class="intro-list"><li><b>حزب‌خوانی:</b> هر گروه ۱۲۰ نفر است و هر نفر روزی یک حزب می‌خواند؛ این‌طور هر روز یک ختم کامل قرآن انجام می‌شود.</li><li><b>دوره‌های قرآن:</b> جزءخوانی و روزی یک صفحه، تا قرآن قدم‌به‌قدم ختم شود.</li><li><b>چله‌ها:</b> زیارت عاشورا، حدیث کسا، زیارت آل یاسین و متن‌های دیگر را معمولاً ۴۰ روز با هم می‌خوانیم.</li></ul><p class="hint">متن هر روز، ثبت قرائت و یادآوری همین‌جاست. همه دوره‌ها و ثبت‌نام در منوی ☰ بالای صفحه است.</p><div class="intro-notice" role="note"><b>ثبت‌نام کنید</b><p>از ۲۳ مهر ۱۴۰۵ می‌توانید در چله‌ها و گروه‌ها ثبت‌نام کنید. با ثبت‌نام، همه چیزهایی که در آن‌ها عضو شده‌اید را در سایت و در هر برنامه‌ای که استفاده می‌کنید یک‌جا دارید و راحت‌تر مدیریت می‌کنید.</p><p>فعلاً بدون ثبت‌نام هم می‌شود قرائت را گزارش داد. اعضای دو گروه فعلی حزب‌خوانی تلگرام و بله هم مثل قبل با شناسه خود ادامه می‌دهند.</p></div><div class="intro-tools"><button type="button" id="introMenu">دیدن دوره‌ها و ثبت‌نام</button><button type="button" class="intro-light" id="introHezb">عضو گروه تلگرام یا بله هستم</button></div></section>
+<section class="panel intro" id="introPanel"><h2>به حزب‌خوانی خوش آمدید</h2><p class="lead">در این سایت قرآن و ادعیه را گروهی و هر روز می‌خوانیم:</p><ul class="intro-list"><li><b>حزب‌خوانی:</b> هر گروه ۱۲۰ نفر است و هر نفر روزی یک حزب می‌خواند؛ این‌طور هر روز یک ختم کامل قرآن انجام می‌شود.</li><li><b>دوره‌های قرآن:</b> جزءخوانی و روزی یک صفحه، تا قرآن قدم‌به‌قدم ختم شود.</li><li><b>چله‌ها:</b> زیارت عاشورا، حدیث کسا، زیارت آل یاسین و متن‌های دیگر را معمولاً ۴۰ روز با هم می‌خوانیم.</li></ul><p class="hint">متن هر روز، ثبت قرائت و یادآوری همین‌جاست. همه دوره‌ها و ثبت‌نام در منوی ☰ بالای صفحه است.</p><div class="intro-notice" role="note"><b>حساب کاربری بسازید</b><p>با ساختن حساب (نام کاربری و رمز)، همه چله‌ها، دوره‌ها و گروه حزب‌خوانی‌ای که در آن‌ها عضو شده‌اید، در سایت و در هر برنامه‌ای که استفاده می‌کنید یک‌جا دیده می‌شود و دیگر لازم نیست کدی را به خاطر بسپارید.</p><p>فعلاً بدون ثبت‌نام هم می‌شود قرائت را گزارش داد. اعضای دو گروه فعلی حزب‌خوانی تلگرام و بله هم مثل قبل با شناسه خود ادامه می‌دهند.</p></div><div class="intro-tools"><button type="button" id="introMenu">دیدن دوره‌ها و ثبت‌نام</button><button type="button" class="intro-light" id="introHezb">عضو گروه تلگرام یا بله هستم</button></div></section>
 <section class="panel hz-panel" id="hzGroupsPanel"><h2>انتخاب گروه</h2><p class="lead">لطفاً بر اساس تاریخ شروع دوره، گروه خود را انتخاب کنید:</p><nav class="groups" id="groupsNav"></nav><p class="hint" id="groupInfo"></p></section>
 <section class="panel hz-panel" id="hzTaskPanel"><h2>شناسه و سهم روزانه</h2><div><label for="pid">شناسه شما</label><div class="row"><input id="pid" inputmode="numeric" placeholder="عددی از ۱ تا ۱۲۰"><button id="showTask" type="button">نمایش سهم امروز</button></div><p class="hint">شناسه همان عدد کنار نام شما در فهرست گروه است.</p><div class="error" id="err"></div></div><section class="result" id="result"></section></section>
 <section class="panel hz-panel" id="hzSearchPanel"><h2>فراموشی شناسه</h2><p class="lead">حداقل سه حرف از نام خود را وارد کنید.</p><div class="row"><input id="nameSearch" minlength="3" placeholder="مثلاً فاطمه"><button type="button" id="searchName">جستجو در همه گروه‌ها</button></div><div id="searchResults" class="search-results"></div></section>
-<section class="panel hz-panel" id="hzReportPanel"><h2>گزارش، اعلام قرائت سهم روزانه</h2><p class="lead">شناسه خود را وارد کنید و پس از قرائت، تیک را بزنید. برای تغییر گروه، از بخش «انتخاب گروه» در بالای صفحه استفاده کنید.</p><span class="current-group" id="reportGroup"></span><label for="reportId">شناسه</label><div class="row"><input id="reportId" inputmode="numeric" placeholder="شناسه ۱ تا ۱۲۰"><button id="verifyReportId" type="button">بررسی شناسه</button></div><div id="reportIdentity" class="identity-card" aria-live="polite"></div><div id="reportDays" class="report-days"></div><label class="checkline"><input id="readCheck" type="checkbox" disabled> <span id="readCheckText">نام و سهم بالا متعلق به من است و سهم امروز را قرائت کردم</span></label><button id="submitReport" type="button" disabled>ثبت گزارش امروز</button><div class="error" id="reportMessage"></div></section>
+<section class="panel hz-panel" id="hzReportPanel"><h2>گزارش قرائت سهم روزانه</h2><p class="lead">شناسه خود را وارد کنید و پس از قرائت، تیک را بزنید. برای تغییر گروه، از بخش «انتخاب گروه» در بالای صفحه استفاده کنید.</p><span class="current-group" id="reportGroup"></span><label for="reportId">شناسه</label><div class="row"><input id="reportId" inputmode="numeric" placeholder="شناسه ۱ تا ۱۲۰"><button id="verifyReportId" type="button">بررسی شناسه</button></div><div id="reportIdentity" class="identity-card" aria-live="polite"></div><div id="reportDays" class="report-days"></div><label class="checkline"><input id="readCheck" type="checkbox" disabled> <span id="readCheckText">نام و سهم بالا متعلق به من است و سهم امروز را قرائت کردم</span></label><button id="submitReport" type="button" disabled>ثبت گزارش امروز</button><div class="error" id="reportMessage"></div></section>
 <section class="panel admin-section" id="adminSection" hidden><h2>مدیریت</h2><div class="admin-panel show" id="adminPanel"><p class="hint">ورود امن مدیر با حساب اختصاصی انجام می‌شود. رمز یا کد مدیر داخل فایل‌های عمومی سایت ذخیره نمی‌شود.</p><label for="adminEmail">ایمیل مدیر</label><input id="adminEmail" type="email"><label for="adminPassword">رمز عبور</label><input id="adminPassword" type="password"><div class="row"><button id="adminLogin" type="button">ورود</button></div><div id="adminMessage" class="error"></div><div id="adminControls" hidden><div class="admin-filters"><label>گروه<select id="adminGroupSelect"></select></label><label>تاریخ گزارش<input id="adminDate" type="date"></label><label>وضعیت<select id="adminStatus"><option value="reported">گزارش داده‌اند</option><option value="missing">گزارش نداده‌اند</option><option value="all">همه اعضا</option></select></label></div><button id="loadReports" type="button">نمایش گزارش انتخاب‌شده</button><div id="adminSummary" class="admin-summary"></div><div id="adminResults" class="admin-results"></div></div></div></section>
-</main><script src="config.js"></script><script src="app.js?v=8"></script><script src="quran-reader.js?v=10"></script><script src="admin.js?v=4"></script><script src="admin-groups.js?v=1"></script><script src="extras.js?v=2"></script><script src="registration.js?v=11"></script><script src="menu.js?v=3"></script><script src="home.js?v=1"></script><script src="chelleh.js?v=8"></script><script src="reminders.js?v=4"></script><script src="notify-admin.js?v=2"></script><script src="install.js?v=1"></script></body></html>
+</main><script src="config.js"></script><script src="app.js?v=8"></script><script src="quran-reader.js?v=10"></script><script src="admin.js?v=5"></script><script src="admin-groups.js?v=2"></script><script src="extras.js?v=3"></script><script src="registration.js?v=13"></script><script src="menu.js?v=4"></script><script src="home.js?v=3"></script><script src="account.js?v=1"></script><script src="chelleh.js?v=10"></script><script src="reminders.js?v=5"></script><script src="notify-admin.js?v=3"></script><script src="install.js?v=2"></script></body></html>

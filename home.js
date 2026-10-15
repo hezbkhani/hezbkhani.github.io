@@ -12,14 +12,12 @@
 .hz-off{display:none!important}
 .intro-list{margin:0 0 4px;padding:0 22px 0 0}
 .intro-list li{margin:0 0 6px}
-.intro-notice{margin:14px 0 0;padding:10px 14px;background:#fff5d9;color:var(--ink);text-shadow:none;border:1px solid var(--gold);border-right:5px solid var(--deep)}
+.intro-notice{margin:14px 0 0;padding:10px 14px;background:var(--cream);color:var(--ink);text-shadow:none;border:1px solid var(--gold);border-right:5px solid var(--deep);border-radius:var(--r-card)}
 .intro-notice b{display:block;color:var(--deep);font-size:18px}
 .intro-notice p{margin:4px 0 0;font-size:15px;line-height:1.8}
 .intro-tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 .intro-tools button{flex:1 1 auto;height:auto;min-height:48px;white-space:normal;line-height:1.6;padding:6px 14px}
-button.intro-light{background:#fff;color:var(--deep);border-color:var(--emerald)}
-button.intro-light:hover{background:#f3ead6}
-.hz-mine{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;margin:0 0 10px;padding:6px 12px;background:rgba(0,92,69,.75);border:1px solid var(--gold);font-size:15px}
+.hz-mine{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;margin:0 0 10px;padding:6px 12px;background:rgba(0,92,69,.75);border:1px solid var(--gold);border-radius:var(--r-card);font-size:15px}
 .hz-mine button{height:auto;padding:0;background:none;border:0;color:#ffe2a8;text-decoration:underline;font-weight:500;font-size:15px}
 @media(max-width:600px){.intro-tools button{flex-basis:100%}}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
@@ -47,24 +45,27 @@ button.intro-light:hover{background:#f3ead6}
   window.hezbReveal = reveal;
 
   // گروه و شناسه پس از نمایش سهم یا ثبت گزارش روی همین گوشی ذخیره می‌شود.
-  const remember = (g, id) => { if (!g || !(id >= 1 && id <= 120)) return; const m = read(); if (m && m.g === g && m.id === id) return; write({ g, id }); apply(); };
+  const remember = (g, id) => { if (!g || !(id >= 1 && id <= 120)) return; const m = read(); if (m && m.g === g && m.id === id) return; write({ g, id }); apply(); document.dispatchEvent(new Event('me:changed')); };
   document.addEventListener('task:shown', e => remember(selected?.number, e.detail?.id));
   new MutationObserver(() => { if (/با موفقیت ثبت شد|قبلاً ثبت شده/.test(reportMessage.textContent) && verifiedReport) remember(verifiedReport.groupNumber, verifiedReport.id); })
     .observe(reportMessage, { childList: true, characterData: true, subtree: true });
 
   // بازدید بعدی: گروه انتخاب و سهم امروز و فرم گزارش با همان شناسه آماده می‌شود.
-  document.addEventListener('groups:loaded', () => {
+  function restore() {
     const me = read();
     if (me && groups.length && !groups.some(g => g.number === me.g)) write(null); // گروه حذف شده است
     apply();
-    if (!me || pid.value || window.groupTouched) return;
+    if (!me || !groups.length || pid.value || window.groupTouched) return;
     const btn = groupsNav.querySelector(`button[data-n="${me.g}"]`);
     if (!btn) return;
     selectGroup(me.g, btn);
     pid.value = toFa(me.id); reportId.value = toFa(me.id);
     showTask.click();
     verifyReportIdentity();
-  });
+  }
+  document.addEventListener('groups:loaded', restore);
+  // پس از ورود به حساب روی گوشی تازه (account.js)، گروه و شناسه حساب همین‌جا آماده می‌شود.
+  window.hezbRestore = restore;
 
   document.getElementById('introMenu').onclick = () => window.siteMenu?.open();
   document.getElementById('introHezb').onclick = () => reveal('hzGroupsPanel');
