@@ -457,7 +457,7 @@ begin
                               where not exists (select 1 from chelleh_members x where x.code = c)));
 end $$;
 
--- ثبت یا برداشتن «خواندم» برای امروز، یا دیروز اگر فراموش شده بود.
+-- ثبت یا برداشتن «خواندم» برای امروز، یا روزی تا ۷ روز گذشته اگر فراموش شده بود (همان LATE_DAYS در app.js).
 create or replace function public.chl_mark(p_code text, p_day date, p_done boolean) returns date[]
 language plpgsql security definer set search_path = public as $$
 declare m chelleh_members; r chelleh_rounds; s date; t date := public.reading_day(); res date[];
@@ -471,7 +471,7 @@ begin
   s := coalesce(m.start_date, r.start_date);
   if s is null or s > t then raise exception 'chl_not_started'; end if;
   -- روزی یک صفحه: تاریخ پایان ندارد؛ هر روزی که خوانده شود صفحه بعد است.
-  if p_day is null or p_day not in (t, t - 1) or p_day < s or (r.kind <> 'page' and p_day > s + r.days - 1) then
+  if p_day is null or p_day > t or p_day < t - 7 or p_day < s or (r.kind <> 'page' and p_day > s + r.days - 1) then
     raise exception 'chl_bad_day';
   end if;
   if p_done then insert into chelleh_marks (member_id, day) values (m.id, p_day) on conflict do nothing;
