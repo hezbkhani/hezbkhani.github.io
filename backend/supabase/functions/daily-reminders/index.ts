@@ -1,7 +1,7 @@
 // اعلان‌های سایت (Web Push). Supabase Cron هر ۱۵ دقیقه با slot=auto صدا می‌زند و این تابع بر اساس ساعت‌ها و متن‌هایی که مدیر
 // در «مدیریت › اعلان‌ها» گذاشته (site_settings.notify، با پیش‌فرض‌های notifications.json سایت) تصمیم می‌گیرد چه بفرستد:
 // سهم امروز و یادآوری گزارش حزب‌خوانی، برنامه امروز و یادآوری چله و دوره‌های قرآن، شروع از فردا، رسیدن جا از فهرست رزرو،
-// اعلام شناسه، و خبر تازه دوره. هیچ اعلانی دو بار نمی‌رود (جدول push_sent).
+// اعلام شناسه، خبر تازه دوره، و با اذان: نماز امام جواد (ع) چهارشنبه‌ها و ختم یاسین حضرت ام‌البنین (س) شب‌های جمعه. هیچ اعلانی دو بار نمی‌رود (جدول push_sent).
 // slot=morning و slot=evening (زمان‌بندی قدیمی ساعت ۱۰ و ۱۹) هم کار می‌کند.
 // slot=test: «ارسال آزمایشی» از سایت؛ برنامه امروزِ همان یک دستگاه (endpoint در بدنه) را همین حالا می‌فرستد.
 // slot=sample و slot=broadcast: فقط مدیر (با توکن ورود مدیر): نمونه یک نوع اعلان به گوشی خودش، یا پیام همگانی.
@@ -11,7 +11,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 import { type Group, isoToUtc, parseGroupText, portionFor, toFa } from './reminder.ts'
-import { type Item, type Msg, type Prefs, type Settings, compose, dueTypes, forDevice, mergeSettings, tehranMinutes } from './notify.ts'
+import { type Item, type Msg, type Prefs, type Settings, azanDue, compose, dueTypes, forDevice, mergeSettings, tehranMinutes } from './notify.ts'
 
 const env = (k: string) => Deno.env.get(k) || ''
 const SITE_URL = (env('SITE_URL') || 'https://hezbkhani.github.io').replace(/\/$/, '')
@@ -21,6 +21,18 @@ const json = (x: unknown, status = 200) => new Response(JSON.stringify(x), { sta
 const makeDb = () => createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } })
 type Db = ReturnType<typeof makeDb>
 type Sub = { endpoint: string; p256dh: string; auth: string; group_number: number | null; participant_id: number | null }
+
+// همه ردیف‌ها، هر بار ۱۰۰۰ تا (سقف هر درخواست Supabase).
+// deno-lint-ignore no-explicit-any
+async function all<T>(q: () => any): Promise<T[]> {
+  const out: T[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await q().range(from, from + 999)
+    if (error) throw Error(error.message)
+    out.push(...data)
+    if (data.length < 1000) return out
+  }
+}
 
 async function loadGroups(db: Db): Promise<Group[]> {
   const setting = await db.from('site_settings').select('value').eq('key', 'groups_source').maybeSingle()
@@ -109,7 +121,8 @@ async function handle(req: Request): Promise<Response> {
       hezb: { name: 'علی محمدی', group: 'گروه تلگرام ۳', id: 17, group_number: 3, start: new Date(Date.now() + 864e5).toISOString().slice(0, 10), task: 'سوره بقره، آیه ۷۵ تا ۹۲ (حزب ۳)' },
       chl: { name: 'علی محمدی', course: 'چله زیارت عاشورا', kind: 'text', day: 5, days: 40, slot: 1, page: 1, times: 1, start: new Date().toISOString().slice(0, 10), news: 'متن نمونه خبر دوره.' }
     }
-    const msg = compose(settings, body.type, [{ type: body.type, data: sample[body.type.startsWith('hezb_') ? 'hezb' : 'chl'] }], SITE_URL)
+    const data = t.azan ? { night: 1 } : sample[body.type.startsWith('hezb_') ? 'hezb' : 'chl']
+    const msg = compose(settings, body.type, [{ type: body.type, data }], SITE_URL)
     await send(s, { ...msg, tag: 'sample' }, 600)
     return json(stats)
   }
@@ -129,7 +142,7 @@ async function handle(req: Request): Promise<Response> {
   // آزمایش: برنامه امروز (یا «از فردا شروع می‌شود») همین دستگاه، بی‌توجه به ساعت؛ بدون یادآوری‌های عصر و رویدادها.
   const nowMin = tehranMinutes(new Date())
   const typesOf = (s: Settings) => {
-    let t = test ? Object.entries(s.types).filter(([k, d]) => (d.on || k === 'chl_start') && !d.event && !k.endsWith('_evening')).map(([k]) => k) : dueTypes(s, slot, nowMin)
+    let t = test ? Object.entries(s.types).filter(([k, d]) => (d.on || k === 'chl_start') && !d.event && !d.azan && !k.endsWith('_evening')).map(([k]) => k) : dueTypes(s, slot, nowMin)
     if (t.includes('chl_daily') || t.includes('chl_start')) t = [...new Set([...t, 'chl_daily', 'chl_start'])]
     return t
   }
@@ -212,6 +225,19 @@ async function handle(req: Request): Promise<Response> {
           add(s, type, key, { ...base, name: p.name, task: task(p), start: tomorrow })
         }
       }
+    }
+  }
+
+  // با اذان (نماز امام جواد، ختم یاسین): برای همه گوشی‌هایی که اعلان دارند، مگر کسی این نوع را روی گوشی خودش خاموش کرده باشد.
+  const azan = slot === 'auto' ? azanDue(settings, new Date()) : []
+  if (azan.length) {
+    stats.azan = azan.map(a => a.type).join(',')
+    const subs = await all<Sub>(() => db.from('push_subscriptions').select('endpoint,p256dh,auth,group_number,participant_id').order('endpoint'))
+    const done = await all<{ endpoint: string; key: string }>(() => db.from('push_sent').select('endpoint,key').in('key', azan.map(a => a.data.key as string)).order('endpoint'))
+    const sent = new Set(done.map(r => r.endpoint + ' ' + r.key))
+    for (const s of subs) for (const a of azan) {
+      if (sent.has(s.endpoint + ' ' + a.data.key) || !dev(s.endpoint).s.types[a.type]?.on) continue
+      add(s, a.type, a.data.key as string, a.data)
     }
   }
 

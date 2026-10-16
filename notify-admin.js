@@ -8,6 +8,7 @@
   const $ = id => document.getElementById(id);
   const VARS = {
     hezb: '{name} نام، {task} سهم امروز، {group} نام گروه، {id} شناسه، {date} تاریخ شروع',
+    ibadat: '{night} شب چندم ختم (اول تا چهارم)، {task} برنامه آن شب (مثلاً «دو بار سوره یاسین، هدیه به حضرت ابوالفضل العباس (ع)»)',
     chl: '{name} نام، {course} نام چله یا دوره، {task} برنامه امروز (مثلاً «جزء ۷ قرآن»)، {day} روز چندم، {days} چند روز، {left} روزهای مانده، {date} تاریخ شروع، {news} متن خبر'
   };
   let defaults = null, built = false;
@@ -45,7 +46,7 @@
   async function build(p) {
     const d = await loadDefaults();
     const typeCard = ([k, t]) => `<div class="ntf-type" data-type="${k}"><div class="ntf-top"><label><input type="checkbox" data-f="on"> ${esc(t.label)}</label>
-${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` : t.same ? '<span class="hint">همان ساعت «برنامه امروز»</span>' : '<span class="hint">همان لحظه (جز ساعت‌های سکوت)</span>'}</div>
+${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` : t.azan ? `<span class="hint">با اذان ${t.azan === 'dhuhr' ? 'ظهر' : 'مغرب'} تهران</span>` : t.same ? '<span class="hint">همان ساعت «برنامه امروز»</span>' : '<span class="hint">همان لحظه (جز ساعت‌های سکوت)</span>'}</div>
 <div class="ntf-fields"><input type="text" data-f="title" maxlength="80" placeholder="عنوان"><textarea data-f="body" maxlength="400" placeholder="متن"></textarea>
 <div class="ntf-tools"><button type="button" class="reg-light" data-sample="${k}">نمونه روی گوشی من</button><button type="button" class="reg-light" data-reset="${k}">متن پیش‌فرض</button></div></div></div>`;
     const group = g => Object.entries(d.types).filter(([, t]) => t.group === g).map(typeCard).join('');
@@ -58,6 +59,9 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
 <p class="hint" style="margin:0 0 10px">ساعت‌ها و روشن/خاموش بودن این‌جا پیش‌فرض همه است. هر کس روی گوشی خودش با «تنظیم اعلان‌ها» می‌تواند نوعی را خاموش کند یا ساعت دیگری بگذارد؛ نوعی که این‌جا خاموش باشد برای هیچ‌کس نمی‌رود.</p>
 <div class="adm-card"><h3>اعلان‌های حزب‌خوانی</h3><p class="hint">جای‌نگهدارها: ${esc(VARS.hezb)}</p>${group('hezb')}</div>
 <div class="adm-card"><h3>اعلان‌های چله و دوره‌های قرآن</h3><p class="hint">جای‌نگهدارها: ${esc(VARS.chl)}. اگر یک نفر چند چله روی یک گوشی داشته باشد، برنامه همه در یک اعلان می‌آید.</p>${group('chl')}</div>
+<div class="adm-card"><h3>اعمال و ختم‌ها</h3><p class="hint">برای همه کسانی که اعلان را روی گوشی فعال کرده‌اند، با اذان تهران. جای‌نگهدارها: ${esc(VARS.ibadat)}</p>${group('ibadat')}
+<div class="ntf-row" style="margin-top:8px"><label for="ntfHijri" style="margin:0">تاریخ قمری</label><select id="ntfHijri" style="flex:none;width:auto">${[-2, -1, 0, 1, 2].map(n => `<option value="${n}">${n ? `${toFa(Math.abs(n))} روز ${n > 0 ? 'جلوتر' : 'عقب‌تر'}` : 'بدون تغییر'}</option>`).join('')}</select></div>
+<p class="hint" id="ntfHijriInfo"></p></div>
 <div class="adm-card"><h3>ساعت سکوت شب</h3><p class="hint">اعلان‌های لحظه‌ای (اعلام شناسه، رزرو، خبر) در این ساعت‌ها نمی‌روند و صبح فرستاده می‌شوند.</p>
 <div class="ntf-row">از <input type="time" id="ntfQuietFrom" step="300"> تا <input type="time" id="ntfQuietTo" step="300"></div></div>
 <div class="reg-tools"><button type="button" id="ntfSave">ذخیره تنظیمات اعلان</button></div><div class="adm-msg" id="ntfSaveMsg"></div>
@@ -86,6 +90,7 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
     };
     $('ntfSave').onclick = async () => { try { await save(); msg('ntfSaveMsg', 'ذخیره شد. از اجرای بعدی (حداکثر ۱۵ دقیقه) به کار می‌رود.', true); } catch (err) { msg('ntfSaveMsg', err.message); } };
     $('ntfReload').onclick = loadStats;
+    $('ntfHijri').onchange = hijriInfo;
     $('ntfMineOn').onclick = async () => {
       try {
         if (!('PushManager' in window) || !cfg.VAPID_PUBLIC_KEY) throw Error('این مرورگر اعلان ندارد (روی آیفون اول سایت را به صفحه اصلی اضافه کنید).');
@@ -121,19 +126,28 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
       types[k] = o;
     });
     const q = { from: $('ntfQuietFrom').value || defaults.quiet.from, to: $('ntfQuietTo').value || defaults.quiet.to };
-    return { public: $('ntfPublic').checked, quiet: q, types };
+    return { public: $('ntfPublic').checked, hijri: +$('ntfHijri').value || 0, quiet: q, types };
   }
   async function save(silent) {
     // جای‌نگهدار ناشناخته احتمالاً غلط تایپی است.
     const bad = [...document.querySelectorAll('#pane-notify .ntf-type [data-f=title], #pane-notify .ntf-type [data-f=body]')]
-      .flatMap(x => (x.value.match(/\{(\w+)\}/g) || []).filter(m => !/\{(name|task|course|day|days|left|date|group|id|news)\}/.test(m)));
+      .flatMap(x => (x.value.match(/\{(\w+)\}/g) || []).filter(m => !/\{(name|task|course|day|days|left|date|group|id|news|night)\}/.test(m)));
     if (bad.length && !silent) throw Error('جای‌نگهدار ناشناخته: ' + [...new Set(bad)].join('، '));
     await window.saveSiteSetting('notify', collect());
   }
 
+  // ختم یاسین از نزدیک‌ترین پنجشنبه به نیمه ماه قمری شروع می‌شود؛ مدیر اگر تاریخ قمری سایت با تقویم رسمی فرق داشت اصلاحش می‌کند.
+  function hijriInfo() {
+    const ib = window.ibadat, el = $('ntfHijri'), out = $('ntfHijriInfo');
+    if (!ib || !el || !out) return;
+    const off = +el.value || 0, k = ib.khatm(off), today = ib.tehranToday();
+    out.textContent = `امروز طبق سایت: ${ib.hijriLabel(today, off)}. اگر با تقویم رسمی فرق دارد، اینجا اصلاح کنید و ذخیره کنید.` +
+      (k ? ` ختم یاسین ${k[0] <= today ? 'جاری' : 'بعدی'}: شب‌های جمعه ${k.map(d => ib.dateFa(d).replace(/^\S+\s/, '')).join('، ')}.` : '');
+  }
   function fillForm() {
     const s = saved(), d = defaults;
     $('ntfPublic').checked = s.public !== false;
+    $('ntfHijri').value = String(Number.isInteger(s.hijri) && Math.abs(s.hijri) <= 2 ? s.hijri : 0); hijriInfo();
     $('ntfQuietFrom').value = s.quiet?.from || d.quiet.from; $('ntfQuietTo').value = s.quiet?.to || d.quiet.to;
     document.querySelectorAll('#pane-notify .ntf-type').forEach(c => {
       const k = c.dataset.type, t = d.types[k], o = (s.types || {})[k] || {}, v = f => c.querySelector(`[data-f=${f}]`);
