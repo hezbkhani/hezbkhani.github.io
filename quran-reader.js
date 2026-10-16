@@ -15,7 +15,7 @@
     ['mojtabavi', 'مجتبوی'], ['safavi', 'صفوی'], ['sadeqi', 'صادقی تهرانی'], ['khorramdel', 'خرمدل'], ['moezzi', 'معزی']
   ];
   // تفسیر هر آیه: متن تفسیر نمونه مجوز انتشار آزاد ندارد، پس دکمه «تفسیر» همان آیه را در سایت رسمی quran.makarem.ir باز می‌کند.
-  const tafsirUrl = (s, n) => `https://quran.makarem.ir/#${s}:${n}`;
+  const tafsirUrl = (s, n) => `https://quran.makarem.ir/fa/interpretation?sura=${s}&verse=${n}`;
   // فایل صوتی هر آیه از چند سرور: everyayah.com، verses.quran.com، cdn.islamic.network (alquran.cloud)
   // و آینه quranicaudio. اگر یکی جواب نداد یا کند بود سراغ بعدی می‌رود.
   // نسخه‌های ۶۴ کیلوبیتی تا جای ممکن، تا با اینترنت کند هم زود شروع شود.
