@@ -30,6 +30,7 @@
 .ib-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.ib-tools button{flex:1 1 auto}
 .ib-box audio{width:100%;margin-top:6px}
 .ib-note{font-size:14.5px;color:var(--muted);margin:6px 0 0}
+.ib-box .rm-link{height:auto;padding:0;border:0;background:none;color:var(--deep);text-decoration:underline;font-weight:600;font-size:inherit}
 .ib-msg{font-weight:700;margin-top:6px}.ib-msg:empty{display:none}
 body.ib-lock{overflow:hidden}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
@@ -103,9 +104,10 @@ body.ib-lock{overflow:hidden}`;
     const n = readCount();
     return `<h2>نماز حاجت امام جواد (ع)</h2><p class="ib-sub">روزهای چهارشنبه</p>
 <div class="ib-card"><ol class="ib-steps">
-<li>روز چهارشنبه، <b>بعد از نماز عصر</b> بلافاصله <b>دو رکعت نماز به نیت امام جواد (ع)</b> بخوانید.</li>
+<li>روز چهارشنبه، <b>بعد از نماز عصر</b> بلافاصله <b>دو رکعت نماز هدیه به امام جواد (ع)</b> بخوانید.</li>
 <li>بلافاصله بعد از نماز، <b>۱۴۶ مرتبه</b> این ذکر را بگویید:<div class="ib-zekr">${ZEKR}</div></li>
 <li>سپس حاجات خود را از خدا بخواهید.</li></ol></div>
+<div class="ib-card"><h3>صوت نماز حاجت امام جواد (ع)</h3><audio controls preload="none" src="audio/namaz-imam-javad.mp3"></audio></div>
 <div class="ib-card"><h3>شمارنده ذکر</h3><div class="ib-count"><button type="button" class="ib-tap${n >= COUNT ? ' ib-done' : ''}" data-ib="tap">${n >= COUNT ? 'تمام شد؛ قبول باشد' : 'بزنید'}</button><b data-ib-n>${toFa(n)} از ${toFa(COUNT)}</b><button type="button" class="rm-ghost" data-ib="zero">از اول</button></div></div>
 ${await notifyHtml('javad_wed', 'هر چهارشنبه با اذان ظهر')}`;
   }

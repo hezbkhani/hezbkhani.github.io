@@ -106,7 +106,7 @@
     ج) Authentication → URL Configuration: Site URL را https://hezbkhani.github.io بگذارید و در Redirect URLs نشانی https://hezbkhani.github.io/** را اضافه کنید.
     د) ایمیل‌فرستِ پیش‌فرض Supabase فقط به ایمیل اعضای تیم پروژه می‌فرستد. برای ایمیل تأیید و فراموشی رمز، در Authentication → Emails → SMTP Settings
        «Enable custom SMTP» را روشن کنید. ساده‌ترین راه Gmail است: Host = smtp.gmail.com، Port = 465، Username = نشانی Gmail، Password = «App password»
-       (در حساب گوگل: Security → 2-Step Verification روشن، سپس App passwords)، Sender email = همان Gmail، Sender name = حزب‌خوانی.
+       (در حساب گوگل: Security → 2-Step Verification روشن، سپس App passwords)، Sender email = همان Gmail، Sender name = نوران.
        متن ایمیل‌ها را می‌توانید در Authentication → Emails → Templates فارسی کنید.
     ه) تابع account-login را (برای ورود با نام کاربری) deploy کنید، مثل گام ۱۱:
          supabase functions deploy account-login --no-verify-jwt
