@@ -75,7 +75,7 @@ body.ib-lock{overflow:hidden}`;
     if (!sp || !sp.enabled() || window.siteSettings?.notify?.types?.[type]?.on === false) return '';
     if (!sp.supported) return `<p class="ib-note">🔔 ${when} با اعلان یادآوری می‌شود. ${/iPad|iPhone|iPod/.test(navigator.userAgent) ? 'روی آیفون، اول سایت را به صفحه اصلی اضافه کنید و از آنجا باز کنید.' : ''}</p>`;
     const st = await sp.status().catch(() => null);
-    if (st) return `<p class="ib-note">🔔 ${when} با اعلان روی این گوشی یادآوری می‌شود${offByMe(type) ? '، ولی این یادآوری را در «تنظیم اعلان‌ها» خاموش کرده‌اید' : ''}. <button type="button" class="rm-link" data-ib="prefs">تنظیم اعلان‌ها</button></p><div class="rm-card" hidden data-ib-prefs></div>`;
+    if (st) return `<p class="ib-note">🔔 ${when} با اعلان روی این گوشی یادآوری می‌شود${offByMe(type) ? '، ولی این یادآوری را در «تنظیم اعلان‌ها» خاموش کرده‌اید' : ''}. <button type="button" class="rm-link" data-ib="prefs">تنظیم اعلان‌ها</button></p>`;
     return `<div class="ib-tools"><button type="button" data-ib="notify">🔔 یادآوری با اعلان روی این گوشی</button></div><p class="ib-note">${when}.</p><div class="ib-msg" aria-live="polite"></div>`;
   }
   async function enableNotify(box) {
@@ -164,7 +164,7 @@ ${await notifyHtml('ommolbanin', 'شب‌های ختم با اذان مغرب')}
       return;
     }
     if (a === 'notify') { b.disabled = true; await enableNotify(box); b.disabled = false; return; }
-    if (a === 'prefs') { const c = box.querySelector('[data-ib-prefs]'); c.hidden = false; return window.sitePush.togglePrefs(c); }
+    if (a === 'prefs') return window.sitePush.openSettings();
     if (a === 'yasin') {
       const qr = window.quranReader, ix = qr && await qr.index().catch(() => null);
       if (!ix) return alert('بارگذاری متن قرآن انجام نشد. اینترنت را بررسی کنید.');
@@ -172,7 +172,8 @@ ${await notifyHtml('ommolbanin', 'شب‌های ختم با اذان مغرب')}
       qr.openRange({ title: 'سوره یاسین', sub: 'ختم یاسین حضرت ام‌البنین (س)', from: ix.surah[35], to: ix.surah[36], endText: 'پایان سوره یاسین. قبول باشد.' });
     }
   }
-  window.addEventListener('popstate', () => close(true));
+  // برگه «تنظیم اعلان‌ها» روی این برگه باز می‌شود؛ برگشت از آن، این برگه را نمی‌بندد.
+  window.addEventListener('popstate', () => { if (!history.state?.ib) close(true); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   window.ibadat.open = open;
 
