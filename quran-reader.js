@@ -15,7 +15,7 @@
     ['mojtabavi', 'مجتبوی'], ['safavi', 'صفوی'], ['sadeqi', 'صادقی تهرانی'], ['khorramdel', 'خرمدل'], ['moezzi', 'معزی']
   ];
   // تفسیر هر آیه: متن تفسیر نمونه مجوز انتشار آزاد ندارد، پس دکمه «تفسیر» همان آیه را در سایت رسمی quran.makarem.ir باز می‌کند.
-  const tafsirUrl = (s, n) => `https://quran.makarem.ir/#${s}:${n}`;
+  const tafsirUrl = (s, n) => `https://quran.makarem.ir/fa/interpretation?sura=${s}&verse=${n}`;
   // فایل صوتی هر آیه از چند سرور: everyayah.com، verses.quran.com، cdn.islamic.network (alquran.cloud)
   // و آینه quranicaudio. اگر یکی جواب نداد یا کند بود سراغ بعدی می‌رود.
   // نسخه‌های ۶۴ کیلوبیتی تا جای ممکن، تا با اینترنت کند هم زود شروع شود.
@@ -119,6 +119,17 @@ body.qr-lock{overflow:hidden}
 .qr-player .qr-now{flex:1;min-width:0;font-size:13.5px;line-height:1.5;color:var(--muted)}
 .qr-player .qr-now b{display:block;font-size:14.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qr-state button{margin-top:12px;height:44px;background:var(--accent);color:#fff;border:0}
+.qr-pnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0 4px}
+.qr-pnav button{flex:1 1 0;max-width:180px;height:44px;padding:0 10px;background:var(--card);color:var(--accent);border:1px solid var(--line);font:600 15px Vazirmatn,sans-serif}
+.qr-pnav button:hover{background:var(--line)}
+.qr-pnav .qr-pmenu{flex:0 1 auto}
+.qr-pnav span{flex:1 1 0;max-width:180px}
+.qr-end .qr-pnav{margin:4px 0 12px}
+.qr-end .qr-pnav button{width:auto;height:46px;background:var(--accent);color:#fff;border:0}
+.qr-end .qr-pnav .qr-pmenu{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.qr.night .qr-end .qr-pnav button:not(.qr-pmenu){color:#10201a}
+.qr-ayah.focus{animation:qrfocus 2.4s ease}
+@keyframes qrfocus{0%,40%{background:rgba(199,154,69,.28)}}
 @media(min-width:700px){.qr-body{padding-left:24px;padding-right:24px}}
 `;
   document.head.insertAdjacentHTML('beforeend', `<style>${css}</style>`);
@@ -193,12 +204,31 @@ body.qr-lock{overflow:hidden}
     $('qrSub').textContent = current.range ? `${current.sub ? current.sub + ' · ' : ''}${toFa(count)} آیه` : `${typeof hizbLabel === 'function' && hizbLabel(current.index) ? `حزب ${toFa(current.index + 1)} · ` : ''}${toFa(count)} آیه`;
     const end = current.range ? `<p>${esc(current.endText || 'پایان. قبول باشد.')}</p>${current.onEnd ? `<button type="button" data-a="rangeEnd">${esc(current.endButton || 'خواندم')}</button>` : ''}`
       : '<p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>';
-    body.innerHTML = html + `<div class="qr-end">${end}
+    const nv = current.nav, navHtml = !nv ? '' : `<div class="qr-pnav">${nv.prev ? `<button type="button" data-a="pprev">→ ${esc(nv.prev)}</button>` : '<span></span>'}${nv.menu ? `<button type="button" class="qr-pmenu" data-a="pmenu">${esc(nv.menu)}</button>` : ''}${nv.next ? `<button type="button" data-a="pnext">${esc(nv.next)} ←</button>` : '<span></span>'}</div>`;
+    body.innerHTML = navHtml + html + `<div class="qr-end">${end}${navHtml}
 <p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud</span></p></div>`;
     items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
     el.scrollTop = 0;
+    const f = current.focus != null && items.find(it => gIndex(it) === current.focus);
+    if (f) { el.scrollTop += f.e.getBoundingClientRect().top - el.querySelector('.qr-bar').offsetHeight - 8; f.e.classList.add('focus'); }
     onScroll();
+    reportView();
     loadTranslation();
+    if (current.autoplay) playAt(0);
+  }
+  // اندیس سراسری آیه (۰ تا ۶۲۳۵)
+  const gIndex = it => SURAH_START[it.s - 1] + it.n - 1;
+  // آیه‌ای که الان بالای صفحه است (یا در حال پخش است) به onView گزارش می‌شود؛ برای ذخیره جای خواندن در قرآن آزاد.
+  let viewTimer = 0;
+  function reportView(now) {
+    if (!current || !current.onView || !items.length) return;
+    clearTimeout(viewTimer);
+    const run = () => {
+      let it = playing && items[pos];
+      if (!it) { const top = el.querySelector('.qr-bar').offsetHeight; it = items.find(x => x.e.getBoundingClientRect().bottom > top + 30) || items[items.length - 1]; }
+      try { current.onView(gIndex(it)); } catch {}
+    };
+    if (now) run(); else viewTimer = setTimeout(() => { if (el.classList.contains('show')) run(); }, 500);
   }
 
   async function loadTranslation() {
@@ -281,6 +311,7 @@ body.qr-lock{overflow:hidden}
 
   let afterClose = null;
   function close(fromHistory, then) {
+    if (el.classList.contains('show')) reportView(true);
     stopAudio();
     el.classList.remove('show');
     document.body.classList.remove('qr-lock');
@@ -300,7 +331,7 @@ body.qr-lock{overflow:hidden}
     const max = el.scrollHeight - el.clientHeight;
     $('qrProgress').style.width = (max > 0 ? Math.min(100, el.scrollTop / max * 100) : 100) + '%';
   }
-  el.addEventListener('scroll', onScroll, { passive: true });
+  el.addEventListener('scroll', () => { onScroll(); reportView(); }, { passive: true });
 
   function keepPlace(fn) {
     // پس از تغییر اندازه یا حالت نمایش، همان آیه‌ای که بالای صفحه بود دوباره بالا بماند.
@@ -318,6 +349,9 @@ body.qr-lock{overflow:hidden}
     if (a === 'menu') { const s = menu.classList.toggle('show'); b.setAttribute('aria-expanded', s); return; }
     if (a === 'retry') return load();
     if (a === 'rangeEnd') { const f = current.onEnd; return close(false, f); }
+    if (a === 'pprev') return current.nav.onPrev();
+    if (a === 'pnext') return current.nav.onNext();
+    if (a === 'pmenu') return close(false, current.nav.onMenu);
     if (a === 'apply') {
       // تغییرات همان لحظه اعمال می‌شوند؛ این دکمه منو را می‌بندد و اگر صوت در حال پخش است، آیه فعلی را با تنظیمات جدید از نو پخش می‌کند.
       menu.classList.remove('show');
@@ -411,7 +445,7 @@ body.qr-lock{overflow:hidden}
   function playAt(i) {
     if (i < 0 || !items[i]) return;
     pos = i; queue = tracksFor(items[i]); qi = 0; srcIdx = 0; playing = true;
-    highlight(); label(); setPlayBtn(); playTrack();
+    highlight(); label(); setPlayBtn(); playTrack(); reportView(true);
   }
   function playTrack() {
     if (!queue[qi]) return advance();
@@ -441,6 +475,8 @@ body.qr-lock{overflow:hidden}
   }
   function advance() {
     if (pos + 1 < items.length) playAt(pos + 1);
+    // قرآن آزاد: در پایان صفحه، صفحه بعد باز می‌شود و پخش ادامه پیدا می‌کند.
+    else if (current?.nav?.next && current.nav.onNext) current.nav.onNext({ autoplay: true });
     else { stopAudio(); setNow('پایان سهم امروز', 'قبول باشد'); }
   }
   audio.addEventListener('ended', () => { qi++; srcIdx = 0; if (qi < queue.length) playTrack(); else advance(); });
@@ -467,8 +503,10 @@ body.qr-lock{overflow:hidden}
 
   // برای بخش‌های دیگر سایت (چله‌ها): باز کردن بازه‌ای از آیه‌ها با همین صفحه، ترجمه‌ها و پخش صوت.
   // opts: { title, sub, from, to (اندیس سراسری، to خودش نیست), endText, endButton, onEnd }
+  // و برای قرآن آزاد (quran-free.js): focus (اندیس آیه‌ای که صفحه رویش باز شود)، onView(اندیس آیه بالای صفحه)،
+  // nav: { prev, next, menu (نام دکمه‌ها)، onPrev, onNext({autoplay}), onMenu (پس از بستن قرآن‌خوان) }، autoplay
   window.quranReader = {
-    openRange(o) { open({ title: o.title, sub: o.sub || '', range: { from: o.from, to: o.to }, endText: o.endText, endButton: o.endButton, onEnd: o.onEnd }); },
+    openRange(o) { open({ title: o.title, sub: o.sub || '', range: { from: o.from, to: o.to }, endText: o.endText, endButton: o.endButton, onEnd: o.onEnd, focus: o.focus, onView: o.onView, nav: o.nav, autoplay: o.autoplay }); },
     index: getIndex
   };
 
