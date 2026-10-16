@@ -1,7 +1,7 @@
 // منطق خالص اعلان‌ها (بدون شبکه) تا جدا آزمایش شود: کدام نوع اعلان الان وقتش است، و ساختن متن از قالب.
 import { toFa } from './reminder.ts'
 
-export type TypeDef = { group?: string; time?: string; event?: boolean; same?: string; azan?: 'dhuhr' | 'maghrib'; weekday?: number; khatm?: boolean; label?: string; title: string; body: string; on?: boolean }
+export type TypeDef = { group?: string; time?: string; event?: boolean; same?: string; azan?: 'dhuhr' | 'maghrib'; offset?: number; weekday?: number; khatm?: boolean; label?: string; title: string; body: string; on?: boolean }
 // hijri: چند روز تاریخ قمری محاسبه‌شده (ام‌القری) جابه‌جا شود تا با تقویم رسمی ایران یکی شود (مدیر تنظیم می‌کند).
 export type Settings = { public?: boolean; hijri?: number; quiet: { from: string; to: string }; types: Record<string, TypeDef> }
 
@@ -10,7 +10,7 @@ export function mergeSettings(defaults: Settings, saved: Partial<Settings> | nul
   const s = saved || {}, types: Record<string, TypeDef> = {}
   for (const [k, d] of Object.entries(defaults.types)) {
     const o = (s.types || {})[k] || {}
-    types[k] = { ...d, on: o.on !== false, time: valid(o.time) ? o.time : d.time,
+    types[k] = { ...d, on: o.on !== false, time: valid(o.time) ? o.time : d.time, offset: azanOffset(o.offset) ?? d.offset,
       title: typeof o.title === 'string' && o.title.trim() ? o.title : d.title,
       body: typeof o.body === 'string' && o.body.trim() ? o.body : d.body }
   }
@@ -31,6 +31,8 @@ export function forDevice(s: Settings, p: Prefs | null | undefined): Settings {
   }
   return { ...s, types }
 }
+// چند دقیقه پیش (منفی) یا پس از اذان؛ مثلاً دعای سمات ۶۰ دقیقه پیش از مغرب جمعه.
+const azanOffset = (x: unknown) => Number.isInteger(x) && Math.abs(x as number) <= 240 ? x as number : undefined
 export const hijriOffset = (x: unknown) => Number.isInteger(x) && Math.abs(x as number) <= 2 ? x as number : 0
 const valid = (t: unknown): t is string => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t)
 export const minutes = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5)
@@ -122,7 +124,8 @@ export function compose(s: Settings, type: string, items: Item[], siteUrl: strin
   return { title: head, body: lines.join('\n'), url, tag: type }
 }
 
-// ---------- اعلان‌های همراه اذان: نماز امام جواد (ع) چهارشنبه‌ها، ختم یاسین حضرت ام‌البنین (س) شب‌های جمعه ----------
+// ---------- اعلان‌های همراه اذان: نماز امام جواد (ع) چهارشنبه‌ها، ختم یاسین حضرت ام‌البنین (س) شب‌های جمعه، ----------
+// ---------- و ادعیه (سمات پیش از مغرب جمعه، کمیل شب جمعه، توسل شب چهارشنبه) با چند دقیقه فاصله از اذان (offset) ----------
 // اوقات شرعی تهران به روش مؤسسه ژئوفیزیک دانشگاه تهران (همان محاسبه tehran_fajr و fajrTehran سایت):
 // ظهر = گذر خورشید از نصف‌النهار؛ مغرب = ۴٫۵ درجه پایین‌تر از افق.
 export function tehranAzan(iso: string, kind: 'dhuhr' | 'maghrib'): Date {
@@ -162,13 +165,14 @@ const TIMES = ['یک بار', 'دو بار', 'سه بار', 'چهار بار']
 export const khatmTask = (n: number) => n >= 1 && n <= 4
   ? `${TIMES[n - 1]} سوره یاسین، ${n < 4 ? 'هدیه به حضرت ابوالفضل العباس (ع)' : 'به نیابت از حضرت عباس (ع) هدیه به مادرشان حضرت ام‌البنین (س)'}` : ''
 
-// اعلان‌های اذانی که الان وقتشان است (برای همه گوشی‌ها). از ۷ دقیقه پیش از اذان (اجراها هر ۱۵ دقیقه است) تا ۳ ساعت بعد.
+// اعلان‌های اذانی که الان وقتشان است (برای همه گوشی‌ها). از ۷ دقیقه پیش از وقتش (اذان + offset؛ اجراها هر ۱۵ دقیقه است) تا ۳ ساعت بعد.
 export function azanDue(s: Settings, now: Date): Item[] {
   const out: Item[] = [], iso = tehranDate(now), wd = new Date(isoToUtcMs(iso)).getUTCDay()
   for (const [k, t] of Object.entries(s.types)) {
     if (!t.azan || !t.on || (t.weekday != null && t.weekday !== wd)) continue
-    const at = tehranAzan(iso, t.azan).getTime(), m = now.getTime()
-    if (m < at - 7 * 6e4 || m > at + 3 * 36e5) continue
+    const at = tehranAzan(iso, t.azan).getTime() + (t.offset || 0) * 6e4, m = now.getTime()
+    // دعای سمات پیش از مغرب است؛ دیرتر از اذان دیگر فرستاده نمی‌شود.
+    if (m < at - 7 * 6e4 || m > at + (t.offset && t.offset < 0 ? -t.offset * 6e4 : 3 * 36e5)) continue
     const night = t.khatm ? khatmNight(iso, s.hijri || 0) : 0
     if (t.khatm && !night) continue
     out.push({ type: k, data: { key: `${k}:${iso}`, ...(night ? { night } : {}) } })
