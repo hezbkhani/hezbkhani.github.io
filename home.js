@@ -72,10 +72,10 @@
   // و هر گزینه با یک لمس به همان بخش می‌رود.
   (function splitIntro() {
     const intro = document.getElementById('introPanel');
-    const h2 = intro.querySelector(':scope > h2'), lead = intro.querySelector(':scope > .lead'), hint = intro.querySelector(':scope > .hint');
+    const h2 = intro.querySelector(':scope > h2'), tagline = intro.querySelector(':scope > .tagline'), lead = intro.querySelector(':scope > .lead'), hint = intro.querySelector(':scope > .hint');
     const list = intro.querySelector('.intro-list'), notice = intro.querySelector('.intro-notice');
     const head = document.createElement('div'); head.className = 'bgx-frame intro-head';
-    h2.before(head); head.append(h2, lead); if (hint) head.append(hint);
+    h2.before(head); head.append(h2); if (tagline) head.append(tagline); head.append(lead); if (hint) head.append(hint);
     const go = ['hezb', 'menu', 'menu'];
     const opts = document.createElement('div'); opts.className = 'intro-opts';
     [...list.children].forEach((li, i) => {

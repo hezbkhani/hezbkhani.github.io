@@ -36,7 +36,7 @@ body.sm-lock{overflow:hidden}
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
   const shade = document.createElement('div'); shade.className = 'sm-shade';
   const nav = document.createElement('nav'); nav.className = 'sm'; nav.setAttribute('aria-label', 'منو'); nav.setAttribute('aria-hidden', 'true');
-  nav.innerHTML = `<div class="sm-head"><img src="icon-192.png" alt=""><b>حزب‌خوانی</b><button type="button" data-sm-close aria-label="بستن">✕</button></div><div class="sm-body"></div>`;
+  nav.innerHTML = `<div class="sm-head"><img src="icon-192.png" alt=""><b>نوران</b><button type="button" data-sm-close aria-label="بستن">✕</button></div><div class="sm-body"></div>`;
   document.body.append(btn, shade, nav);
   const body = nav.querySelector('.sm-body');
 
