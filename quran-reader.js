@@ -128,6 +128,7 @@ body.qr-lock{overflow:hidden}
 .qr-end .qr-pnav button{width:auto;height:46px;background:var(--accent);color:#fff;border:0}
 .qr-end .qr-pnav .qr-pmenu{background:transparent;color:var(--accent);border:1px solid var(--line)}
 .qr.night .qr-end .qr-pnav button:not(.qr-pmenu){color:#10201a}
+.qr-note{margin:0 0 12px!important;font-size:14px!important;line-height:1.9;color:var(--muted)}
 .qr-ayah.focus{animation:qrfocus 2.4s ease}
 @keyframes qrfocus{0%,40%{background:rgba(199,154,69,.28)}}
 @media(min-width:700px){.qr-body{padding-left:24px;padding-right:24px}}
@@ -202,7 +203,7 @@ body.qr-lock{overflow:hidden}
       return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small></div>${bism}<div class="qr-seg">${ayahs}</div>`;
     }).join('');
     $('qrSub').textContent = current.range ? `${current.sub ? current.sub + ' · ' : ''}${toFa(count)} آیه` : `${typeof hizbLabel === 'function' && hizbLabel(current.index) ? `حزب ${toFa(current.index + 1)} · ` : ''}${toFa(count)} آیه`;
-    const end = current.range ? `<p>${esc(current.endText || 'پایان. قبول باشد.')}</p>${current.onEnd ? `<button type="button" data-a="rangeEnd">${esc(current.endButton || 'خواندم')}</button>` : ''}`
+    const end = current.range ? `<p>${esc(current.endText || 'پایان. قبول باشد.')}</p>${current.onEnd ? `<button type="button" data-a="rangeEnd">${esc(current.endButton || 'خواندم')}</button>` : ''}${current.note ? `<p class="qr-note">${esc(current.note)}</p>` : ''}`
       : '<p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>';
     const nv = current.nav, navHtml = !nv ? '' : `<div class="qr-pnav">${nv.prev ? `<button type="button" data-a="pprev">→ ${esc(nv.prev)}</button>` : '<span></span>'}${nv.menu ? `<button type="button" class="qr-pmenu" data-a="pmenu">${esc(nv.menu)}</button>` : ''}${nv.next ? `<button type="button" data-a="pnext">${esc(nv.next)} ←</button>` : '<span></span>'}</div>`;
     body.innerHTML = navHtml + html + `<div class="qr-end">${end}${navHtml}
@@ -476,7 +477,7 @@ body.qr-lock{overflow:hidden}
   function advance() {
     if (pos + 1 < items.length) playAt(pos + 1);
     // قرآن آزاد: در پایان صفحه، صفحه بعد باز می‌شود و پخش ادامه پیدا می‌کند.
-    else if (current?.nav?.next && current.nav.onNext) current.nav.onNext({ autoplay: true });
+    else if (current?.nav?.next && current.nav.onNext && current.nav.autoNext !== false) current.nav.onNext({ autoplay: true });
     else { stopAudio(); setNow('پایان سهم امروز', 'قبول باشد'); }
   }
   audio.addEventListener('ended', () => { qi++; srcIdx = 0; if (qi < queue.length) playTrack(); else advance(); });
@@ -504,9 +505,9 @@ body.qr-lock{overflow:hidden}
   // برای بخش‌های دیگر سایت (چله‌ها): باز کردن بازه‌ای از آیه‌ها با همین صفحه، ترجمه‌ها و پخش صوت.
   // opts: { title, sub, from, to (اندیس سراسری، to خودش نیست), endText, endButton, onEnd }
   // و برای قرآن آزاد (quran-free.js): focus (اندیس آیه‌ای که صفحه رویش باز شود)، onView(اندیس آیه بالای صفحه)،
-  // nav: { prev, next, menu (نام دکمه‌ها)، onPrev, onNext({autoplay}), onMenu (پس از بستن قرآن‌خوان) }، autoplay
+  // nav: { prev, next, menu (نام دکمه‌ها)، onPrev, onNext({autoplay}), onMenu (پس از بستن قرآن‌خوان)، autoNext: false یعنی پایان صوت به صفحه بعد نرود }، autoplay، note (راهنمای کوتاه پایین صفحه)
   window.quranReader = {
-    openRange(o) { open({ title: o.title, sub: o.sub || '', range: { from: o.from, to: o.to }, endText: o.endText, endButton: o.endButton, onEnd: o.onEnd, focus: o.focus, onView: o.onView, nav: o.nav, autoplay: o.autoplay }); },
+    openRange(o) { open({ title: o.title, sub: o.sub || '', range: { from: o.from, to: o.to }, endText: o.endText, endButton: o.endButton, onEnd: o.onEnd, note: o.note, focus: o.focus, onView: o.onView, nav: o.nav, autoplay: o.autoplay }); },
     index: getIndex
   };
 
