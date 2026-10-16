@@ -11,7 +11,7 @@
   const root = document.documentElement;
   window.bgxReady = true;
   const themed = !!root.dataset.bg; // در «ظاهر قبلی سایت» زمینه‌ای نیست و فقط انتخاب در منو کار می‌کند
-  const NAMES = window.bgxNames = { night: 'سبز شب', sage: 'سبز ملایم', blue: 'آبی و طلایی', garden: 'باغ گل' };
+  const NAMES = window.bgxNames = { night: 'سبز شب', sage: 'سبز ملایم', blue: 'آبی و طلایی', garden: 'باغ گل', dark: 'تیره' };
   // جای قاب وسط در هر تصویر، نسبت به عرض و ارتفاع تصویر: چپ، بالا، راست، پایین
   const WIN = { night: [.06, .21, .94, .74], sage: [.13, .23, .88, .76], blue: [.19, .19, .82, .80], garden: [.08, .27, .92, .77] };
   const SIZE = { night: [1024, 1536], sage: [1024, 1536], blue: [864, 1221], garden: [941, 1672] };
