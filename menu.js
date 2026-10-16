@@ -51,10 +51,12 @@ body.sm-lock{overflow:hidden}
   const visible = el => el && !el.closest('[hidden]') && el.offsetParent !== null;
   function render() {
     body.innerHTML = '';
-    [...sections].sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(s => {
+    // بخش‌های order ≥ ۵۰ (تنظیمات، زمینه صفحه) پس از میان‌برهای حزب‌خوانی، ته منو می‌آیند.
+    const sorted = [...sections].sort((a, b) => (a.order || 0) - (b.order || 0)), tail = document.createDocumentFragment();
+    sorted.forEach(s => {
       const box = document.createElement('div'); box.className = 'sm-sec'; box.dataset.sec = s.id;
       try { s.render(box); } catch (e) { console.error(e); }
-      if (box.childNodes.length) body.appendChild(box);
+      if (box.childNodes.length) ((s.order || 0) >= 50 ? tail : body).appendChild(box);
     });
     // بخش‌های حزب‌خوانی در صفحه اول فقط برای اعضا دیده می‌شوند (home.js)؛ در منو همیشه هستند و با زدن، باز می‌شوند.
     // اگر «قرآن حزب‌خوانی» در فهرست ثبت‌نام دوره‌ها هست، همان ثبت‌نام دوباره زیر حزب‌خوانی نمی‌آید.
@@ -65,6 +67,7 @@ body.sm-lock{overflow:hidden}
       box.innerHTML = '<h3>حزب‌خوانی قرآن</h3>' + links.map(([id, ic, t, s]) => `<button type="button" class="sm-item" data-sm-to="${id}"><span class="sm-ic">${ic}</span><span>${t}${s ? `<small>${s}</small>` : ''}</span><span class="sm-go">‹</span></button>`).join('');
       body.appendChild(box);
     }
+    body.appendChild(tail);
   }
   let lastFocus = null;
   function open() {

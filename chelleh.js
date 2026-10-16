@@ -260,6 +260,7 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
     return mine;
   }
   window.chlRefresh = async () => { await refresh(); if (sheet?.classList.contains('show') && sheetType) renderSheet(); };
+  window.chlMine = () => mine; // برای «تنظیم اعلان‌ها» (reminders.js): نام هر چله کنار کلید اعلانش
   async function refresh() {
     await Promise.all([loadTypes(), loadMine()]);
     today = today || isoIran();
@@ -345,7 +346,7 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
     if (done) {
       box.innerHTML = top(t.title) + `<div class="chs-ok"><div class="chs-check">✓</div><p class="chl-big">ثبت‌نام شد. قبول باشد.</p>
 <p>${hezbAsReserve ? 'ظرفیت ۱۲۰ نفر کامل بود و شما در فهرست رزرو هستید. اگر کسی انصراف دهد، شناسه او به شما می‌رسد و در بخش «ثبت‌نام دوره جدید» همین سایت نشان داده می‌شود.' : 'وقتی ظرفیت ۱۲۰ نفر کامل شد، شناسه شما (عددی از ۱ تا ۱۲۰) و تاریخ شروع در بخش «ثبت‌نام دوره جدید» همین سایت نشان داده می‌شود.'}</p>
-<p class="chl-note">کد پیگیری: <span class="chs-code">${fa(done)}</span><br>این کد روی همین گوشی ذخیره شد.</p></div>
+<p class="chl-note">کد پیگیری: <span class="chs-code">${fa(done)}</span><br>این کد روی همین گوشی ذخیره شد.</p></div>${window.sitePush?.hint() || ''}
 <button type="button" class="chs-main" data-hz-go>دیدن ثبت‌نام من</button>`;
       return;
     }
@@ -448,7 +449,7 @@ ${open.length ? `<div class="chs-state">${open.length > 1 ? 'یکی از گرو�
         : state(m) === 'soon' ? `${m.kind === 'text' ? 'چله' : 'دوره'} شما ${dateFa(m.start_date)} شروع می‌شود.` : m.kind === 'page' ? 'از امروز شروع شد. همین حالا صفحه ۱ را بخوانید و «خواندم» را بزنید؛ فردا صفحه ۲.' : m.kind === 'juz' ? `دوره شروع شده است؛ امروز جزء ${fa(todaySpec(m).juz)} را بخوانید.` : 'چله شما از امروز شروع شده است. همین حالا می‌توانید متن را بخوانید و «امروز خواندم» را بزنید.';
       box.innerHTML = top(t.title) + `<div class="chs-ok"><div class="chs-check">✓</div><p class="chl-big">ثبت‌نام شد. قبول باشد.</p><p>${esc(when)}</p>
 <p class="chl-note">${m?.email ? `اخبار دوره به ${esc(m.email)} هم فرستاده می‌شود.` : 'اخبار دوره را در همین سایت، بخش «چله‌های من» ببینید.'}</p>
-<p class="hint" style="color:var(--muted)">کد چله شما: <span class="chs-code">${fa(done)}</span><br>این کد روی همین گوشی ذخیره شد. برای ادامه روی گوشی دیگر لازم است.</p></div>
+<p class="hint" style="color:var(--muted)">کد چله شما: <span class="chs-code">${fa(done)}</span><br>این کد روی همین گوشی ذخیره شد. برای ادامه روی گوشی دیگر لازم است.</p></div>${window.sitePush?.hint() || ''}
 <button type="button" class="chs-main" data-chs-go="${done}">رفتن به چله‌های من</button><button type="button" class="chs-alt" data-chs-share>دعوت دیگران به این چله</button>`;
       return;
     }
