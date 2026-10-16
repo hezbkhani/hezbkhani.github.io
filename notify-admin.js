@@ -46,7 +46,7 @@
   async function build(p) {
     const d = await loadDefaults();
     const typeCard = ([k, t]) => `<div class="ntf-type" data-type="${k}"><div class="ntf-top"><label><input type="checkbox" data-f="on"> ${esc(t.label)}</label>
-${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` : t.azan ? `<span class="hint">با اذان ${t.azan === 'dhuhr' ? 'ظهر' : 'مغرب'} تهران</span>` : t.same ? '<span class="hint">همان ساعت «برنامه امروز»</span>' : '<span class="hint">همان لحظه (جز ساعت‌های سکوت)</span>'}</div>
+${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` : t.offset != null ? `<span>دقیقه نسبت به اذان ${t.azan === 'dhuhr' ? 'ظهر' : 'مغرب'} <input type="number" data-f="offset" step="5" min="-240" max="240" style="width:6em;direction:ltr"></span>` : t.azan ? `<span class="hint">با اذان ${t.azan === 'dhuhr' ? 'ظهر' : 'مغرب'} تهران</span>` : t.same ? '<span class="hint">همان ساعت «برنامه امروز»</span>' : '<span class="hint">همان لحظه (جز ساعت‌های سکوت)</span>'}</div>
 <div class="ntf-fields"><input type="text" data-f="title" maxlength="80" placeholder="عنوان"><textarea data-f="body" maxlength="400" placeholder="متن"></textarea>
 <div class="ntf-tools"><button type="button" class="reg-light" data-sample="${k}">نمونه روی گوشی من</button><button type="button" class="reg-light" data-reset="${k}">متن پیش‌فرض</button></div></div></div>`;
     const group = g => Object.entries(d.types).filter(([, t]) => t.group === g).map(typeCard).join('');
@@ -62,6 +62,7 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
 <div class="adm-card"><h3>اعمال و ختم‌ها</h3><p class="hint">برای همه کسانی که اعلان را روی گوشی فعال کرده‌اند، با اذان تهران. جای‌نگهدارها: ${esc(VARS.ibadat)}</p>${group('ibadat')}
 <div class="ntf-row" style="margin-top:8px"><label for="ntfHijri" style="margin:0">تاریخ قمری</label><select id="ntfHijri" style="flex:none;width:auto">${[-2, -1, 0, 1, 2].map(n => `<option value="${n}">${n ? `${toFa(Math.abs(n))} روز ${n > 0 ? 'جلوتر' : 'عقب‌تر'}` : 'بدون تغییر'}</option>`).join('')}</select></div>
 <p class="hint" id="ntfHijriInfo"></p></div>
+<div class="adm-card"><h3>ادعیه</h3><p class="hint">برای همه کسانی که اعلان را روی گوشی فعال کرده‌اند، با فاصله از اذان مغرب تهران (عدد منفی یعنی پیش از اذان).</p>${group('doa')}</div>
 <div class="adm-card"><h3>ساعت سکوت شب</h3><p class="hint">اعلان‌های لحظه‌ای (اعلام شناسه، رزرو، خبر) در این ساعت‌ها نمی‌روند و صبح فرستاده می‌شوند.</p>
 <div class="ntf-row">از <input type="time" id="ntfQuietFrom" step="300"> تا <input type="time" id="ntfQuietTo" step="300"></div></div>
 <div class="reg-tools"><button type="button" id="ntfSave">ذخیره تنظیمات اعلان</button></div><div class="adm-msg" id="ntfSaveMsg"></div>
@@ -74,7 +75,7 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
     p.addEventListener('change', e => { const t = e.target.closest('.ntf-type'); if (t && e.target.dataset.f === 'on') t.classList.toggle('off', !e.target.checked); });
     p.addEventListener('click', async e => {
       const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.reset) { const t = d.types[b.dataset.reset], c = b.closest('.ntf-type'); c.querySelector('[data-f=title]').value = t.title; c.querySelector('[data-f=body]').value = t.body; if (t.time) c.querySelector('[data-f=time]').value = t.time; return; }
+      if (b.dataset.reset) { const t = d.types[b.dataset.reset], c = b.closest('.ntf-type'); c.querySelector('[data-f=title]').value = t.title; c.querySelector('[data-f=body]').value = t.body; if (t.time) c.querySelector('[data-f=time]').value = t.time; if (t.offset != null) c.querySelector('[data-f=offset]').value = t.offset; return; }
       if (b.dataset.sample) {
         const c = b.closest('.ntf-type'), sub = await mySub();
         if (!sub) return msg('ntfMineMsg', 'روی این گوشی اعلان فعال نیست؛ اول «فعال کردن اعلان روی این گوشی» را بزنید.');
@@ -121,6 +122,7 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
       const k = c.dataset.type, d = defaults.types[k], v = f => c.querySelector(`[data-f=${f}]`);
       const o = { on: v('on').checked };
       if (v('time') && v('time').value && v('time').value !== d.time) o.time = v('time').value;
+      if (v('offset') && v('offset').value !== '' && +v('offset').value !== d.offset && Math.abs(Math.round(+v('offset').value)) <= 240) o.offset = Math.round(+v('offset').value);
       if (v('title').value.trim() && v('title').value.trim() !== d.title) o.title = v('title').value.trim();
       if (v('body').value.trim() && v('body').value.trim() !== d.body) o.body = v('body').value.trim();
       types[k] = o;
@@ -153,6 +155,7 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
       const k = c.dataset.type, t = d.types[k], o = (s.types || {})[k] || {}, v = f => c.querySelector(`[data-f=${f}]`);
       v('on').checked = o.on !== false; c.classList.toggle('off', o.on === false);
       if (v('time')) v('time').value = o.time || t.time;
+      if (v('offset')) v('offset').value = Number.isInteger(o.offset) ? o.offset : t.offset;
       v('title').value = o.title || t.title; v('body').value = o.body || t.body;
     });
   }

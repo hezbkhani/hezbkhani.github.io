@@ -1,5 +1,6 @@
 // اعمال و ختم‌ها: نماز حاجت امام جواد (ع) چهارشنبه‌ها و ختم سوره یاسین هدیه به حضرت ام‌البنین (س).
-// پیوند اعلان‌ها (?doa=javad_wed و ?doa=ommolbanin) همین برگه‌ها را باز می‌کند؛ در منو هم هستند.
+// ادعیه: دعای سمات (عصر جمعه)، کمیل (شب جمعه) و توسل (شب چهارشنبه)؛ متن، ترجمه و صوت در خواننده چله‌ها (chelleh/samat.json و …).
+// پیوند اعلان‌ها (?doa=javad_wed، ?doa=ommolbanin، ?doa=doa_kumayl و …) همین برگه‌ها را باز می‌کند؛ در منو هم هستند.
 // اعلان‌ها را تابع daily-reminders با اذان ظهر و مغرب تهران می‌فرستد (نوع‌های javad_wed و ommolbanin در notifications.json).
 // محاسبه شب‌های ختم همان khatmNight در backend/supabase/functions/daily-reminders/notify.ts است؛ اگر یکی را تغییر دادید دیگری را هم.
 (function () {
@@ -125,7 +126,24 @@ ${await notifyHtml('javad_wed', 'هر چهارشنبه با اذان ظهر')}`;
 <div class="ib-card"><h3>توسل به حضرت ام‌البنین (س)</h3><audio controls preload="none" src="audio/tavasol-ommolbanin.mp3"></audio></div>
 ${await notifyHtml('ommolbanin', 'شب‌های ختم با اذان مغرب')}`;
   }
+  // ادعیه: key متن در پوشه chelleh، روز (getUTCDay) و فاصله پیش‌فرض اعلان از اذان مغرب در notifications.json.
+  const DOAS = {
+    doa_samat: { key: 'samat', title: 'دعای سمات', sub: 'ساعت‌های پایانی روز جمعه، پیش از غروب', day: 'جمعه', about: 'دعای سمات (دعای شبّور) از دعاهای مشهور مفاتیح‌الجنان است که مستحب است در ساعت‌های آخر روز جمعه خوانده شود.' },
+    doa_kumayl: { key: 'kumayl', title: 'دعای کمیل', sub: 'شب‌های جمعه', day: 'پنجشنبه', night: 'شب جمعه', about: 'دعای کمیل را امیرالمؤمنین علی (ع) به کمیل بن زیاد آموخت؛ خواندن آن در شب‌های جمعه و شب نیمه شعبان سفارش شده است.' },
+    doa_tavassul: { key: 'tavassul', title: 'دعای توسل', sub: 'شب‌های چهارشنبه', day: 'سه‌شنبه', night: 'شب چهارشنبه', about: 'دعای توسل، توسل به پیامبر اکرم (ص) و اهل‌بیت (ع) برای برآمدن حاجات است و رسم است که شب‌های چهارشنبه خوانده شود.' }
+  };
+  const doaOffset = async type => { const s = window.siteSettings?.notify?.types?.[type]?.offset; if (Number.isInteger(s)) return s; return (await fetch('notifications.json').then(r => r.json()).catch(() => null))?.types?.[type]?.offset || 0; };
+  const minutesFa = m => m % 60 ? `${toFa(m)} دقیقه` : m === 60 ? 'یک ساعت' : `${toFa(m / 60)} ساعت`;
+  async function doaHtml(type) {
+    const d = DOAS[type], off = await doaOffset(type);
+    const when = `هر ${d.day}${d.night ? ` (${d.night})` : ''} ${off ? `${minutesFa(Math.abs(off))} ${off < 0 ? 'پیش از' : 'پس از'} اذان مغرب` : 'با اذان مغرب'}`;
+    return `<h2>${d.title}</h2><p class="ib-sub">${d.sub}</p>
+<div class="ib-card"><p style="margin:0">${d.about}</p>
+<div class="ib-tools"><button type="button" data-ib="read" data-key="${d.key}">📖 خواندن متن دعا و گوش دادن به صوت</button></div></div>
+${await notifyHtml(type, when)}`;
+  }
   const PAGES = { javad_wed: javadHtml, ommolbanin: ommolbaninHtml };
+  for (const t in DOAS) PAGES[t] = () => doaHtml(t);
 
   let shade = null, current = null;
   async function render(type) {
@@ -165,6 +183,12 @@ ${await notifyHtml('ommolbanin', 'شب‌های ختم با اذان مغرب')}
     }
     if (a === 'notify') { b.disabled = true; await enableNotify(box); b.disabled = false; return; }
     if (a === 'prefs') return window.sitePush.openSettings();
+    if (a === 'read') {
+      if (!window.chlRead) return;
+      // برگه این دعا بسته می‌شود و خواننده جای آن در تاریخچه می‌نشیند (دکمه برگشت خواننده را می‌بندد).
+      close(true); try { if (history.state?.ib) history.replaceState(null, ''); } catch {}
+      return window.chlRead(b.dataset.key);
+    }
     if (a === 'yasin') {
       const qr = window.quranReader, ix = qr && await qr.index().catch(() => null);
       if (!ix) return alert('بارگذاری متن قرآن انجام نشد. اینترنت را بررسی کنید.');
@@ -189,7 +213,15 @@ ${await notifyHtml('ommolbanin', 'شب‌های ختم با اذان مغرب')}
     }
   });
 
-  // پیوند اعلان: ?doa=javad_wed یا ?doa=ommolbanin
+  window.siteMenu?.section({
+    id: 'doa', order: 6,
+    render(box) {
+      box.innerHTML = `<h3>ادعیه</h3>${Object.entries(DOAS).map(([k, d]) => `<button type="button" class="sm-item" data-ib-open="${k}"><span class="sm-ic">📿</span><span>${d.title}<small>${d.sub}</small></span><span class="sm-go">‹</span></button>`).join('')}`;
+      box.querySelectorAll('[data-ib-open]').forEach(x => x.onclick = () => { window.siteMenu.close(); setTimeout(() => open(x.dataset.ibOpen), 280); });
+    }
+  });
+
+  // پیوند اعلان: ?doa=javad_wed، ?doa=ommolbanin، ?doa=doa_samat و …
   const q = new URLSearchParams(location.search).get('doa');
   if (q) {
     try { const u = new URL(location.href); u.searchParams.delete('doa'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch {}
