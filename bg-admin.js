@@ -5,7 +5,8 @@
 (function () {
   const cfg = window.APP_CONFIG || {};
   const BUILT = ['night', 'sage', 'blue', 'garden'];
-  const BOX = { night: '#1f5a3a', sage: '#6b8a66', blue: '#3e5f84', garden: '#3c7a66' };
+  const BOX = { night: '#1f5a3a', sage: '#6b8a66', blue: '#3e5f84', garden: '#3c7a66', dark: '#c9a35a' };
+  const STYLES = [...BUILT, 'dark']; // «تیره» فقط سبک کادر است، برای تصویرهای تیره
   const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fa = '۰۱۲۳۴۵۶۷۸۹', toFa = x => String(x).replace(/\d/g, d => fa[d]);
   const $ = id => document.getElementById(id);
@@ -113,7 +114,7 @@
 <div class="bga-form"><label for="bgaFile">افزودن زمینه تازه (تصویر ایستاده، مثل صفحه گوشی)</label><input type="file" id="bgaFile" accept="image/*">
 <div id="bgaEdit" hidden>
 <label for="bgaName">نام</label><input type="text" id="bgaName" maxlength="30" placeholder="مثلاً گل‌های بهاری">
-<label for="bgaStyle">رنگ و نقش کادرها</label><select id="bgaStyle">${BUILT.map(k => `<option value="${k}">مثل «${esc(names()[k])}»</option>`).join('')}</select>
+<label for="bgaStyle">رنگ و نقش کادرها</label><select id="bgaStyle">${STYLES.map(k => `<option value="${k}">${k === 'dark' ? 'تیره (برای تصویرهای تیره)' : `مثل «${esc(names()[k])}»`}</option>`).join('')}</select>
 <p class="hint">کادرها فقط داخل مستطیل خط‌چین دیده می‌شوند. آن را روی بخش ساده و خلوت تصویر بگذارید.</p>
 <div class="bga-edit"><div class="bga-prev" id="bgaPrev"><b></b></div><div class="bga-rng">
 <label for="bgaTop">فاصله از بالا <span id="bgaTopV"></span></label><input type="range" id="bgaTop" min="0" max="45">
