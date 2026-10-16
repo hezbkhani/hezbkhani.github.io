@@ -11,6 +11,10 @@ html[data-bg] body::before{content:"";position:fixed;inset:0;z-index:-2;backgrou
 }
 html[data-bg] .site-foot{background:radial-gradient(farthest-side,var(--t-veil) 45%,transparent);text-shadow:0 0 10px var(--t-paper),0 0 4px var(--t-paper),0 0 2px var(--t-paper)}
 html[data-bg] .site-foot .today{color:var(--t-ink);font-weight:600}
+/* دکمه منو (☰) به رنگ قاب همان زمینه */
+html[data-bg] .sm-btn{background:var(--t-frame);border-color:var(--t-gold)}
+html[data-bg] .sm-btn:hover{background:var(--t-head)}
+html[data-bg] .sm-btn .sm-dot{background:var(--t-gold);box-shadow:0 0 0 2px var(--t-frame)}
 html[data-bg] .shell .panel .tagline{color:var(--t-head)}
 /* پنجره وسط (backdrop.js جای آن را روی تصویر حساب می‌کند): خود صفحه عادی اسکرول می‌شود،
    ولی کادرها فقط داخل قاب وسط تصویر دیده می‌شوند و بالا و پایینش محو است (--m0 و --m1 با اسکرول جابه‌جا می‌شوند) */
