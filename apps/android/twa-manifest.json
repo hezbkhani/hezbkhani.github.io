@@ -15,7 +15,7 @@
   "enableNotifications": true,
   "startUrl": "/",
   "iconUrl": "https://hezbkhani.github.io/icon-512.png",
-  "maskableIconUrl": "https://hezbkhani.github.io/icon-512.png",
+  "maskableIconUrl": "https://hezbkhani.github.io/icon-maskable-512.png",
   "monochromeIconUrl": "https://hezbkhani.github.io/icon-badge.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": { "path": "./android.keystore", "alias": "hezbkhani" },
