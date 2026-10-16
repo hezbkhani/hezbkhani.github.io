@@ -172,7 +172,8 @@ html[data-bg] .bgx-frame{position:relative;display:block;margin:30px 24px;paddin
 html[data-bg] .bgx-frame::before{content:"";position:absolute;pointer-events:none;inset:-11px -22px;background-repeat:no-repeat;background-size:34px 64px,34px 64px,40px 20px,40px 20px;background-position:left 4px center,right 4px center,center top 1px,center bottom 1px}
 html[data-bg] .shell .intro-head{text-align:center;padding-top:22px}
 html[data-bg] .shell .intro-head>h2::after{content:"";display:block;width:160px;height:12px;margin:0 auto;background:var(--t-div) center/contain no-repeat}
-html[data-bg=night] .shell .intro-head>h2::after{display:none}
+/* «نوران» در همه زمینه‌ها ساده و بی‌کادر است (لوح سبز فقط برای عنوان بقیه کادرهای سبز شب) */
+html[data-bg=night] .shell .intro-head>h2.brand{display:block;margin:0;padding:0;background:none;border:0;box-shadow:none;color:var(--t-head);line-height:1.45}
 html[data-bg] .shell .intro-head .lead{margin:6px 0 0}
 html[data-bg] .shell .intro-head .hint{margin:6px 0 0;font-size:15px}
 html[data-bg] .intro-opt{text-decoration:none;text-align:center;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
