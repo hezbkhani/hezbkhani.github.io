@@ -3,14 +3,14 @@
 //    خود صفحه مثل همیشه اسکرول می‌شود (با کشیدن هر جای صفحه، و کشیدن به پایین در بالای صفحه برای تازه کردن)؛
 //    فقط محوشدن بالا و پایین همراه اسکرول جابه‌جا می‌شود تا ظاهر ثابت بماند. در ‎#admin‎ صفحه مثل قبل است.
 // ۲) ورود کادرها: هر کادر وقتی به پنجره می‌رسد، یکی‌یکی و مرتب وارد می‌شود.
-// ۳) انتخاب زمینه در منو: «هر بار یکی» (پیش‌فرض) یا یکی از چهار زمینه برای همیشه (کلید bgPick روی همین گوشی).
-// خود زمینه را اسکریپت کوچک داخل <head> در index.html انتخاب می‌کند.
+// ۳) انتخاب زمینه در منو: «هر بار یکی» (پیش‌فرض) یا یکی از زمینه‌های روشن برای همیشه (کلید bgPick روی همین گوشی).
+// خود زمینه را اسکریپت کوچک داخل <head> در index.html انتخاب می‌کند (bgxList: زمینه‌های روشن، bgxSet: گذاشتن یکی).
+// زمینه‌هایی که مدیر اضافه می‌کند (bg-admin.js) رنگ کادرهای یکی از چهار زمینه را می‌گیرند و قاب وسطشان را خود مدیر تعیین کرده است.
 (function () {
   const root = document.documentElement;
   window.bgxReady = true;
   if (!root.dataset.bg) return;
-  const THEMES = [['night', 'سبز شب'], ['sage', 'سبز ملایم'], ['blue', 'آبی و طلایی'], ['garden', 'باغ گل']];
-  const COLOR = { night: '#1f5a3a', sage: '#6b8a66', blue: '#3e5f84', garden: '#3c7a66' };
+  const NAMES = window.bgxNames = { night: 'سبز شب', sage: 'سبز ملایم', blue: 'آبی و طلایی', garden: 'باغ گل' };
   // جای قاب وسط در هر تصویر، نسبت به عرض و ارتفاع تصویر: چپ، بالا، راست، پایین
   const WIN = { night: [.06, .21, .94, .74], sage: [.13, .23, .88, .76], blue: [.19, .19, .82, .80], garden: [.08, .27, .92, .77] };
   const SIZE = { night: [1024, 1536], sage: [1024, 1536], blue: [864, 1221], garden: [941, 1672] };
@@ -20,10 +20,11 @@
   // ---------- ۱) پنجره وسط ----------
   let win = null; // { T, B } به پیکسل از بالای صفحه نمایش
   function layout() {
-    const k = root.dataset.bg, on = location.hash !== '#admin' && !!WIN[k];
+    const e = window.bgxCur || { id: root.dataset.bg }, box = e.url ? e.win : WIN[e.id], size = e.url ? e.size : SIZE[e.id];
+    const on = location.hash !== '#admin' && !!box && !!size;
     root.classList.toggle('bgx-win', on);
     if (!on) { win = null; return; }
-    const vw = root.clientWidth, vh = innerHeight, [iw, ih] = SIZE[k], [l, t, r, b] = WIN[k];
+    const vw = root.clientWidth, vh = innerHeight, [iw, ih] = size, [l, t, r, b] = box;
     // همان اندازه‌ای که backdrop.css به تصویر می‌دهد: صفحه باریک «cover»، صفحه پهن تصویر کامل به ارتفاع صفحه
     let w, h;
     if (vw / vh < 4 / 5) { const s = Math.max(vw / iw, vh / ih); w = iw * s; h = ih * s; } else { h = vh; w = iw / ih * vh; }
@@ -76,7 +77,7 @@
 
   // ---------- ۳) انتخاب زمینه در منو ----------
   const css = `
-.bgp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:4px 16px 8px}
+.bgp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;padding:4px 16px 8px}
 .bgp-grid button{height:auto;min-height:0;padding:0;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;color:var(--ink);font-size:12px;font-weight:500;line-height:1.5;white-space:normal}
 .bgp-grid button:hover{background:none}
 .bgp-grid i{display:block;width:100%;aspect-ratio:2/3;border-radius:8px;border:2px solid var(--line);background:center/cover no-repeat;box-shadow:0 2px 6px #0002}
@@ -84,26 +85,25 @@
 .bgp-grid button.on i{border-color:var(--gold);box-shadow:0 0 0 2px var(--deep)}
 .bgp-grid button.on{font-weight:700;color:var(--deep)}`;
   { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); }
+  const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const getPick = () => { try { return localStorage.getItem('bgPick') || ''; } catch { return ''; } };
-  function apply(k) {
-    root.setAttribute('data-bg', k);
-    try { localStorage.setItem('homeBg', k); } catch {}
-    const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = COLOR[k];
-    layout();
-  }
+  const thumb = e => e.url || `bg/${e.id}.webp`;
+  function apply(e) { window.bgxSet(e); layout(); }
+  window.bgxApply = apply;
   window.siteMenu?.section({
     id: 'backdrop', order: 90,
     render(box) {
-      const pick = getPick();
+      const list = window.bgxList(), ids = list.map(e => e.id), pick = ids.includes(getPick()) ? getPick() : '';
+      if (list.length < 2) return; // فقط یک زمینه روشن است؛ چیزی برای انتخاب نیست
       box.innerHTML = `<h3>زمینه صفحه</h3><div class="bgp-grid">
 <button type="button" data-bgp=""${pick ? '' : ' class="on"'}><i class="bgp-auto">↻</i>هر بار یکی</button>
-${THEMES.map(([k, n]) => `<button type="button" data-bgp="${k}"${pick === k ? ' class="on"' : ''}><i style="background-image:url('bg/${k}.webp')"></i>${n}</button>`).join('')}</div>`;
+${list.map(e => `<button type="button" data-bgp="${esc(e.id)}"${pick === e.id ? ' class="on"' : ''}><i style="background-image:url('${esc(thumb(e))}')"></i>${esc(e.name || NAMES[e.id])}</button>`).join('')}</div>`;
       box.querySelector('.bgp-grid').onclick = e => {
         const b = e.target.closest('[data-bgp]'); if (!b) return;
         const k = b.dataset.bgp;
         try { k ? localStorage.setItem('bgPick', k) : localStorage.removeItem('bgPick'); } catch {}
         box.querySelectorAll('[data-bgp]').forEach(x => x.classList.toggle('on', x === b));
-        if (k) apply(k);
+        const pickE = list.find(x => x.id === k); if (pickE) apply(pickE);
       };
     }
   });
