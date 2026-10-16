@@ -1,5 +1,6 @@
 // اعلان‌های سایت روی این گوشی (Web Push):
 // - حزب‌خوانی: پس از «نمایش سهم امروز» پیشنهاد می‌شود؛ هر روز سهم امروز، و عصر اگر گزارش ثبت نشده یادآوری.
+// - اعمال و ختم‌ها (ibadat.js): نماز امام جواد (ع) چهارشنبه‌ها با اذان ظهر و ختم یاسین حضرت ام‌البنین (س) با اذان مغرب، برای هر گوشی که اعلان دارد.
 // - چله و دوره‌های قرآن (جزء، صفحه): کارت بالای «چله‌های من»؛ برنامه امروز (مثلاً «جزء ۷»)، شروع از فردا، یادآوری «خواندم»،
 //   رسیدن جا از فهرست رزرو و خبر تازه دوره. کدهای ثبت‌نام حزب‌خوانی هم همراهش می‌رود تا اعلام شناسه و گروه خبر داده شود.
 // ساعت‌ها و متن‌ها را مدیر در «مدیریت › اعلان‌ها» تنظیم می‌کند (پیش‌فرض‌ها در notifications.json).
@@ -199,7 +200,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     const st = await status();
     if (!st) return `<p style="margin:0">${ERR.nosub}</p>`;
     const d = (await loadDefaults()).types || {}, a = window.siteSettings?.notify?.types || {}, p = store.get(PREFS) || {};
-    const groups = [['hezb', 'حزب‌خوانی', st.group_number != null || st.reg > 0], ['chl', 'چله و دوره‌های قرآن', st.chl > 0]];
+    const groups = [['hezb', 'حزب‌خوانی', st.group_number != null || st.reg > 0], ['chl', 'چله و دوره‌های قرآن', st.chl > 0], ['ibadat', 'اعمال و ختم‌ها', true]];
     const rows = g => Object.entries(d).filter(([k, t]) => t.group === g && a[k]?.on !== false).map(([k, t]) => {
       const base = a[k]?.time || t.time, timed = !t.event && !t.same && base, mine = p.times?.[k] || base;
       const label = esc(String(t.label || k).replace(/^[^:]*:\s*/, ''));
