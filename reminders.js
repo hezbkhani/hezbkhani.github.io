@@ -4,11 +4,12 @@
 // - چله و دوره‌های قرآن (جزء، صفحه): کارت بالای «چله‌های من»؛ برنامه امروز (مثلاً «جزء ۷»)، شروع از فردا، یادآوری «خواندم»،
 //   رسیدن جا از فهرست رزرو و خبر تازه دوره. کدهای ثبت‌نام حزب‌خوانی هم همراهش می‌رود تا اعلام شناسه و گروه خبر داده شود.
 // ساعت‌ها و متن‌ها را مدیر در «مدیریت › اعلان‌ها» تنظیم می‌کند (پیش‌فرض‌ها در notifications.json).
-// هر کس با «تنظیم اعلان‌ها» می‌تواند روی گوشی خودش هر نوع اعلان را خاموش کند یا ساعت دیگری بگذارد (push_prefs).
+// هر کس با «تنظیم اعلان‌ها» (منوی ☰ › تنظیمات، یا پیوند همین نام در هر کارت) می‌تواند روی گوشی خودش هر نوع اعلان یا هر چله را
+// خاموش کند یا ساعت دیگری بگذارد (push_prefs). پس از هر ثبت‌نام، hint() همین را یادآوری می‌کند.
 // برای همه روشن است، مگر مدیر «اعلان برای همه» را خاموش کند (آن‌وقت فقط ‎#admin‎ و برنامه نصب‌شده).
 // سمت سرور: backend/supabase/reminders.sql و تابع backend/supabase/functions/daily-reminders.
 (function () {
-  const cfg = window.APP_CONFIG || {}, LS = 'quranReminder', NO = 'quranReminderNo', CHL = 'pushChl', CHLNO = 'pushChlNo', SENT = 'pushCodesSent', PREFS = 'pushPrefs';
+  const cfg = window.APP_CONFIG || {}, LS = 'quranReminder', NO = 'quranReminderNo', CHL = 'pushChl', CHLNO = 'pushChlNo', SENT = 'pushCodesSent', PREFS = 'pushPrefs', CHLMUTE = 'pushChlMute';
   const fa = '۰۱۲۳۴۵۶۷۸۹', toFa = x => String(x).replace(/\d/g, d => fa[d]);
   const esc = x => String(x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const store = { get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
@@ -29,13 +30,30 @@
 .rm-msg{min-height:0;margin-top:6px;font-weight:700}.rm-msg:empty{display:none}
 .rm-card ol,.rm-card ul{margin:4px 0 8px;padding-inline-start:22px}.rm-card ol{list-style-type:persian}
 .push-codes .rm-card{margin:0 0 12px}
-.rm-prefs{margin-top:10px;padding:10px 12px;background:#fff;border:1px solid var(--gold);border-radius:var(--r)}
-.rm-prefs h4{margin:0 0 6px;font-size:16px}.rm-prefs h5{margin:10px 0 4px;font-size:15px;color:var(--deep)}
-.rm-prefs label.rm-t{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #d8e6e0;line-height:1.6}
-.rm-prefs label.rm-t span{flex:1}.rm-prefs input[type=checkbox]{width:20px;height:20px;flex:none;margin:0}
-.rm-prefs input[type=time]{width:112px;height:36px;font-size:15px;padding:0 6px;direction:ltr;flex:none}
-.rm-prefs .rm-row{margin-top:10px}
-@media(max-width:600px){.rm-card .rm-row{flex-direction:column}.rm-card .rm-row button{width:100%}}
+.ns{position:fixed;inset:0;z-index:62;display:none;align-items:flex-end;justify-content:center;background:#0009}
+.ns.show{display:flex}
+.ns-box{width:100%;max-width:560px;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;background:#fffaf0;color:var(--ink);text-shadow:none;border-top:3px solid var(--gold);border-radius:18px 18px 0 0;padding:0 18px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px #0007;line-height:1.8}
+.ns-grip{width:44px;height:5px;border-radius:3px;background:#d9cba9;margin:10px auto 4px}
+.ns-top{display:flex;align-items:flex-start;gap:8px}
+.ns-top h2{flex:1;margin:4px 0 6px;font:normal 34px/1.6 SiteFont,Tahoma,serif;color:var(--deep)}
+.ns-top button{flex:none;width:42px;height:42px;padding:0;background:transparent;border:0;color:var(--muted);font-size:24px}
+.ns-in ul{margin:4px 0 8px;padding-inline-start:22px}
+.ns-in section{margin:10px 0;padding:8px 12px;background:#fff;border:1px solid var(--line);border-radius:var(--r-card)}
+.ns-in h5{margin:2px 0 4px;font-size:16px;color:var(--deep)}
+.ns-in h6{margin:10px 0 0;font-size:14px;color:var(--muted)}
+.ns-in label.rm-t{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #d8e6e0;line-height:1.6;font-weight:400}
+.ns-in label.rm-t:last-child{border-bottom:0}
+.ns-in label.rm-t span{flex:1}.ns-in label.rm-t small{color:var(--muted)}
+.ns-in input[type=checkbox]{width:20px;height:20px;flex:none;margin:0}
+.ns-in input[type=time]{width:112px;height:36px;font-size:15px;padding:0 6px;direction:ltr;flex:none}
+.ns-in .rm-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.ns-in .rm-row button{height:46px}
+.ns-in .rm-link{height:auto;padding:0;border:0;background:none;color:var(--deep);text-decoration:underline;font-weight:600}
+.ns-in .ns-off{color:var(--danger)}
+.ns-ok{margin:0;color:var(--ok);font-weight:700}.ns-who{margin:0 0 4px;font-size:14px;color:var(--muted)}
+.ns-hint{margin:12px 0 0;padding:10px 14px;background:var(--mint);color:var(--ink);text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);text-align:right;line-height:1.8}
+.ns-hint p{margin:0}.ns-hint .chs-alt,.ns-hint button{width:100%;height:46px;margin-top:8px}.ns-hint .ns-where{margin-top:6px;font-size:13px;color:var(--muted)}
+body.ns-lock{overflow:hidden}
+@media(max-width:600px){.rm-card .rm-row{flex-direction:column}.rm-card .rm-row button{width:100%}.ns-in .rm-row{flex-direction:column}.ns-in .rm-row button{width:100%}}
 </style>`);
 
   // ساعت‌های اعلان (پیش‌فرض‌ها + تنظیم مدیر) برای نوشتن در متن کارت‌ها.
@@ -65,7 +83,8 @@
   const keys = sub => { const k = sub.toJSON().keys; return { p_endpoint: sub.endpoint, p_p256dh: k.p256dh, p_auth: k.auth }; };
   const arr = k => { const a = store.get(k); return Array.isArray(a) ? a.filter(c => /^\d{8}$/.test(c)) : []; };
   // کدهای چله و ثبت‌نام این گوشی (اگر اعلان چله‌ها روشن باشد).
-  const deviceCodes = () => store.get(CHL) ? { p_chl: arr('chlCodes'), p_reg: arr('regCodes') } : { p_chl: [], p_reg: [] };
+  // چله‌هایی که در «تنظیم اعلان‌ها» خاموش شده‌اند فرستاده نمی‌شوند.
+  const deviceCodes = () => { const m = store.get(CHLMUTE) || []; return store.get(CHL) ? { p_chl: arr('chlCodes').filter(c => !m.includes(c)), p_reg: arr('regCodes') } : { p_chl: [], p_reg: [] }; };
   async function syncCodes(force) {
     const sub = await currentSub(); if (!sub || !enabled()) return;
     const c = deviceCodes(), sig = sub.endpoint.slice(-24) + JSON.stringify(c);
@@ -192,23 +211,48 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     };
   }
 
-  // ---------- تنظیم اعلان‌های این گوشی ----------
-  // فهرست نوع‌هایی که برای این گوشی معنی دارد (حزب‌خوانی، چله و دوره قرآن)، هر کدام با کلید روشن/خاموش و ساعت.
-  // نوعی که مدیر خاموش کرده نشان داده نمی‌شود. پیش‌فرض همان تنظیم مدیر است.
+  // ---------- تنظیم اعلان‌ها (منو › تنظیمات، و پیوند «تنظیم اعلان‌ها» در همه کارت‌ها) ----------
+  // یک برگه برای همه چیزهایی که روی این گوشی ثبت‌نام شده: حزب‌خوانی، هر چله و دوره قرآن جداگانه، و اعمال و ختم‌ها؛
+  // هر نوع اعلان با کلید روشن/خاموش و ساعت. نوعی که مدیر خاموش کرده نشان داده نمی‌شود. پیش‌فرض همان تنظیم مدیر است.
+  // خاموش کردن یک چله فقط کد آن را از کدهای این گوشی کنار می‌گذارد (pushChlMute)؛ سمت سرور تغییری لازم نیست.
   const fmt = t => t ? toFa(t) : '';
-  async function prefsHtml() {
-    const st = await status();
-    if (!st) return `<p style="margin:0">${ERR.nosub}</p>`;
+  const chlList = () => { const m = (window.chlMine?.() || []).filter(x => arr('chlCodes').includes(x.code)); return m.length ? m : arr('chlCodes').map(code => ({ code })); };
+  async function typeRows(g) {
     const d = (await loadDefaults()).types || {}, a = window.siteSettings?.notify?.types || {}, p = store.get(PREFS) || {};
-    const groups = [['hezb', 'حزب‌خوانی', st.group_number != null || st.reg > 0], ['chl', 'چله و دوره‌های قرآن', st.chl > 0], ['ibadat', 'اعمال و ختم‌ها', true]];
-    const rows = g => Object.entries(d).filter(([k, t]) => t.group === g && a[k]?.on !== false).map(([k, t]) => {
+    return Object.entries(d).filter(([k, t]) => t.group === g && a[k]?.on !== false).map(([k, t]) => {
       const base = a[k]?.time || t.time, timed = !t.event && !t.same && base, mine = p.times?.[k] || base;
       const label = esc(String(t.label || k).replace(/^[^:]*:\s*/, ''));
       return `<label class="rm-t"><input type="checkbox" data-k="${k}"${(p.off || []).includes(k) ? '' : ' checked'}><span>${label}${timed && mine !== base ? ` <small>(پیش‌فرض ${fmt(base)})</small>` : ''}</span>${timed ? `<input type="time" data-time="${k}" data-base="${base}" value="${mine}" aria-label="ساعت">` : ''}</label>`;
     }).join('');
-    const body = groups.filter(g => g[2]).map(([g, title]) => `<h5>${title}</h5>${rows(g)}`).join('');
-    return `<h4>تنظیم اعلان‌های این گوشی</h4><p class="hint" style="margin:0">هر کدام را که نمی‌خواهید خاموش کنید یا ساعتش را عوض کنید (به وقت ایران).</p>${body || '<p>اعلانی برای تنظیم نیست.</p>'}
-<div class="rm-row"><button type="button" data-p="save">ذخیره</button><button type="button" data-p="reset" class="rm-ghost">بازگشت به پیش‌فرض</button><button type="button" data-p="close" class="rm-ghost">بستن</button></div><div class="rm-msg" aria-live="polite"></div>`;
+  }
+  async function settingsHtml() {
+    if (!supported) return `<div class="rm-card">${unsupportedHtml('اعلان‌ها')}</div>`;
+    if (Notification.permission === 'denied') return `<div class="rm-card"><p style="margin:0">${ERR.denied}</p></div>`;
+    const st = await status(), chl = chlList(), regs = arr('regCodes').length, hz = store.get(LS);
+    const hasHezb = !!hz || regs > 0 || (st && st.group_number != null);
+    if (!st) {
+      const items = [hasHezb && 'حزب‌خوانی: شناسه و گروه، سهم هر روز و یادآوری گزارش', chl.length && `${chl.length > 1 ? `${toFa(chl.length)} چله و دوره شما` : 'چله یا دوره شما'}: برنامه هر روز، یادآوری «خواندم» و خبرهای دوره`, 'اعمال و ختم‌ها: نماز امام جواد (ع) و ختم یاسین'].filter(Boolean);
+      return `<p>اعلان روی این گوشی خاموش است. با روشن کردنش این‌ها یادتان می‌آید:</p><ul>${items.map(x => `<li>${x}</li>`).join('')}</ul>
+<p class="hint" style="margin:0">پس از روشن کردن، هر کدام را می‌توانید خاموش کنید یا ساعتش را عوض کنید.</p>
+<div class="rm-row"><button type="button" data-n="on">🔔 روشن کردن اعلان‌ها</button></div><div class="rm-msg" aria-live="polite"></div>`;
+    }
+    const muted = store.get(CHLMUTE) || [], chlOn = !!store.get(CHL);
+    let html = '<p class="ns-ok">✓ اعلان روی این گوشی روشن است.</p>';
+    if (hasHezb) {
+      const rows = await typeRows('hezb');
+      html += `<section><h5>📖 حزب‌خوانی</h5>${hz ? `<p class="ns-who">یادآوری روزانه برای ${who(hz)}</p>` : `<p class="ns-who">برای یادآوری سهم هر روز، شناسه خود را در «سهم امروز من» ببینید و «بله، یادآوری کن» را بزنید.</p>`}${rows}</section>`;
+    }
+    if (chl.length) {
+      const rows = await typeRows('chl');
+      html += `<section><h5>📿 چله‌ها و دوره‌های قرآن من</h5>${chl.map(m => `<label class="rm-t"><input type="checkbox" data-c="${m.code}"${chlOn && !muted.includes(m.code) ? ' checked' : ''}><span><b>${esc(m.title || 'کد ' + toFa(m.code))}</b>${m.name ? ` <small>${esc(m.name)}</small>` : ''}</span></label>`).join('')}
+${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>`;
+    }
+    const ib = await typeRows('ibadat');
+    if (ib) html += `<section><h5>🤲 اعمال و ختم‌ها</h5>${ib}</section>`;
+    return html + `<p class="hint" style="margin:8px 0 0">ساعت‌ها به وقت ایران است.</p>
+<div class="rm-row"><button type="button" data-n="save">ذخیره</button><button type="button" data-n="test" class="rm-ghost">اعلان آزمایشی</button><button type="button" data-n="reset" class="rm-ghost">بازگشت به پیش‌فرض</button></div>
+<div class="rm-msg" aria-live="polite"></div>
+<p style="margin:14px 0 0"><button type="button" class="rm-link ns-off" data-n="alloff">خاموش کردن همه اعلان‌ها روی این گوشی</button></p>`;
   }
   async function savePrefs(next) {
     const sub = await currentSub(); if (!sub) throw Error('nosub');
@@ -216,38 +260,102 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     if (saved === null) throw Error('nosub');
     store.set(PREFS, hasPrefs(saved) ? saved : null);
   }
-  async function togglePrefs(card) {
-    const open = document.getElementById('rmPrefs');
-    if (open) { const same = open.parentElement === card; open.remove(); if (same) return; }
-    const box = document.createElement('div'); box.id = 'rmPrefs'; box.className = 'rm-prefs';
-    box.innerHTML = '<p style="margin:0">لطفاً صبر کنید…</p>';
-    card.appendChild(box);
-    box.innerHTML = await prefsHtml();
+  let sheet = null;
+  function buildSheet() {
+    if (sheet) return sheet;
+    sheet = document.createElement('div'); sheet.className = 'ns'; sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); sheet.setAttribute('aria-label', 'تنظیم اعلان‌ها');
+    sheet.innerHTML = '<div class="ns-box"><div class="ns-grip"></div><div class="ns-top"><h2>تنظیم اعلان‌ها</h2><button type="button" data-n="close" aria-label="بستن">✕</button></div><div class="ns-in"></div></div>';
+    document.body.appendChild(sheet);
+    sheet.addEventListener('click', e => { if (e.target === sheet) closeSettings(); });
+    window.addEventListener('popstate', () => { if (sheet.classList.contains('show') && !history.state?.ns) closeSettings(true); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet.classList.contains('show')) { e.stopImmediatePropagation(); closeSettings(); } }, true);
+    return sheet;
+  }
+  async function refreshAll() {
+    const r = document.querySelector('#result .rm-card');
+    await Promise.all([renderStatus(), renderCodes('chl'), renderCodes('reg'), r && r._t && render(r, r._t)]);
+    document.dispatchEvent(new Event('push:changed'));
+  }
+  async function renderSettings(note) {
+    const box = sheet.querySelector('.ns-in');
+    box.innerHTML = await settingsHtml();
     const msg = box.querySelector('.rm-msg');
-    const host = card.closest('[id]')?.id;
-    const done = async text => {
-      box.remove();
-      const r = document.querySelector('#result .rm-card');
-      await Promise.all([renderStatus(), renderCodes('chl'), renderCodes('reg'), r && r._t && render(r, r._t)]);
-      const m = (card.isConnected ? card : document.getElementById(host))?.querySelector('.rm-msg'); if (m) m.textContent = text;
-    };
+    if (msg && note) msg.textContent = note;
     const run = f => async () => {
       box.querySelectorAll('button').forEach(x => x.disabled = true); msg.style.color = ''; msg.textContent = 'لطفاً صبر کنید…';
-      try { await f(); } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = fail(e); box.querySelectorAll('button').forEach(x => x.disabled = false); }
+      try { const t = await f(); if (t !== false) await renderSettings(t); } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = fail(e); box.querySelectorAll('button').forEach(x => x.disabled = false); }
     };
-    box.querySelector('[data-p=close]').onclick = () => box.remove();
-    box.querySelector('[data-p=reset]').onclick = run(async () => { await savePrefs({}); await done('اعلان‌ها به تنظیم پیش‌فرض برگشت.'); });
-    box.querySelector('[data-p=save]').onclick = run(async () => {
+    const on = (k, f) => { const b = box.querySelector(`[data-n=${k}]`); if (b) b.onclick = run(f); };
+    on('on', async () => {
+      const sub = await ensureSub();
+      store.set(CHL, true); store.set(CHLNO, null);
+      const c = deviceCodes();
+      await rpc('push_join', { ...keys(sub), ...c });
+      store.set(SENT, sub.endpoint.slice(-24) + JSON.stringify(c));
+      await restorePrefs(sub); await refreshAll();
+      return 'اعلان روشن شد. هر کدام را که نمی‌خواهید خاموش کنید یا ساعتش را عوض کنید.';
+    });
+    on('test', async () => { await sendTest(); msg.textContent = 'اعلان آزمایشی فرستاده شد؛ تا چند لحظه دیگر باید برسد.'; box.querySelectorAll('button').forEach(x => x.disabled = false); return false; });
+    on('reset', async () => { await savePrefs({}); await refreshAll(); return 'اعلان‌ها به تنظیم پیش‌فرض برگشت.'; });
+    on('save', async () => {
       const prev = store.get(PREFS) || {}, off = (prev.off || []).filter(k => !box.querySelector(`[data-k="${k}"]`)), times = {};
       box.querySelectorAll('[data-k]').forEach(c => { if (!c.checked) off.push(c.dataset.k); });
       // ساعت نوع‌هایی که اینجا نیست (مثلاً حزب‌خوانی وقتی فقط چله دارد) دست نمی‌خورد.
       Object.entries(prev.times || {}).forEach(([k, v]) => { if (!box.querySelector(`[data-time="${k}"]`)) times[k] = v; });
       box.querySelectorAll('[data-time]').forEach(i => { if (/^\d\d:\d\d$/.test(i.value) && i.value !== i.dataset.base) times[i.dataset.time] = i.value; });
+      const cs = [...box.querySelectorAll('[data-c]')];
+      if (cs.length) {
+        store.set(CHLMUTE, cs.filter(c => !c.checked).map(c => c.dataset.c));
+        if (cs.some(c => c.checked)) store.set(CHL, true);
+      }
+      await syncCodes(true);
       await savePrefs({ off, times });
-      await done('تنظیم اعلان‌ها ذخیره شد.');
+      await refreshAll();
+      return 'تنظیم اعلان‌ها ذخیره شد.';
+    });
+    on('alloff', async () => {
+      if (!confirm('همه اعلان‌های این گوشی خاموش شود؟')) return false;
+      const sub = await currentSub();
+      if (sub) { await rpc('push_unsubscribe', { p_endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); }
+      [LS, CHL, SENT].forEach(k => store.set(k, null));
+      await refreshAll();
+      return 'همه اعلان‌های این گوشی خاموش شد.';
     });
   }
-  const prefsBtn = box => Object.assign(async () => togglePrefs(box.classList.contains('rm-card') ? box : box.querySelector('.rm-card') || box), { panel: true });
+  async function openSettings() {
+    buildSheet();
+    sheet.classList.add('show'); document.body.classList.add('ns-lock');
+    try { if (!history.state?.ns) history.pushState({ ns: 1 }, ''); } catch {}
+    sheet.querySelector('.ns-in').innerHTML = '<p>لطفاً صبر کنید…</p>';
+    sheet.querySelector('[data-n=close]').onclick = () => closeSettings();
+    await renderSettings();
+  }
+  function closeSettings(fromHistory) {
+    if (!sheet?.classList.contains('show')) return;
+    sheet.classList.remove('show'); document.body.classList.remove('ns-lock');
+    if (!fromHistory) { try { if (history.state?.ns) history.back(); } catch {} }
+  }
+  const togglePrefs = () => openSettings();
+  const prefsBtn = () => Object.assign(async () => openSettings(), { panel: true });
+  document.addEventListener('click', e => { if (e.target.closest('[data-ns-open]')) openSettings(); });
+
+  // پس از هر ثبت‌نام (چله، دوره قرآن، حزب‌خوانی): یادآوری که اعلان‌ها را می‌شود روشن یا تنظیم کرد.
+  function hint() {
+    if (!enabled() || desktopApp) return '';
+    const on = !!store.get(CHL);
+    return `<div class="ns-hint"><p>🔔 ${on ? 'خبر این ثبت‌نام با اعلان روی همین گوشی می‌آید. چه اعلان‌هایی و چه ساعتی بیاید را خودتان انتخاب کنید.' : 'می‌خواهید برنامه هر روز، یادآوری‌ها و خبرهای این ثبت‌نام با اعلان روی همین گوشی بیاید؟'}</p>
+<button type="button" class="chs-alt" data-ns-open>${on ? 'تنظیم اعلان‌ها' : 'روشن کردن و تنظیم اعلان‌ها'}</button><p class="ns-where">هر وقت خواستید: منوی ☰ › تنظیمات › تنظیم اعلان‌ها</p></div>`;
+  }
+
+  window.siteMenu?.section({
+    id: 'settings', order: 89,
+    render(box) {
+      if (!enabled() || desktopApp) return;
+      const parts = [(store.get(LS) || arr('regCodes').length) && 'حزب‌خوانی', arr('chlCodes').length && 'چله‌ها و دوره‌ها', 'اعمال و ختم‌ها'].filter(Boolean);
+      box.innerHTML = `<h3>تنظیمات</h3><button type="button" class="sm-item" data-ns-menu><span class="sm-ic">🔔</span><span>تنظیم اعلان‌ها<small>چه اعلانی و چه ساعتی: ${parts.join('، ')}</small></span><span class="sm-go">‹</span></button>`;
+      box.querySelector('[data-ns-menu]').onclick = () => { window.siteMenu.close(); setTimeout(openSettings, 280); };
+    }
+  });
 
   // ---------- چله، دوره‌های قرآن و ثبت‌نام حزب‌خوانی ----------
   // یک کارت در «چله‌های من» و یکی در «ثبت‌نام‌های من»؛ هر دو همان یک اشتراک (کدهای این گوشی) را روشن یا خاموش می‌کنند.
@@ -313,7 +421,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
   document.addEventListener('settings:changed', () => { renderStatus(); renderChl(); });
   window.addEventListener('hashchange', () => { renderStatus(); renderChl(); });
   renderStatus();
-  window.sitePush = { syncCodes, status, enabled, supported, togglePrefs };
+  window.sitePush = { syncCodes, status, enabled, supported, togglePrefs, openSettings, hint };
 
   // پیوند اعلان (?g=1&id=5): گروه و شناسه را خودکار پر می‌کند و سهم امروز و بخش گزارش را آماده می‌کند.
   const q = new URLSearchParams(location.search), qg = +q.get('g'), qid = +q.get('id');
