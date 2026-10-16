@@ -9,9 +9,9 @@ html[data-bg] body::before{content:"";position:fixed;inset:0;z-index:-2;backgrou
   html[data-bg] body::before{inset:-40px;filter:blur(24px) saturate(1.05) brightness(.92)}
   html[data-bg] body::after{content:"";position:fixed;inset:0;z-index:-1;background:var(--t-img) center top/max(780px,calc(var(--t-ratio) * 100vh)) auto no-repeat;box-shadow:inset 0 0 60px #0003}
 }
-html[data-bg] header{background:radial-gradient(farthest-side,var(--t-veil) 45%,transparent);text-shadow:0 0 10px var(--t-paper),0 0 4px var(--t-paper),0 0 2px var(--t-paper);color:var(--t-head)}
-html[data-bg] header h1{color:var(--t-head)}
-html[data-bg] header .today{color:var(--t-ink);font-weight:600}
+html[data-bg] .site-foot{background:radial-gradient(farthest-side,var(--t-veil) 45%,transparent);text-shadow:0 0 10px var(--t-paper),0 0 4px var(--t-paper),0 0 2px var(--t-paper)}
+html[data-bg] .site-foot .today{color:var(--t-ink);font-weight:600}
+html[data-bg] .shell .panel .tagline{color:var(--t-head)}
 /* کادرها */
 html[data-bg] .shell .panel{position:relative;background:var(--t-paper);color:var(--t-ink);text-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
   border:2px solid var(--t-gold);border-radius:var(--t-radius);padding:30px 28px 26px;margin-bottom:40px;
