@@ -7,11 +7,20 @@ html[data-bg] body::before{content:"";position:fixed;inset:0;z-index:-2;backgrou
 /* صفحه پهن (رایانه): تصویر کامل در وسط، دو طرف همان تصویر محو */
 @media (min-aspect-ratio:4/5){
   html[data-bg] body::before{inset:-40px;filter:blur(24px) saturate(1.05) brightness(.92)}
-  html[data-bg] body::after{content:"";position:fixed;inset:0;z-index:-1;background:var(--t-img) center top/max(780px,calc(var(--t-ratio) * 100vh)) auto no-repeat;box-shadow:inset 0 0 60px #0003}
+  html[data-bg] body::after{content:"";position:fixed;inset:0;z-index:-1;background:var(--t-img) center top/auto 100% no-repeat;box-shadow:inset 0 0 60px #0003}
 }
 html[data-bg] .site-foot{background:radial-gradient(farthest-side,var(--t-veil) 45%,transparent);text-shadow:0 0 10px var(--t-paper),0 0 4px var(--t-paper),0 0 2px var(--t-paper)}
 html[data-bg] .site-foot .today{color:var(--t-ink);font-weight:600}
 html[data-bg] .shell .panel .tagline{color:var(--t-head)}
+/* پنجره وسط (backdrop.js جای آن را روی تصویر حساب می‌کند): فقط همین‌جا اسکرول می‌شود و بالا و پایینش محو است */
+html[data-bg].bgx-win body{overflow:hidden;padding:0}
+html[data-bg].bgx-win main.shell{position:fixed;left:var(--win-l);top:var(--win-t);width:var(--win-w);height:var(--win-h);max-width:none;margin:0;padding:18px 14px 40px;
+  overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(transparent,#000 34px,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(transparent,#000 34px,#000 calc(100% - 44px),transparent)}
+html[data-bg].bgx-win main.shell::-webkit-scrollbar{display:none}
+html[data-bg].bgx-win .shell .panel{margin-inline:0}
+html[data-bg].bgx-win .shell .site-foot{margin:6px auto 0}
+html[data-bg].bgx-win .shell>.panel:first-of-type .bgx-frame:first-child{margin-top:16px}
 /* کادرها */
 html[data-bg] .shell .panel{position:relative;background:var(--t-paper);color:var(--t-ink);text-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
   border:2px solid var(--t-gold);border-radius:var(--t-radius);padding:30px 28px 26px;margin-bottom:40px;
