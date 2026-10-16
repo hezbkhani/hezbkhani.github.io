@@ -1,8 +1,8 @@
 {
   "packageId": "io.github.hezbkhani.app",
   "host": "hezbkhani.github.io",
-  "name": "حزب‌خوانی قرآن کریم",
-  "launcherName": "حزب‌خوانی",
+  "name": "نوران",
+  "launcherName": "نوران",
   "display": "standalone",
   "orientation": "default",
   "themeColor": "#006b50",
