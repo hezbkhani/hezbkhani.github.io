@@ -68,6 +68,28 @@
   // پس از ورود به حساب روی گوشی تازه (account.js)، گروه و شناسه حساب همین‌جا آماده می‌شود.
   window.hezbRestore = restore;
 
+  // معرفی صفحه اول: به‌جای یک کادر بزرگ، عنوان و هر گزینه در کادر جدای خودش (شکل و رنگ کادرها با زمینه در backdrop.css)
+  // و هر گزینه با یک لمس به همان بخش می‌رود.
+  (function splitIntro() {
+    const intro = document.getElementById('introPanel');
+    const h2 = intro.querySelector(':scope > h2'), lead = intro.querySelector(':scope > .lead'), hint = intro.querySelector(':scope > .hint');
+    const list = intro.querySelector('.intro-list'), notice = intro.querySelector('.intro-notice');
+    const head = document.createElement('div'); head.className = 'bgx-frame intro-head';
+    h2.before(head); head.append(h2, lead); if (hint) head.append(hint);
+    const go = ['hezb', 'menu', 'menu'];
+    const opts = document.createElement('div'); opts.className = 'intro-opts';
+    [...list.children].forEach((li, i) => {
+      const a = document.createElement('a'); a.href = '#'; a.className = 'bgx-frame intro-opt'; a.dataset.go = go[i] || 'menu';
+      a.innerHTML = li.innerHTML.replace(/<b>([^<]*?):?<\/b>\s*/, '<b>$1</b><span>') + '</span>';
+      opts.append(a);
+    });
+    list.replaceWith(opts);
+    opts.addEventListener('click', e => { const a = e.target.closest('[data-go]'); if (!a) return; e.preventDefault(); a.dataset.go === 'hezb' ? reveal('hzGroupsPanel') : window.siteMenu?.open(); });
+    if (notice) notice.classList.add('bgx-frame');
+    // خود کادر بزرگ دیگر کادر نیست؛ هر کادر کوچک جداگانه وارد می‌شود (backdrop.js).
+    intro.classList.add('intro-split', 'bgx-in', 'bgx-done');
+  })();
+
   document.getElementById('introMenu').onclick = () => window.siteMenu?.open();
   document.getElementById('introHezb').onclick = () => reveal('hzGroupsPanel');
   window.addEventListener('hashchange', apply);
