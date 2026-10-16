@@ -70,7 +70,9 @@
 
   // معرفی صفحه اول: به‌جای یک کادر بزرگ، عنوان و هر گزینه در کادر جدای خودش (شکل و رنگ کادرها با زمینه در backdrop.css)
   // و هر گزینه با یک لمس به همان بخش می‌رود.
+  // در «ظاهر قبلی سایت» (بدون زمینه، انتخاب در منو) معرفی همان یک کادر قبلی می‌ماند.
   (function splitIntro() {
+    if (!document.documentElement.dataset.bg) return;
     const intro = document.getElementById('introPanel');
     const h2 = intro.querySelector(':scope > h2'), tagline = intro.querySelector(':scope > .tagline'), lead = intro.querySelector(':scope > .lead'), hint = intro.querySelector(':scope > .hint');
     const list = intro.querySelector('.intro-list'), notice = intro.querySelector('.intro-notice');
