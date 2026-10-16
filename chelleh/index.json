@@ -1,0 +1,14 @@
+[
+  { "key": "ashura", "title": "زیارت عاشورا" },
+  { "key": "alyasin", "title": "زیارت آل یاسین" },
+  { "key": "kisa", "title": "حدیث شریف کسا" },
+  { "key": "waqia", "title": "سوره واقعه", "quran": { "surah": 56 } },
+  { "key": "dhariyat", "title": "سوره ذاریات", "quran": { "surah": 51 } },
+  { "key": "muzzammil", "title": "سوره مزمل", "quran": { "surah": 73 } },
+  { "key": "fath", "title": "سوره فتح", "quran": { "surah": 48 } },
+  { "key": "mashlool", "title": "دعای مشلول" },
+  { "key": "ahd", "title": "دعای عهد" },
+  { "key": "samat", "title": "دعای سمات" },
+  { "key": "kumayl", "title": "دعای کمیل" },
+  { "key": "tavassul", "title": "دعای توسل" }
+]
