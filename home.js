@@ -18,6 +18,7 @@
 .intro-tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 .intro-tools button{flex:1 1 auto;height:auto;min-height:48px;white-space:normal;line-height:1.6;padding:6px 14px}
 .hz-mine{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;margin:0 0 10px;padding:6px 12px;background:rgba(0,92,69,.75);border:1px solid var(--gold);border-radius:var(--r-card);font-size:15px}
+.hz-mine[hidden]{display:none}
 .hz-mine button{height:auto;padding:0;background:none;border:0;color:#ffe2a8;text-decoration:underline;font-weight:500;font-size:15px}
 @media(max-width:600px){.intro-tools button{flex-basis:100%}}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
