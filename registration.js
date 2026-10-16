@@ -173,7 +173,7 @@ pre.reg-text{white-space:pre-wrap;max-height:220px;overflow:auto;background:#fff
         await loadPublic();
         window.account?.sync();
         const m = $p('#regMine');
-        m.insertAdjacentHTML('afterbegin', `<p class="reg-note">ثبت‌نام «${esc(name)}» انجام شد. کد پیگیری <span class="reg-code">${fa(a[0].code)}</span> را یادداشت کنید؛ برای انصراف یا دیدن شناسه از دستگاه دیگر لازم است.</p>`);
+        m.insertAdjacentHTML('afterbegin', `<p class="reg-note">ثبت‌نام «${esc(name)}» انجام شد. کد پیگیری <span class="reg-code">${fa(a[0].code)}</span> را یادداشت کنید؛ برای انصراف یا دیدن شناسه از دستگاه دیگر لازم است.</p>${window.sitePush?.hint() || ''}`);
         m.scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (window.regAdminReload) window.regAdminReload();
       } catch (err) {
