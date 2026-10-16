@@ -6,5 +6,8 @@
   { "key": "dhariyat", "title": "سوره ذاریات", "quran": { "surah": 51 } },
   { "key": "muzzammil", "title": "سوره مزمل", "quran": { "surah": 73 } },
   { "key": "mashlool", "title": "دعای مشلول" },
-  { "key": "ahd", "title": "دعای عهد" }
+  { "key": "ahd", "title": "دعای عهد" },
+  { "key": "samat", "title": "دعای سمات" },
+  { "key": "kumayl", "title": "دعای کمیل" },
+  { "key": "tavassul", "title": "دعای توسل" }
 ]

@@ -231,7 +231,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     const st = await status(), chl = chlList(), regs = arr('regCodes').length, hz = store.get(LS);
     const hasHezb = !!hz || regs > 0 || (st && st.group_number != null);
     if (!st) {
-      const items = [hasHezb && 'حزب‌خوانی: شناسه و گروه، سهم هر روز و یادآوری گزارش', chl.length && `${chl.length > 1 ? `${toFa(chl.length)} چله و دوره شما` : 'چله یا دوره شما'}: برنامه هر روز، یادآوری «خواندم» و خبرهای دوره`, 'اعمال و ختم‌ها: نماز امام جواد (ع) و ختم یاسین'].filter(Boolean);
+      const items = [hasHezb && 'حزب‌خوانی: شناسه و گروه، سهم هر روز و یادآوری گزارش', chl.length && `${chl.length > 1 ? `${toFa(chl.length)} چله و دوره شما` : 'چله یا دوره شما'}: برنامه هر روز، یادآوری «خواندم» و خبرهای دوره`, 'اعمال و ختم‌ها: نماز امام جواد (ع) و ختم یاسین', 'ادعیه: دعای سمات، کمیل و توسل'].filter(Boolean);
       return `<p>اعلان روی این گوشی خاموش است. با روشن کردنش این‌ها یادتان می‌آید:</p><ul>${items.map(x => `<li>${x}</li>`).join('')}</ul>
 <p class="hint" style="margin:0">پس از روشن کردن، هر کدام را می‌توانید خاموش کنید یا ساعتش را عوض کنید.</p>
 <div class="rm-row"><button type="button" data-n="on">🔔 روشن کردن اعلان‌ها</button></div><div class="rm-msg" aria-live="polite"></div>`;
@@ -249,6 +249,8 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
     }
     const ib = await typeRows('ibadat');
     if (ib) html += `<section><h5>🤲 اعمال و ختم‌ها</h5>${ib}</section>`;
+    const doa = await typeRows('doa');
+    if (doa) html += `<section><h5>📿 ادعیه</h5>${doa}</section>`;
     return html + `<p class="hint" style="margin:8px 0 0">ساعت‌ها به وقت ایران است.</p>
 <div class="rm-row"><button type="button" data-n="save">ذخیره</button><button type="button" data-n="test" class="rm-ghost">اعلان آزمایشی</button><button type="button" data-n="reset" class="rm-ghost">بازگشت به پیش‌فرض</button></div>
 <div class="rm-msg" aria-live="polite"></div>
