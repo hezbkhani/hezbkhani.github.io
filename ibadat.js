@@ -139,7 +139,7 @@ ${await notifyHtml('ommolbanin', 'شب‌های ختم با اذان مغرب')}
     const when = `هر ${d.day}${d.night ? ` (${d.night})` : ''} ${off ? `${minutesFa(Math.abs(off))} ${off < 0 ? 'پیش از' : 'پس از'} اذان مغرب` : 'با اذان مغرب'}`;
     return `<h2>${d.title}</h2><p class="ib-sub">${d.sub}</p>
 <div class="ib-card"><p style="margin:0">${d.about}</p>
-<div class="ib-tools"><button type="button" data-ib="read" data-key="${d.key}">📖 خواندن متن دعا و گوش دادن به صوت</button></div></div>
+<div class="ib-tools"><button type="button" data-ib="read" data-key="${d.key}">📖 خواندن دعا: متن، ترجمه و صوت</button></div></div>
 ${await notifyHtml(type, when)}`;
   }
   const PAGES = { javad_wed: javadHtml, ommolbanin: ommolbaninHtml };
