@@ -22,5 +22,12 @@
     {"ar": "فَاِنَّكُمْ وَسيلَتى اِلَى اللّهِ وَبِحُبِّكُمْ وَبِقُرْبِكُمْ أَرْجُو نَجاةً مِنَ اللّهِ فَكُونُوا عِنْدَ اللّهِ رَجائى"},
     {"ar": "يا سادَتى يا أَوْلِياءَ اللّهِ صَلَّى اللّهُ عَلَيْهِمْ اَجْمَعينَ وَلَعَنَ اللّهُ أَعْداءَ اللّهِ ظالِميهِمْ مِنَ الْاَوَّلينَ وَالْآخِرينَ آمينَ رَبَّ الْعالَمينَ"}
   ],
-  "audio": []
+  "audio": [
+    {"name": "حاج مهدی سماواتی", "url": "https://shiavoice.com/stream-cbWPX"},
+    {"name": "محسن فرهمند آزاد", "url": "https://shiavoice.com/stream-zfhxo"},
+    {"name": "صادق آهنگران", "url": "https://shiavoice.com/stream-812u9"},
+    {"name": "باسم کربلائی", "url": "https://shiavoice.com/stream-bx5nf"},
+    {"name": "حسین غریب", "url": "https://assets.world-federation.org/audiovisual/Hajj1428/28-Dua_Tawassul_-_Hus_gharib.mp3"},
+    {"name": "اباذر الحلواجی", "url": "https://mp3.duas.org/Misc%20Duas/Tawassul_abather.mp3"}
+  ]
 }
