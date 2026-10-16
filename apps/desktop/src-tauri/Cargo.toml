@@ -1,7 +1,7 @@
 [package]
 name = "hezbkhani"
 version = "1.0.0"
-description = "حزب‌خوانی قرآن کریم"
+description = "نوران"
 edition = "2021"
 
 [build-dependencies]
