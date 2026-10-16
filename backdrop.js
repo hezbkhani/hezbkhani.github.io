@@ -21,8 +21,8 @@
 
   const main = document.querySelector('main');
   const watch = el => { if (!el.classList.contains('bgx-in')) io.observe(el); };
-  document.querySelectorAll('main > header, main > .panel').forEach(watch);
+  document.querySelectorAll('main > header, main > .panel, main .bgx-frame').forEach(watch);
   // کادرهایی که فایل‌های دیگر بعداً اضافه می‌کنند (چله‌های من، ثبت‌نام، نصب برنامه)
-  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains('panel')) watch(n); })))
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains('panel') && !n.classList.contains('bgx-in')) watch(n); })))
     .observe(main, { childList: true });
 })();
