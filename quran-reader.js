@@ -14,6 +14,8 @@
     ['gharaati', 'قرائتی'], ['khorramshahi', 'خرمشاهی'], ['ayati', 'آیتی'], ['bahrampour', 'بهرام‌پور'],
     ['mojtabavi', 'مجتبوی'], ['safavi', 'صفوی'], ['sadeqi', 'صادقی تهرانی'], ['khorramdel', 'خرمدل'], ['moezzi', 'معزی']
   ];
+  // تفسیر هر آیه: متن تفسیر نمونه مجوز انتشار آزاد ندارد، پس دکمه «تفسیر» همان آیه را در سایت رسمی quran.makarem.ir باز می‌کند.
+  const tafsirUrl = (s, n) => `https://quran.makarem.ir/#${s}:${n}`;
   // فایل صوتی هر آیه از چند سرور: everyayah.com، verses.quran.com، cdn.islamic.network (alquran.cloud)
   // و آینه quranicaudio. اگر یکی جواب نداد یا کند بود سراغ بعدی می‌رود.
   // نسخه‌های ۶۴ کیلوبیتی تا جای ممکن، تا با اینترنت کند هم زود شروع شود.
@@ -47,7 +49,7 @@
     get() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } },
     set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} }
   };
-  const prefs = Object.assign({ size: 27, trans: true, night: false, tr: 'makarem', reciter: 'abdulbasit', voice: 'hedayatfar', mode: 'ar' }, store.get());
+  const prefs = Object.assign({ size: 27, trans: true, night: false, tr: 'makarem', tafsir: true, reciter: 'abdulbasit', voice: 'hedayatfar', mode: 'ar' }, store.get());
   const save = () => store.set(prefs);
 
   const css = `
@@ -84,6 +86,9 @@ body.qr-lock{overflow:hidden}
 .qr-num{color:var(--accent);white-space:nowrap}
 .qr-fa{margin:8px 0 0;font-size:max(15px,calc(var(--qs)*.6));line-height:2;color:var(--tr);text-align:justify}
 .qr-fa i{font-style:normal;color:var(--muted);font-size:.85em;margin-left:4px}
+.qr-tf{display:inline-block;margin-right:6px;padding:0 8px;border:1px solid var(--line);color:var(--accent);font-size:.8em;line-height:1.9;text-decoration:none;white-space:nowrap}
+.qr-tf:hover{background:var(--line)}
+.qr.notf .qr-tf{display:none}
 .qr.flow .qr-fa{display:none}
 .qr.flow .qr-seg{padding:10px 2px;font:normal var(--qs)/2.2 QuranHafs,serif;text-align:justify}
 .qr.flow .qr-ayah{display:inline;padding:0;border:0}
@@ -131,6 +136,7 @@ body.qr-lock{overflow:hidden}
 <div class="qr-menu" id="qrMenu">
 <div class="qr-row"><span>اندازه متن</span><span class="ctl"><button type="button" data-a="smaller" aria-label="کوچک‌تر">−</button><button type="button" data-a="bigger" aria-label="بزرگ‌تر">+</button></span></div>
 <div class="qr-row"><span>ترجمه فارسی</span><span class="ctl"><button type="button" class="qr-chip" data-a="trans-on">نمایش</button><button type="button" class="qr-chip" data-a="trans-off">فقط عربی</button></span></div>
+<div class="qr-row"><span>دکمه تفسیر</span><span class="ctl"><button type="button" class="qr-chip" data-a="tf-on">نمایش</button><button type="button" class="qr-chip" data-a="tf-off">پنهان</button></span></div>
 <div class="qr-row"><span>رنگ صفحه</span><span class="ctl"><button type="button" class="qr-chip" data-a="day">روز</button><button type="button" class="qr-chip" data-a="night">شب</button></span></div>
 <div class="qr-row qr-x"><span>مترجم</span><select id="qrTr" aria-label="ترجمه">${TRANSLATIONS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
 <div class="qr-row qr-x qr-sec">صوت</div>
@@ -153,6 +159,9 @@ body.qr-lock{overflow:hidden}
     el.style.setProperty('--qs', prefs.size + 'px');
     el.classList.toggle('flow', !prefs.trans);
     el.classList.toggle('night', prefs.night);
+    el.classList.toggle('notf', !prefs.tafsir);
+    el.querySelector('[data-a="tf-on"]').classList.toggle('on', prefs.tafsir);
+    el.querySelector('[data-a="tf-off"]').classList.toggle('on', !prefs.tafsir);
     el.querySelector('[data-a="trans-on"]').classList.toggle('on', prefs.trans);
     el.querySelector('[data-a="trans-off"]').classList.toggle('on', !prefs.trans);
     el.querySelector('[data-a="day"]').classList.toggle('on', !prefs.night);
@@ -177,7 +186,7 @@ body.qr-lock{overflow:hidden}
       const bism = seg.from === 1 && seg.s !== 1 && seg.s !== 9 ? `<div class="qr-bism">${BISMILLAH}</div>` : '';
       const ayahs = seg.ayahs.map(([a, t], i) => {
         const n = seg.from + i;
-        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<span class="qr-num" data-a="ayah">${toAr(n)}</span> </p><p class="qr-fa"><i>(${toFa(n)})</i>${esc(t)}</p></div>`;
+        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<span class="qr-num" data-a="ayah">${toAr(n)}</span> </p><p class="qr-fa"><i>(${toFa(n)})</i><span>${esc(t)}</span><a class="qr-tf" href="${tafsirUrl(seg.s, n)}" target="_blank" rel="noopener" title="تفسیر نمونه این آیه در سایت آیت‌الله مکارم شیرازی">تفسیر ↖</a></p></div>`;
       }).join('');
       return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small></div>${bism}<div class="qr-seg">${ayahs}</div>`;
     }).join('');
@@ -185,7 +194,7 @@ body.qr-lock{overflow:hidden}
     const end = current.range ? `<p>${esc(current.endText || 'پایان. قبول باشد.')}</p>${current.onEnd ? `<button type="button" data-a="rangeEnd">${esc(current.endButton || 'خواندم')}</button>` : ''}`
       : '<p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>';
     body.innerHTML = html + `<div class="qr-end">${end}
-<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net)<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud</span></p></div>`;
+<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud</span></p></div>`;
     items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
     el.scrollTop = 0;
     onScroll();
@@ -194,9 +203,9 @@ body.qr-lock{overflow:hidden}
 
   async function loadTranslation() {
     const t = activeTr(), want = current;
-    const fas = items.map(it => it.e.querySelector('.qr-fa'));
+    const fas = items.map(it => it.e.querySelector('.qr-fa > span'));
     let list;
-    if (t === 'makarem') list = items.map(it => it.makarem ?? (it.makarem = it.e.querySelector('.qr-fa').lastChild.textContent));
+    if (t === 'makarem') list = items.map(it => it.makarem ?? (it.makarem = it.e.querySelector('.qr-fa > span').textContent));
     else {
       try {
         if (current.range) list = (await Promise.all(current.parts.map(async pt => {
@@ -208,11 +217,11 @@ body.qr-lock{overflow:hidden}
         if (!r.ok) throw Error(r.status);
         list = await r.json();
         }
-        items.forEach(it => { if (it.makarem == null) it.makarem = it.e.querySelector('.qr-fa').lastChild.textContent; });
+        items.forEach(it => { if (it.makarem == null) it.makarem = it.e.querySelector('.qr-fa > span').textContent; });
       } catch { return; }
     }
     if (want !== current || list.length !== items.length) return;
-    fas.forEach((p, i) => { p.lastChild.textContent = list[i]; });
+    fas.forEach((p, i) => { p.textContent = list[i]; });
     const src = $('qrTrSrc'); if (src) src.textContent = trName();
   }
 
@@ -336,6 +345,8 @@ body.qr-lock{overflow:hidden}
       if (a === 'trans-off') prefs.trans = false;
       if (a === 'day') prefs.night = false;
       if (a === 'night') prefs.night = true;
+      if (a === 'tf-on') prefs.tafsir = true;
+      if (a === 'tf-off') prefs.tafsir = false;
       if (a.startsWith('mode-')) prefs.mode = a.slice(5);
       applyPrefs();
     });
