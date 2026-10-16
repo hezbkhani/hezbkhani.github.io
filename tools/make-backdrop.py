@@ -58,6 +58,14 @@ T['garden'] = dict(
   medL=svg(f"<svg viewBox='0 0 28 56'>{med}</svg>"),
   corners=None, tsize='44px 22px', toff='33px', radius='18px',
   divider=divider(tg, t_))
+# 5) dark: near-black + bronze and soft gold, for dark pictures (only as the box style of a background the admin adds; no picture of its own)
+dk, dg, dp = '#8b6b3d', '#c9a35a', '#1d1916'
+T['dark'] = dict(
+  vars=dict(paper=dp, frame=dk, line='#4a3d2c', gold=dg, ink='#eadfc8', ink2='#b8aa8f', head='#d9b56b', base='#0d0b0a', theme='#14110f'),
+  top=svg(f"<svg viewBox='0 0 120 40'><path d='M4 20H44M76 20H116' stroke='{dg}' stroke-width='1.3'/><circle cx='48' cy='20' r='1.8' fill='{dg}'/><circle cx='72' cy='20' r='1.8' fill='{dg}'/><path d='M60 3C66 12 69 16 69 22A9 9 0 0 1 51 22C51 16 54 12 60 3Z' fill='{dp}' stroke='{dg}' stroke-width='1.8'/><path d='M60 11C63 16 64.5 18.5 64.5 22A4.5 4.5 0 0 1 55.5 22C55.5 18.5 57 16 60 11Z' fill='{dg}' opacity='.85'/></svg>"),
+  corners=corners(f"<path d='M3 33V12A9 9 0 0 1 12 3H33' fill='none' stroke='{dg}' stroke-width='1.8'/><path d='M9 33V16A7 7 0 0 1 16 9H33' fill='none' stroke='{dk}' stroke-width='1'/><path d='M13 9L17 13L13 17L9 13Z' fill='{dg}'/>", 36),
+  csize=36, tsize='120px 40px', toff='22px', radius='14px',
+  divider=divider(dg, dp))
 
 out = []
 out.append("""/* زمینه‌های صفحه اول: هر بار که سایت باز می‌شود یکی از چهار زمینه (پوشه bg/) انتخاب می‌شود
@@ -126,9 +134,9 @@ html[data-bg] .shell .panel :is(.hz-mine,.current-group){background:var(--t-fram
 @keyframes bgxUnfold{0%{opacity:0;transform:scale(.9,.55)}60%{opacity:1;transform:scale(1.015,1.02)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.bgx-anim .shell>.panel:not(.bgx-in),.bgx-anim header:not(.bgx-in){opacity:1}.bgx-anim *{animation:none!important}}
 """)
-RATIO=dict(night='.667',sage='.667',blue='.708',garden='.563')
-VEIL=dict(night='#fbf4e2cc',sage='#fcfaf2bf',blue='#fdf8ecd0',garden='#fdf8e8d9')
-anim = dict(night='bgxRise', sage='bgxSoft', blue='bgxOpen', garden='bgxUnfold')
+RATIO=dict(night='.667',sage='.667',blue='.708',garden='.563',dark='.7')
+VEIL=dict(night='#fbf4e2cc',sage='#fcfaf2bf',blue='#fdf8ecd0',garden='#fdf8e8d9',dark='#1d1916d9')
+anim = dict(night='bgxRise', sage='bgxSoft', blue='bgxOpen', garden='bgxUnfold', dark='bgxSoft')
 for k, d in T.items():
     v = d['vars']
     layers, pos, size = [d['top']], [f"center top {d['toff']}"], [d['tsize']]
@@ -142,7 +150,8 @@ for k, d in T.items():
     if k == 'blue':
         # the arched top: corners only at the bottom
         layers = [layers[0]] + layers[3:]; pos = [pos[0]] + pos[3:]; size = [size[0]] + size[3:]
-    out.append(f"/* {k} */\nhtml[data-bg={k}]{{--t-img:url('bg/{k}.webp');" + ''.join(f"--t-{n}:{x};" for n, x in v.items() if n != 'theme') +
+    img = '' if k == 'dark' else f"--t-img:url('bg/{k}.webp');"
+    out.append(f"/* {k} */\nhtml[data-bg={k}]{{{img}" + ''.join(f"--t-{n}:{x};" for n, x in v.items() if n != 'theme') +
                f"--t-radius:{d['radius']};--t-ratio:{RATIO[k]};--t-veil:{VEIL[k]};--t-anim:{anim[k]};--t-orn-pos:{','.join(pos)};--t-orn-size:{','.join(size)}}}")
     out.append(f"html[data-bg={k}] .shell .panel::before{{background-image:{','.join(layers)}}}")
     if d.get('divider'):
