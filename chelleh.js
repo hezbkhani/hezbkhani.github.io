@@ -261,6 +261,7 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
   }
   window.chlRefresh = async () => { await refresh(); if (sheet?.classList.contains('show') && sheetType) renderSheet(); };
   window.chlMine = () => mine; // برای «تنظیم اعلان‌ها» (reminders.js): نام هر چله کنار کلید اعلانش
+  window.chlRead = key => openReader(key, null); // برای بخش «ادعیه» (ibadat.js): متن، ترجمه و صوت دعا
   async function refresh() {
     await Promise.all([loadTypes(), loadMine()]);
     today = today || isoIran();
