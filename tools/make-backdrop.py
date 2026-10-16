@@ -73,6 +73,8 @@ html[data-bg] body::before{content:"";position:fixed;inset:0;z-index:-2;backgrou
 }
 html[data-bg] .site-foot{background:radial-gradient(farthest-side,var(--t-veil) 45%,transparent);text-shadow:0 0 10px var(--t-paper),0 0 4px var(--t-paper),0 0 2px var(--t-paper)}
 html[data-bg] .site-foot .today{color:var(--t-ink);font-weight:600}
+/* رنگ‌های اصلی سایت (سربرگ منو، دکمه‌ها، نشانه‌ها) هم به رنگ قاب همان زمینه */
+html[data-bg]{--deep:var(--t-frame);--emerald:var(--t-head);--mint:color-mix(in srgb,var(--t-frame) 13%,#fff)}
 /* دکمه منو (☰) به رنگ قاب همان زمینه */
 html[data-bg] .sm-btn{background:var(--t-frame);border-color:var(--t-gold)}
 html[data-bg] .sm-btn:hover{background:var(--t-head)}
