@@ -78,5 +78,12 @@
     {"ar": "يَا دَافِعَ النِّقَمِ، يَا نُورَ الْمُسْتَوْحِشِينَ فِي الظُّلَمِ، يَا عَالِماً لَا يُعَلَّمُ، صَلِّ عَلَىٰ مُحَمَّدٍ وَآلِ مُحَمَّدٍ، وَافْعَلْ بِي مَا أَنْتَ أَهْلُهُ"},
     {"ar": "وَصَلَّى اللَّهُ عَلَىٰ رَسُولِهِ وَالْأَئِمَّةِ الْمَيَامِينَ مِنْ آلِهِ وَسَلَّمَ تَسْلِيماً كَثِيراً"}
   ],
-  "audio": []
+  "audio": [
+    {"name": "حاج مهدی سماواتی", "url": "https://shiavoice.com/stream-cRsCf"},
+    {"name": "علی فانی و محسن فرهمند آزاد", "url": "https://shiavoice.com/stream-mZhYf"},
+    {"name": "باسم کربلائی", "url": "https://shiavoice.com/stream-xzu3d"},
+    {"name": "محمود کریمی", "url": "https://shiavoice.com/stream-8GSCj"},
+    {"name": "صادق آهنگران", "url": "https://shiavoice.com/stream-7xx5a"},
+    {"name": "مجموعه صوتی حج WF (قاری نامشخص)", "url": "https://assets.world-federation.org/audiovisual/Hajj1428/26-Dua_Kumail_.mp3"}
+  ]
 }
