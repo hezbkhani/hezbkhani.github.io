@@ -137,3 +137,43 @@ html[data-bg=night] .shell .panel>h2::after,html[data-bg=night] .shell .panel>.c
 html[data-bg=garden] .shell .panel{padding-inline:34px}
 @media(max-width:600px){html[data-bg=night] .shell .panel h2{padding:0 22px}html[data-bg=garden] .shell .panel{padding-inline:26px}}""")
 open(sys.argv[1], 'w').write('\n'.join(out) + '\n')
+
+# ---- separate framed boxes (like the reference picture): .bgx-frame ----
+# A cusped medallion with a blossom on each side, and a small knot on the top and bottom edges.
+def lobe(frame, gold, paper):
+    petals = ''.join(f"<ellipse cx='17' cy='26.5' rx='2.6' ry='4' fill='{paper}' transform='rotate({a} 17 32)'/>" for a in range(0, 360, 72))
+    body = (f"<path d='M34 3C26 3 24 10 18 12C11 14 13 22 6 25C1 27.5 1 36.5 6 39C13 42 11 50 18 52C24 54 26 61 34 61Z' fill='{frame}' stroke='{gold}' stroke-width='2'/>"
+            f"<path d='M34 9C28 9 26 15 21 17C16 19 17 25 11 28C8 29.5 8 34.5 11 36C17 39 16 45 21 47C26 49 28 55 34 55' fill='none' stroke='{gold}' stroke-width='.9' opacity='.8'/>"
+            f"{petals}<circle cx='17' cy='32' r='2.2' fill='{gold}'/>")
+    left = svg(f"<svg viewBox='0 0 34 64'>{body}</svg>")
+    right = svg(f"<svg viewBox='0 0 34 64'><g transform='matrix(-1 0 0 1 34 0)'>{body}</g></svg>")
+    return left, right
+def knot(frame, gold, paper):
+    return svg(f"<svg viewBox='0 0 40 20'><path d='M3 10C9 10 11 4 16 6M37 10C31 10 29 4 24 6M3 10C9 10 11 16 16 14M37 10C31 10 29 16 24 14' fill='none' stroke='{gold}' stroke-width='1.3'/><path d='M20 1L28 10L20 19L12 10Z' fill='{frame}' stroke='{gold}' stroke-width='1.5'/><circle cx='20' cy='10' r='2.3' fill='{paper}'/></svg>")
+frame_css = ["""/* کادرهای جدا (گزینه‌های صفحه اول): قاب دولایه با مدال گل‌دار در دو طرف و گره کوچک بالا و پایین، مثل تصویر نمونه */
+html[data-bg] .shell .panel.intro-split{background:none;border:0;box-shadow:none;padding:0;margin-bottom:34px}
+html[data-bg] .shell .panel.intro-split::before{display:none}
+html[data-bg] .bgx-frame{position:relative;display:block;margin:30px 24px;padding:18px 40px;background:var(--t-paper);color:var(--t-ink);text-shadow:none;
+  border:2px solid var(--t-gold);border-radius:16px;box-shadow:inset 0 0 0 4px var(--t-paper),inset 0 0 0 6.5px var(--t-frame),inset 0 0 0 8px var(--t-gold),0 8px 22px rgba(0,0,0,.18)}
+html[data-bg] .bgx-frame::before{content:"";position:absolute;pointer-events:none;inset:-11px -22px;background-repeat:no-repeat;background-size:34px 64px,34px 64px,40px 20px,40px 20px;background-position:left 4px center,right 4px center,center top 1px,center bottom 1px}
+html[data-bg] .shell .intro-head{text-align:center;padding-top:22px}
+html[data-bg] .shell .intro-head>h2::after{content:"";display:block;width:160px;height:12px;margin:0 auto;background:var(--t-div) center/contain no-repeat}
+html[data-bg=night] .shell .intro-head>h2::after{display:none}
+html[data-bg] .shell .intro-head .lead{margin:6px 0 0}
+html[data-bg] .shell .intro-head .hint{margin:6px 0 0;font-size:15px}
+html[data-bg] .intro-opt{text-decoration:none;text-align:center;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
+html[data-bg] .intro-opt:hover,html[data-bg] .intro-opt:focus-visible{transform:translateY(-2px);box-shadow:inset 0 0 0 4px var(--t-paper),inset 0 0 0 6.5px var(--t-frame),inset 0 0 0 8px var(--t-gold),0 12px 26px rgba(0,0,0,.24);outline:none}
+html[data-bg] .intro-opt b{display:block;font:normal 32px/1.6 SiteFont,Tahoma,serif;color:var(--t-head)}
+html[data-bg] .intro-opt span{display:block;font-size:15px;line-height:1.85;color:var(--t-ink2)}
+html[data-bg] .shell .panel.intro-split .intro-notice.bgx-frame{border-right-width:2px;border-right-color:var(--t-gold);padding:18px 40px}
+html[data-bg] .shell .panel.intro-split .intro-notice b{text-align:center}
+html[data-bg] .shell .panel.intro-split>.intro-tools,html[data-bg] .shell .panel.intro-split>.intro-acc{margin:0 24px}
+@media(max-width:600px){html[data-bg] .bgx-frame{margin:26px 18px;padding:16px 30px}html[data-bg] .shell .panel.intro-split .intro-notice.bgx-frame{padding:16px 30px}html[data-bg] .intro-opt b{font-size:28px}html[data-bg] .shell .panel.intro-split>.intro-tools{margin:0 6px}}
+.bgx-anim .bgx-frame:not(.bgx-in){opacity:0}
+.bgx-anim .bgx-frame.bgx-in:not(.bgx-done){animation:var(--t-anim) .8s cubic-bezier(.2,.75,.25,1) both;animation-delay:var(--bgx-d,0ms)}
+.bgx-anim .bgx-frame.bgx-in:not(.bgx-done)::before{animation:bgxOrn .7s ease-out both;animation-delay:calc(var(--bgx-d,0ms) + 350ms)}
+@media (prefers-reduced-motion:reduce){.bgx-anim .bgx-frame:not(.bgx-in){opacity:1}}"""]
+for k, d in T.items():
+    v = d['vars']; l, r = lobe(v['frame'], v['gold'], v['paper']); kn = knot(v['frame'], v['gold'], v['paper'])
+    frame_css.append(f"html[data-bg={k}] .bgx-frame::before{{background-image:{l},{r},{kn},{kn}}}")
+with open(sys.argv[1], 'a') as f: f.write('\n'.join(frame_css) + '\n')
