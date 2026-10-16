@@ -301,16 +301,22 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
     else if (spec.juz) { from = ix.juz[spec.juz - 1]; to = spec.juz < 30 ? ix.juz[spec.juz] : ix.total; title = `جزء ${fa(spec.juz)} قرآن`; }
     else { from = ix.page[spec.page - 1]; to = spec.page < 604 ? ix.page[spec.page] : ix.total; title = `صفحه ${fa(spec.page)} قرآن`; }
     const run = m && state(m) === 'run', done = run && (m.marked || []).includes(today);
+    // روزی یک صفحه: صفحه قبل و بعد را هم می‌شود خواند (بدون ثبت)؛ برای خواندن آزاد، «قرآن آزاد» پیشنهاد می‌شود.
+    const p = spec.page, base = spec.base || p, extra = p && p !== base;
+    const nav = p ? { prev: p > 1 ? 'صفحه قبل' : '', next: p < 604 ? 'صفحه بعد' : '', menu: window.quranFree ? 'قرآن آزاد' : '', autoNext: false,
+      onPrev: () => openQuran({ page: p - 1, base }, m), onNext: () => openQuran({ page: p + 1, base }, m), onMenu: () => window.quranFree.open() } : null;
     qr.openRange({
-      title, sub: m ? m.title : '', from, to,
-      endText: done ? 'امروز ثبت شده است. قبول باشد.' : `پایان ${title}. قبول باشد.`,
+      title, sub: m ? (extra ? `${m.title} · غیر از صفحه امروز` : m.title) : '', from, to, nav,
+      note: p && window.quranFree ? 'برای خواندن صفحه‌های دیگر، «قرآن آزاد» بهتر است: از هر سوره، آیه یا صفحه‌ای شروع می‌کنید و جای خواندن‌تان روی گوشی ذخیره می‌شود.' : '',
+      endText: extra ? `پایان ${title}. صفحه امروز شما صفحه ${fa(base)} است.` : done ? 'امروز ثبت شده است. قبول باشد.' : `پایان ${title}. قبول باشد.`,
       endButton: 'خواندم؛ ثبت برای امروز',
-      onEnd: run && !done ? () => mark(m.code, today, true).then(() => { toast('ثبت شد. قبول باشد.'); flash(m.code); }).catch(e => toast(e.message)) : null
+      onEnd: run && !done && !extra ? () => mark(m.code, today, true).then(() => { toast('ثبت شد. قبول باشد.'); flash(m.code); }).catch(e => toast(e.message)) : null
     });
   }
   const typeOf = key => types.find(t => t.key === key);
 
   // ---------- منو ----------
+  // «قرآن آزاد» (quran-free.js) هم در همین فهرست، پس از دوره‌های قرآن می‌آید.
   window.siteMenu?.section({
     id: 'chelleh', order: 1,
     render(box) {
@@ -319,7 +325,7 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
       const mineHtml = mine.length ? `<button type="button" class="sm-item" data-chl-mine><span class="sm-ic">⭐</span><span>چله‌های من<small>${fa(mine.length)} چله${mine.some(m => state(m) === 'run' && !(m.marked || []).includes(today)) ? '، امروز هنوز ثبت نشده' : ''}</small></span><span class="sm-go">‹</span></button>` : '';
       const item = t => `<button type="button" class="sm-item chl-mi" data-chl-type="${esc(t.key)}"><span class="sm-ic">${t.kind === 'text' ? '📿' : '📖'}</span><span>${esc(t.title)}<small>${esc(typeLine(t))}</small></span><span class="sm-go">‹</span></button>`;
       const quran = types.filter(t => t.kind !== 'text'), chl = types.filter(t => t.kind === 'text');
-      box.innerHTML = mineHtml + (quran.length ? `<h3>ثبت‌نام در دوره‌های قرآن</h3>${quran.map(item).join('')}` : '') + (chl.length ? `<h3>ثبت‌نام در چله</h3>${chl.map(item).join('')}` : '');
+      box.innerHTML = mineHtml + (quran.length ? `<h3>ثبت‌نام در دوره‌های قرآن</h3>${quran.map(item).join('')}${window.quranFree ? window.quranFree.menuItem() : ''}` : '') + (chl.length ? `<h3>ثبت‌نام در چله</h3>${chl.map(item).join('')}` : '');
       box.onclick = e => {
         const b = e.target.closest('[data-chl-type],[data-chl-mine]'); if (!b) return;
         window.siteMenu.close(true);
