@@ -74,12 +74,13 @@ html[data-bg] body::before{content:"";position:fixed;inset:0;z-index:-2;backgrou
 html[data-bg] .site-foot{background:radial-gradient(farthest-side,var(--t-veil) 45%,transparent);text-shadow:0 0 10px var(--t-paper),0 0 4px var(--t-paper),0 0 2px var(--t-paper)}
 html[data-bg] .site-foot .today{color:var(--t-ink);font-weight:600}
 html[data-bg] .shell .panel .tagline{color:var(--t-head)}
-/* پنجره وسط (backdrop.js جای آن را روی تصویر حساب می‌کند): فقط همین‌جا اسکرول می‌شود و بالا و پایینش محو است */
-html[data-bg].bgx-win body{overflow:hidden;padding:0}
-html[data-bg].bgx-win main.shell{position:fixed;left:var(--win-l);top:var(--win-t);width:var(--win-w);height:var(--win-h);max-width:none;margin:0;padding:18px 14px 40px;
-  overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;
-  -webkit-mask-image:linear-gradient(transparent,#000 34px,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(transparent,#000 34px,#000 calc(100% - 44px),transparent)}
-html[data-bg].bgx-win main.shell::-webkit-scrollbar{display:none}
+/* پنجره وسط (backdrop.js جای آن را روی تصویر حساب می‌کند): خود صفحه عادی اسکرول می‌شود،
+   ولی کادرها فقط داخل قاب وسط تصویر دیده می‌شوند و بالا و پایینش محو است (--m0 و --m1 با اسکرول جابه‌جا می‌شوند) */
+html[data-bg].bgx-win body{padding:0}
+html[data-bg].bgx-win main.shell{position:relative;max-width:none;width:var(--win-w);margin:0 auto 0 var(--win-l);
+  padding:calc(var(--win-t) + 18px) 14px calc(var(--win-gap) + 40px);
+  -webkit-mask-image:linear-gradient(transparent var(--m0),#000 calc(var(--m0) + 34px),#000 calc(var(--m1) - 44px),transparent var(--m1));
+  mask-image:linear-gradient(transparent var(--m0),#000 calc(var(--m0) + 34px),#000 calc(var(--m1) - 44px),transparent var(--m1))}
 html[data-bg].bgx-win .shell .panel{margin-inline:0}
 html[data-bg].bgx-win .shell .site-foot{margin:6px auto 0}
 html[data-bg].bgx-win .shell>.panel:first-of-type .bgx-frame:first-child{margin-top:16px}
