@@ -50,22 +50,24 @@
   const publicUrl = name => `${cfg.SUPABASE_URL}/storage/v1/object/public/backgrounds/${name}`;
 
   // تصویر را کوچک می‌کند (بلندترین ضلع ۱۹۲۰) و webp یا jpeg می‌سازد
-  function shrink(file) {
+  function shrink(file, max = 1920, q = .85) {
     return new Promise((ok, bad) => {
       const img = new Image(), u = URL.createObjectURL(file);
       img.onload = () => {
         URL.revokeObjectURL(u);
-        const s = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight));
+        const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
         const w = Math.round(img.naturalWidth * s), h = Math.round(img.naturalHeight * s);
         const c = document.createElement('canvas'); c.width = w; c.height = h;
         c.getContext('2d').drawImage(img, 0, 0, w, h);
         c.toBlob(b => b && b.type === 'image/webp' ? ok({ blob: b, ext: 'webp', w, h })
-          : c.toBlob(j => j ? ok({ blob: j, ext: 'jpg', w, h }) : bad(Error('تصویر خوانده نشد.')), 'image/jpeg', .85), 'image/webp', .85);
+          : c.toBlob(j => j ? ok({ blob: j, ext: 'jpg', w, h }) : bad(Error('تصویر خوانده نشد.')), 'image/jpeg', q), 'image/webp', q);
       };
       img.onerror = () => { URL.revokeObjectURL(u); bad(Error('این فایل تصویر نیست یا خوانده نشد.')); };
       img.src = u;
     });
   }
+
+  window.bgxShrink = shrink; // زمینه خود کاربر هم (bg-mine.js)
 
   let pane = null, form = null; // form: { id?, url?, size, src, blob?, ext? }
   const msg = (t, ok) => { const e = $('bgaMsg'); if (e) { e.className = 'adm-msg ' + (ok ? 'adm-ok' : 'adm-bad'); e.textContent = t; } };

@@ -4,6 +4,7 @@
 //    فقط محوشدن بالا و پایین همراه اسکرول جابه‌جا می‌شود تا ظاهر ثابت بماند. در ‎#admin‎ صفحه مثل قبل است.
 // ۲) ورود کادرها: هر کادر وقتی به پنجره می‌رسد، یکی‌یکی و مرتب وارد می‌شود.
 // ۳) انتخاب زمینه در منو: «هر بار یکی» (پیش‌فرض)، یکی از زمینه‌های روشن برای همیشه (کلید bgPick روی همین گوشی)،
+//    «زمینه من» (bgPick=mine، تصویری که خود کاربر روی همین گوشی گذاشته؛ bg-mine.js)،
 //    یا «ظاهر قبلی» (bgPick=classic): همان صفحه پیش از این زمینه‌ها، بی‌قاب و بی‌محوشدن؛ هرگز تصادفی انتخاب نمی‌شود.
 // خود زمینه را اسکریپت کوچک داخل <head> در index.html انتخاب می‌کند (bgxList: زمینه‌های روشن، bgxSet: گذاشتن یکی).
 // زمینه‌هایی که مدیر اضافه می‌کند (bg-admin.js) رنگ کادرهای یکی از چهار زمینه را می‌گیرند و قاب وسطشان را خود مدیر تعیین کرده است.
@@ -85,7 +86,8 @@
 .bgp-grid i{display:block;width:100%;aspect-ratio:2/3;border-radius:8px;border:2px solid var(--line);background:center/cover no-repeat;box-shadow:0 2px 6px #0002}
 .bgp-grid i.bgp-auto{display:flex;align-items:center;justify-content:center;font-style:normal;font-size:22px;background:linear-gradient(135deg,#1f5a3a 0 25%,#6b8a66 25% 50%,#3e5f84 50% 75%,#3c7a66 75%);color:#fff}
 .bgp-grid button.on i{border-color:var(--gold);box-shadow:0 0 0 2px var(--deep)}
-.bgp-grid button.on{font-weight:700;color:var(--deep)}`;
+.bgp-grid button.on{font-weight:700;color:var(--deep)}
+.bgp-grid i.bgp-add{background:var(--mint);color:var(--deep);border-style:dashed;font-size:26px}`;
   { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); }
   const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const getPick = () => { try { return localStorage.getItem('bgPick') || ''; } catch { return ''; } };
@@ -95,19 +97,22 @@
   window.siteMenu?.section({
     id: 'backdrop', order: 90,
     render(box) {
-      const list = window.bgxList(), ids = list.map(e => e.id), pick = ids.includes(getPick()) || getPick() === 'classic' ? getPick() : '';
+      const list = window.bgxList(), ids = list.map(e => e.id), mine = window.bgxMine?.(), pick = ids.includes(getPick()) || getPick() === 'classic' || (mine && getPick() === 'mine') ? getPick() : '';
       box.innerHTML = `<h3>زمینه صفحه</h3><div class="bgp-grid">
 <button type="button" data-bgp=""${pick ? '' : ' class="on"'}><i class="bgp-auto">↻</i>هر بار یکی</button>
 ${list.map(e => `<button type="button" data-bgp="${esc(e.id)}"${pick === e.id ? ' class="on"' : ''}><i style="background-image:url('${esc(thumb(e))}')"></i>${esc(e.name || NAMES[e.id])}</button>`).join('')}
-<button type="button" data-bgp="classic"${pick === 'classic' ? ' class="on"' : ''}><i style="background-image:url('background.jpg')"></i>ظاهر قبلی</button></div>`;
+<button type="button" data-bgp="classic"${pick === 'classic' ? ' class="on"' : ''}><i style="background-image:url('background.jpg')"></i>ظاهر قبلی</button>
+${mine ? `<button type="button" data-bgp="mine"${pick === 'mine' ? ' class="on"' : ''}><i style="background-image:url('${mine.url}')"></i>زمینه من</button>` : ''}
+${window.bgxMineEdit ? `<button type="button" data-bgm><i class="bgp-auto bgp-add">${mine ? '✎' : '+'}</i>${mine ? 'تغییر زمینه من' : 'زمینه خودم'}</button>` : ''}</div><div class="bgp-mine"></div>`;
       box.querySelector('.bgp-grid').onclick = e => {
+        if (e.target.closest('[data-bgm]')) return window.bgxMineEdit(box.querySelector('.bgp-mine'));
         const b = e.target.closest('[data-bgp]'); if (!b) return;
         const k = b.dataset.bgp;
         try { k ? localStorage.setItem('bgPick', k) : localStorage.removeItem('bgPick'); } catch {}
         box.querySelectorAll('[data-bgp]').forEach(x => x.classList.toggle('on', x === b));
         // رفتن به «ظاهر قبلی» یا برگشتن از آن، چیدمان صفحه اول را عوض می‌کند؛ پس صفحه از نو باز می‌شود.
         if (k === 'classic' || !themed) return location.reload();
-        const pickE = list.find(x => x.id === k); if (pickE) apply(pickE);
+        const pickE = k === 'mine' ? mine : list.find(x => x.id === k); if (pickE) apply(pickE);
       };
     }
   });
