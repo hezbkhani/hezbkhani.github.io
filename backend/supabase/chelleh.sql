@@ -679,3 +679,17 @@ begin
     insert into public.chelleh_meta (key, value) values ('seed_v3', now()::text);
   end if;
 end $$;
+
+-- نسخه ۴: چله سوره فتح (متن از مصحف خود سایت، سوره ۴۸).
+do $$
+declare sat date := public.reading_day() + (6 - extract(dow from public.reading_day())::integer + 7) % 7;
+begin
+  if sat = public.reading_day() then sat := sat + 7; end if;
+  if not exists (select 1 from public.chelleh_meta where key = 'seed_v4') then
+    insert into public.chelleh_types (key, title, text_key, kind, start_mode, capacity, days, start_after_days, next_start, sort, description) values
+      ('fath', 'چله سوره فتح', 'fath', 'text', 'date', null, 40, 0, sat, 18, '')
+    on conflict (key) do nothing;
+    if found then perform public.chl_sync_type('fath'); end if;
+    insert into public.chelleh_meta (key, value) values ('seed_v4', now()::text);
+  end if;
+end $$;
