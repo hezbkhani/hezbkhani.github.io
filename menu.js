@@ -1,0 +1,120 @@
+// منوی سه‌خط بالا سمت چپ: میان‌بر به بخش‌های صفحه، و بخش‌هایی که فایل‌های دیگر اضافه می‌کنند (مثل ثبت‌نام چله در chelleh.js).
+// استفاده: siteMenu.section({ id, order, render(box) }) ؛ siteMenu.open() / siteMenu.close() / siteMenu.refresh()
+(function () {
+  const css = `
+.sm-btn{position:fixed;top:max(10px,env(safe-area-inset-top));left:10px;z-index:30;width:48px;height:48px;padding:0;display:flex;align-items:center;justify-content:center;background:rgba(0,92,69,.92);border:1px solid var(--gold);box-shadow:0 4px 14px #0006;color:#fff;border-radius:12px}
+.sm-btn svg{width:26px;height:26px}
+.sm-btn:hover{background:var(--deep)}
+.sm-btn{transition:transform .25s ease,opacity .25s}
+.sm-btn.away{transform:translateY(-140%);opacity:0;pointer-events:none}
+.sm-btn .sm-dot{position:absolute;top:7px;right:7px;width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 2px rgba(0,92,69,.92)}
+.sm-shade{position:fixed;inset:0;z-index:45;background:#0008;opacity:0;pointer-events:none;transition:opacity .2s}
+.sm-shade.show{opacity:1;pointer-events:auto}
+.sm{position:fixed;top:0;bottom:0;left:0;z-index:46;width:min(88vw,380px);background:#fffaf0;color:var(--ink);text-shadow:none;box-shadow:6px 0 30px #0007;transform:translateX(-105%);transition:transform .25s ease;display:flex;flex-direction:column;font-size:16px}
+.sm.show{transform:none}
+.sm-head{display:flex;align-items:center;gap:10px;padding:12px 14px;padding-top:max(12px,env(safe-area-inset-top));background:var(--deep);color:#fff;border-bottom:2px solid var(--gold)}
+.sm-head img{width:40px;height:40px;object-fit:contain;border-radius:10px}
+.sm-head b{flex:1;font:normal 26px/1.5 SiteFont,Tahoma,serif}
+.sm-head button{width:42px;height:42px;padding:0;background:transparent;border:0;font-size:24px;color:#fff}
+.sm-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:6px 0 calc(20px + env(safe-area-inset-bottom))}
+.sm-sec{padding:6px 0;border-bottom:1px solid #eadfca}
+.sm-sec:last-child{border-bottom:0}
+.sm-sec h3{margin:8px 16px 4px;font-size:14px;font-weight:700;color:var(--muted);letter-spacing:0}
+.sm-item{display:flex;align-items:center;gap:12px;width:100%;height:auto;min-height:52px;padding:8px 16px;background:transparent;border:0;border-radius:0;color:var(--ink);text-align:right;font-weight:500;font-size:16px;white-space:normal;line-height:1.6}
+.sm-item:hover,.sm-item:focus-visible{background:var(--hover)}
+.sm-item .sm-ic{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--mint);color:var(--deep);font-size:19px}
+.sm-item span{flex:1;min-width:0}
+.sm-item small{display:block;color:var(--muted);font-size:13px;font-weight:400;line-height:1.6}
+.sm-item .sm-go{flex:none;color:var(--muted);font-size:18px}
+.sm-note{margin:6px 16px;font-size:14px;color:var(--muted)}
+body.sm-lock{overflow:hidden}
+@media(max-width:600px){header{padding-top:max(8vh,64px)}}`;
+  const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'sm-btn'; btn.setAttribute('aria-label', 'منو'); btn.setAttribute('aria-expanded', 'false');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+  const shade = document.createElement('div'); shade.className = 'sm-shade';
+  const nav = document.createElement('nav'); nav.className = 'sm'; nav.setAttribute('aria-label', 'منو'); nav.setAttribute('aria-hidden', 'true');
+  nav.innerHTML = `<div class="sm-head"><img src="icon-192.png" alt=""><b>نوران</b><button type="button" data-sm-close aria-label="بستن">✕</button></div><div class="sm-body"></div>`;
+  document.body.append(btn, shade, nav);
+  const body = nav.querySelector('.sm-body');
+
+  // میان‌برهای ثابت به بخش‌های صفحه؛ فقط بخش‌هایی که الان دیده می‌شوند.
+  const LINKS = [
+    ['pid', '📖', 'سهم امروز من', 'دیدن سهم و متن قرائت امروز'],
+    ['reportId', '✅', 'گزارش قرائت', 'اعلام قرائت سهم امروز'],
+    ['nameSearch', '🔎', 'فراموشی شناسه', 'جستجوی نام در گروه‌ها'],
+    ['registerPanel', '📝', 'ثبت‌نام دوره حزب‌خوانی', '']
+  ];
+  const sections = [];
+  const visible = el => el && !el.closest('[hidden]') && el.offsetParent !== null;
+  function render() {
+    body.innerHTML = '';
+    // بخش‌های order ≥ ۵۰ (تنظیمات، زمینه صفحه) پس از میان‌برهای حزب‌خوانی، ته منو می‌آیند.
+    const sorted = [...sections].sort((a, b) => (a.order || 0) - (b.order || 0)), tail = document.createDocumentFragment();
+    sorted.forEach(s => {
+      const box = document.createElement('div'); box.className = 'sm-sec'; box.dataset.sec = s.id;
+      try { s.render(box); } catch (e) { console.error(e); }
+      if (box.childNodes.length) ((s.order || 0) >= 50 ? tail : body).appendChild(box);
+    });
+    // بخش‌های حزب‌خوانی در صفحه اول فقط برای اعضا دیده می‌شوند (home.js)؛ در منو همیشه هستند و با زدن، باز می‌شوند.
+    // اگر «قرآن حزب‌خوانی» در فهرست ثبت‌نام دوره‌ها هست، همان ثبت‌نام دوباره زیر حزب‌خوانی نمی‌آید.
+    const hezbListed = !!body.querySelector('[data-chl-type="hezb"]');
+    const links = LINKS.filter(([id]) => id === 'registerPanel' ? !hezbListed && (window.regHasOpen || visible(document.getElementById(id))) : document.getElementById(id));
+    if (links.length) {
+      const box = document.createElement('div'); box.className = 'sm-sec';
+      box.innerHTML = '<h3>حزب‌خوانی قرآن</h3>' + links.map(([id, ic, t, s]) => `<button type="button" class="sm-item" data-sm-to="${id}"><span class="sm-ic">${ic}</span><span>${t}${s ? `<small>${s}</small>` : ''}</span><span class="sm-go">‹</span></button>`).join('');
+      body.appendChild(box);
+    }
+    body.appendChild(tail);
+  }
+  let lastFocus = null;
+  function open() {
+    render();
+    lastFocus = document.activeElement;
+    nav.classList.add('show'); shade.classList.add('show'); document.body.classList.add('sm-lock');
+    nav.setAttribute('aria-hidden', 'false'); btn.setAttribute('aria-expanded', 'true');
+    try { if (!history.state?.sm) history.pushState({ sm: 1 }, ''); } catch {}
+    setTimeout(() => nav.querySelector('[data-sm-close]').focus(), 50);
+  }
+  function close(fromHistory) {
+    if (!nav.classList.contains('show')) return;
+    nav.classList.remove('show'); shade.classList.remove('show'); document.body.classList.remove('sm-lock');
+    nav.setAttribute('aria-hidden', 'true'); btn.setAttribute('aria-expanded', 'false');
+    if (!fromHistory) { try { if (history.state?.sm) history.back(); } catch {} }
+    if (lastFocus && lastFocus.focus) try { lastFocus.focus({ preventScroll: true }); } catch {}
+  }
+  btn.onclick = () => (nav.classList.contains('show') ? close() : open());
+  shade.onclick = () => close();
+  nav.addEventListener('click', e => {
+    if (e.target.closest('[data-sm-close]')) return close();
+    const to = e.target.closest('[data-sm-to]');
+    if (to) {
+      close();
+      if (to.dataset.smTo === 'registerPanel' && window.regOpenPublic) { setTimeout(() => window.regOpenPublic(), 280); return; }
+      window.hezbReveal?.();
+      const el = document.getElementById(to.dataset.smTo), panel = el && (el.closest('.panel') || el);
+      setTimeout(() => { if (!panel) return; panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (el.tagName === 'INPUT') setTimeout(() => el.focus({ preventScroll: true }), 400); }, 280);
+    }
+  });
+  window.addEventListener('popstate', () => close(true));
+  // هنگام پایین رفتن در صفحه دکمه کنار می‌رود تا روی محتوا نیفتد؛ با کمی بالا آمدن دوباره پیدا می‌شود.
+  let lastY = scrollY;
+  // در بخش مدیریت، وقتی نوار زبانه‌ها بالای صفحه چسبیده، دکمه روی زبانه آخر می‌افتاد؛ آنجا کنار می‌رود.
+  const tabsUnder = () => { const t = document.querySelector('.adm-tabs'); if (!t || !t.offsetParent) return false; const r = t.getBoundingClientRect(); return r.top < 70 && r.bottom > 0; };
+  addEventListener('scroll', () => {
+    const y = scrollY, d = y - lastY;
+    if (Math.abs(d) < 8) return;
+    btn.classList.toggle('away', (d > 0 && y > 120 || tabsUnder()) && !nav.classList.contains('show'));
+    lastY = y;
+  }, { passive: true });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+
+  window.siteMenu = {
+    section(s) { const i = sections.findIndex(x => x.id === s.id); if (i >= 0) sections[i] = s; else sections.push(s); if (nav.classList.contains('show')) render(); },
+    open, close,
+    refresh() { if (nav.classList.contains('show')) render(); },
+    dot(on) { let d = btn.querySelector('.sm-dot'); if (on && !d) { d = document.createElement('i'); d.className = 'sm-dot'; btn.appendChild(d); } else if (!on && d) d.remove(); }
+  };
+})();
