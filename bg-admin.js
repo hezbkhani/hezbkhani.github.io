@@ -81,7 +81,7 @@
 
   function list() {
     const c = conf(), all = [...BUILT.map(id => ({ id, style: id, on: !c.off.includes(id) })), ...c.custom.map(x => ({ ...x, on: x.on !== false }))];
-    $('bgaList').innerHTML = all.map(e => `<div class="bga-row" data-id="${esc(e.id)}"><i style="background-image:url('${esc(e.url || `bg/${e.id}.webp`)}')"></i>
+    $('bgaList').innerHTML = all.map(e => `<div class="bga-row" data-id="${esc(e.id)}"><i style="background-image:url('${e.url ? (/^https:\/\/[^"'()\s\\]+$/.test(e.url) ? e.url : '') : `bg/${esc(e.id)}.webp`}')"></i>
 <label><input type="checkbox" data-on${e.on ? ' checked' : ''}><span>${esc(e.name || names()[e.id])}${e.url ? `<small>رنگ کادرها: ${esc(names()[e.style])}</small>` : '<small>زمینه همیشگی سایت</small>'}</span></label>
 <span class="bga-btn"><button type="button" class="reg-light" data-see>دیدن</button>${e.url ? '<button type="button" class="reg-light" data-edit>ویرایش</button><button type="button" class="reg-light" data-del>حذف</button>' : ''}</span></div>`).join('');
   }
