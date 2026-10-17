@@ -40,9 +40,10 @@
   // ترجمه گویای سوره‌به‌سوره: ترجمه مسعود ریاعی با صدای بهروز رضوی، از قرآن مهر (موسسه پیامبر مهر و رحمت).
   // ناشر انتشار فایل‌ها را «عیناً و بدون تغییر و با ذکر منبع» آزاد گذاشته است. هر فایل ترجمه کامل یک سوره است،
   // پس با این صدا ترجمه بعد از هر آیه پخش نمی‌شود: در حالت «ترجمه» هر سوره یک‌جا پخش می‌شود و در حالت «تلاوت + ترجمه»
-  // ترجمه کامل سوره بعد از آخرین آیه آن سوره در صفحه می‌آید. تا نشانی فایل‌ها (RAZAVI_URL) تعیین نشده، این گزینه نشان داده نمی‌شود.
-  const RAZAVI_URL = '';
-  if (RAZAVI_URL) VOICES.push(['razavi', 'ریاعی، صدای بهروز رضوی (کل سوره)', '', s => RAZAVI_URL.replace('{s}', s).replace('{sss}', pad3(s))]);
+  // ترجمه کامل سوره بعد از آخرین آیه آن سوره در صفحه می‌آید. نشانی فایل‌ها: quranmehr.ir/files/audio/<شماره>-<نام>.mp3،
+  // نام‌ها همان ستون دهم QuranData.Sura در public/js/data.js سایت قرآن مهر است.
+  const RAZAVI_NAMES = 'Fatiha,Baqarah,AalImran,Nisa,Maidah,Anam,Araf,Anfal,Tawbah,Yunus,Hud,Yusuf,Rad,Ibrahim,Hijr,Nahl,Isra,Kahf,Maryam,Taha,Anbiya,Hajj,Muminun,Nur,Furqan,Shuara,Naml,Qasas,Ankabut,Rum,Luqman,Sajdah,Ahzab,Saba,Fatir,YaaSin,Saffat,Saad,Zumar,Ghafir,Fussilat,Shura,Zukhruf,Dukhan,Jathiyah,Ahqaf,Muhammad,Fath,Hujurat,Qaf,Dhariyat,Tur,Najm,Qamar,Rahman,Waqiah,Hadid,Mujadilah,Hashr,Mumtahinah,Saff,Jumuah,Munafiqun,Taghabun,Talaq,Tahrim,Mulk,Qalam,Haqqah,Maarij,Nuh,Jinn,Muzammil,Mudathir,Qiyamah,Insan,Mursalat,Naba,Naziat,Abasa,Takwir,Infitar,Mutaffifin,Inshiqaq,Buruj,Tariq,Alaa,Ghashiyah,Fajr,Balad,Shams,Layl,Dhuha,Sharh,Tin,Alaq,Qadr,Baiyinah,Zalzalah,Adiyat,Qariah,Takathur,Asr,Humazah,Fil,Quraysh,Maaun,Kauthar,Kafirun,Nasr,Masad,Ikhlas,Falaq,Nas'.split(',');
+  VOICES.push(['razavi', 'ریاعی، صدای بهروز رضوی (کل سوره)', '', s => `https://quranmehr.ir/files/audio/${s}-${RAZAVI_NAMES[s - 1]}.mp3`]);
   const SURAH_AYAHS = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
   const SURAH_START = SURAH_AYAHS.reduce((a, n, i) => (a.push(i ? a[i - 1] + SURAH_AYAHS[i - 1] : 0), a), []);
   const pad3 = n => String(n).padStart(3, '0');
@@ -213,7 +214,7 @@ body.qr-lock{overflow:hidden}
       : '<p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>';
     const nv = current.nav, navHtml = !nv ? '' : `<div class="qr-pnav">${nv.prev ? `<button type="button" data-a="pprev">→ ${esc(nv.prev)}</button>` : '<span></span>'}${nv.menu ? `<button type="button" class="qr-pmenu" data-a="pmenu">${esc(nv.menu)}</button>` : ''}${nv.next ? `<button type="button" data-a="pnext">${esc(nv.next)} ←</button>` : '<span></span>'}</div>`;
     body.innerHTML = navHtml + html + `<div class="qr-end">${end}${navHtml}
-<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud${RAZAVI_URL ? ' · ترجمه گویای ریاعی با صدای بهروز رضوی: quranmehr.ir' : ''}</span></p></div>`;
+<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud · ترجمه گویای ریاعی با صدای بهروز رضوی: quranmehr.ir</span></p></div>`;
     items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
     el.scrollTop = 0;
     const f = current.focus != null && items.find(it => gIndex(it) === current.focus);
