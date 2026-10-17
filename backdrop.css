@@ -47,6 +47,11 @@ html[data-bg] .shell .panel button:not(:is(.intro-light,.reg-light,.chs-alt,.rm-
 html[data-bg] .shell .panel button:not(:is(.intro-light,.reg-light,.chs-alt,.rm-ghost,.x-link,.rd,[data-hz-change])):hover:not(:disabled){filter:brightness(.88)}
 html[data-bg] .shell .panel button:is(.intro-light,.reg-light,.chs-alt,.rm-ghost){color:var(--t-head);border-color:var(--t-frame)}
 html[data-bg] .shell .panel :is(.hz-mine,.current-group){background:var(--t-frame)}
+/* دکمه‌های روشنی که نوشته‌شان به رنگ ‎--deep‎ است با قانون بالا هم‌رنگِ زمینه‌شان می‌شدند و بی‌نوشته دیده می‌شدند (میان‌بُرهای تاریخ، حالت گروه، گزینه‌های چله، فهرست جزء‌ها). */
+html[data-bg] .shell .panel :is(.jd-quick,.chl-chips,.qf-juz) button,html[data-bg] .shell .panel :is(.grp-mode,.qf-tabs) button:not(.on){background:#fff;color:var(--t-head);border-color:var(--t-frame)}
+html[data-bg] .shell .panel .qf-juz button.cur{background:var(--mint)}
+html[data-bg] .shell .panel :is(.chl-small,.acs-pass) button{background:none}
+html[data-bg] .shell .panel :is(.chl-small,.acs-pass) button:not(.chl-red){color:var(--t-head)}
 @media(max-width:600px){
   html[data-bg] .shell .panel{padding:28px 18px 22px;margin-bottom:34px}
   html[data-bg] .shell{padding:0 4px}
