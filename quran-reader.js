@@ -381,10 +381,12 @@ body.qr-lock{overflow:hidden}
     let seg = null;
     try { seg = await tafsirFor(s, n); } catch {}
     if (req !== tafsirReq) return;
-    if (!seg) { box.innerHTML = `<div class="qr-state">متن تفسیر این آیه اینجا بارگذاری نشد.<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a></div>`; return; }
+    if (!seg || !String(seg.text || '').trim()) { box.innerHTML = `<div class="qr-state">متن تفسیر این آیه اینجا بارگذاری نشد.<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a></div>`; return; }
     const range = seg.from === seg.to ? `آیه ${toFa(seg.from)}` : `آیه‌های ${toFa(seg.from)} تا ${toFa(seg.to)}`;
     $('qrTfsTitle').innerHTML = `${esc(seg.title || 'تفسیر نمونه')}<small>سوره ${esc(FA_NAME[s] || toFa(s))} · ${range}</small>`;
-    box.innerHTML = tafsirHtml(seg.text) + `<p class="qr-tfs-src">منبع: ${esc(TAFSIR_SRC)}<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a></p>`;
+    // عنوان بخش در سربرگ آمده؛ اگر متن با همان عنوان شروع شود، تکرارش نمی‌کنیم.
+    const text = seg.title && seg.text.startsWith(`## ${seg.title}\n`) ? seg.text.slice(seg.title.length + 4) : seg.text;
+    box.innerHTML = tafsirHtml(text) + `<p class="qr-tfs-src">منبع: ${esc(TAFSIR_SRC)}<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a></p>`;
     box.scrollTop = 0;
   }
   function closeTafsir() { tafsirReq++; $('qrTfs').classList.remove('show'); }
