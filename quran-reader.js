@@ -35,6 +35,12 @@
     ['muaiqly', 'ماهر المعیقلی', 'Maher_AlMuaiqly_64kbps', 'ar.mahermuaiqly'],
     ['ghamadi', 'سعد الغامدی', 'Ghamadi_40kbps', '']
   ];
+  // تحدیر معتز آقایی: هر فایل یک جزء کامل است (audio/aghaei/، رونوشت archive.org/details/Tahdir_Aqaee روی خود سایت
+  // چون archive.org در ایران فیلتر است) و زمان شروع و پایان هر آیه
+  // در quran/aghaei.json است (به همان شکل razavi.json)، پس هر آیه از وسط فایل جزء خودش پخش می‌شود.
+  // ابتدای آیه اول هر سوره بسم‌الله همان قاری را هم در بر دارد.
+  RECITERS.push(['aghaei', 'معتز آقایی (تحدیر)', '', '', '', j => [`audio/aghaei/joz${pad2(j)}.mp3`]]);
+  const JUZ_START = [0,148,259,385,516,640,750,899,1041,1200,1327,1478,1648,1802,2029,2214,2483,2673,2875,3214,3385,3563,3732,4089,4264,4510,4705,5104,5241,5672];
   const VOICES = [
     ['hedayatfar', 'فولادوند، صدای هدایت‌فر', 'translations/Fooladvand_Hedayatfar_40Kbps'],
     ['kabiri', 'مکارم، صدای کبیری', 'translations/Makarem_Kabiri_16Kbps']
@@ -44,11 +50,12 @@
   // و زمان شروع و پایان هر آیه در quran/razavi.json است، پس هر آیه جدا از وسط همان فایل پخش می‌شود.
   const RAZAVI_NAMES = 'Fatiha,Baqarah,AalImran,Nisa,Maidah,Anam,Araf,Anfal,Tawbah,Yunus,Hud,Yusuf,Rad,Ibrahim,Hijr,Nahl,Isra,Kahf,Maryam,Taha,Anbiya,Hajj,Muminun,Nur,Furqan,Shuara,Naml,Qasas,Ankabut,Rum,Luqman,Sajdah,Ahzab,Saba,Fatir,YaaSin,Saffat,Saad,Zumar,Ghafir,Fussilat,Shura,Zukhruf,Dukhan,Jathiyah,Ahqaf,Muhammad,Fath,Hujurat,Qaf,Dhariyat,Tur,Najm,Qamar,Rahman,Waqiah,Hadid,Mujadilah,Hashr,Mumtahinah,Saff,Jumuah,Munafiqun,Taghabun,Talaq,Tahrim,Mulk,Qalam,Haqqah,Maarij,Nuh,Jinn,Muzammil,Mudathir,Qiyamah,Insan,Mursalat,Naba,Naziat,Abasa,Takwir,Infitar,Mutaffifin,Inshiqaq,Buruj,Tariq,Alaa,Ghashiyah,Fajr,Balad,Shams,Layl,Dhuha,Sharh,Tin,Alaq,Qadr,Baiyinah,Zalzalah,Adiyat,Qariah,Takathur,Asr,Humazah,Fil,Quraysh,Maaun,Kauthar,Kafirun,Nasr,Masad,Ikhlas,Falaq,Nas'.split(',');
   VOICES.push(['razavi', 'ریاعی، صدای بهروز رضوی', '', s => `https://quranmehr.ir/files/subtitle/${s}-${RAZAVI_NAMES[s - 1]}.mp3`]);
-  let razaviTimes = null;
-  const loadRazavi = () => razaviTimes || (razaviTimes = fetch('quran/razavi.json').then(r => { if (!r.ok) throw Error(r.status); return r.json(); }).catch(e => { razaviTimes = null; throw e; }));
+  // زمان‌بندی آیه‌ها در فایل‌های بلند (سوره یا جزء کامل): برای هر سوره فهرست [ثانیه شروع، ثانیه پایان] هر آیه.
+  const times = {}, timing = {};
+  const loadTimes = f => timing[f] || (timing[f] = fetch(`quran/${f}.json`).then(r => { if (!r.ok) throw Error(r.status); return r.json(); }).then(t => (times[f] = t)).catch(e => { timing[f] = null; throw e; }));
   const SURAH_AYAHS = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
   const SURAH_START = SURAH_AYAHS.reduce((a, n, i) => (a.push(i ? a[i - 1] + SURAH_AYAHS[i - 1] : 0), a), []);
-  const pad3 = n => String(n).padStart(3, '0');
+  const pad3 = n => String(n).padStart(3, '0'), pad2 = n => String(n).padStart(2, '0');
   const fa = '۰۱۲۳۴۵۶۷۸۹', arD = '٠١٢٣٤٥٦٧٨٩';
   const toFa = x => String(x).replace(/\d/g, d => fa[d]);
   const toAr = x => String(x).replace(/\d/g, d => arD[d]);
@@ -229,7 +236,7 @@ body.qr-lock{overflow:hidden}
       : '<p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>';
     const nv = current.nav, navHtml = !nv ? '' : `<div class="qr-pnav">${nv.prev ? `<button type="button" data-a="pprev">→ ${esc(nv.prev)}</button>` : '<span></span>'}${nv.menu ? `<button type="button" class="qr-pmenu" data-a="pmenu">${esc(nv.menu)}</button>` : ''}${nv.next ? `<button type="button" data-a="pnext">${esc(nv.next)} ←</button>` : '<span></span>'}</div>`;
     body.innerHTML = navHtml + html + `<div class="qr-end">${end}${navHtml}
-<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud · ترجمه ریاعی و صدای بهروز رضوی: quranmehr.ir (موسسه پیامبر مهر و رحمت)</span></p></div>`;
+<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud · ترجمه ریاعی و صدای بهروز رضوی: quranmehr.ir (موسسه پیامبر مهر و رحمت) · تحدیر معتز آقایی: archive.org</span></p></div>`;
     items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
     el.scrollTop = 0;
     const f = current.focus != null && items.find(it => gIndex(it) === current.focus);
@@ -470,25 +477,31 @@ body.qr-lock{overflow:hidden}
   }));
 
   function arUrls(s, n) {
-    const r = RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0], f = pad3(s) + pad3(n);
+    const r = reciter(), f = pad3(s) + pad3(n);
+    if (r[5]) {
+      const g = SURAH_START[s - 1] + n - 1;
+      let j = 30; while (JUZ_START[j - 1] > g) j--;
+      return Object.assign(r[5](j), { seg: times[r[0]][s - 1][n - 1] });
+    }
     const u = [`https://everyayah.com/data/${r[2]}/${f}.mp3`];
     if (r[4]) u.push(`https://verses.quran.com/${r[4]}/mp3/${f}.mp3`);
     if (r[3]) u.push(`https://cdn.islamic.network/quran/audio/128/${r[3]}/${SURAH_START[s - 1] + n}.mp3`);
     u.push(`https://mirrors.quranicaudio.com/everyayah/${r[2]}/${f}.mp3`);
     return u;
   }
+  const reciter = () => RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0];
   const voice = () => VOICES.find(x => x[0] === prefs.voice) || VOICES[0];
-  // برای صدای رضوی، razaviTimes پیش از پخش (در playAt) بارگذاری شده و هر شیء صوت بازه [شروع، پایان] آیه را در seg دارد.
+  // برای صدای رضوی و قاری‌های فایل جزئی، زمان‌بندی پیش از پخش (در playAt) بارگذاری شده و هر شیء صوت بازه [شروع، پایان] آیه را در seg دارد.
   function faUrls(s, n) {
     const v = voice(), f = pad3(s) + pad3(n);
-    if (v[3]) return Object.assign([v[3](s)], { seg: razaviTimes[s - 1][n - 1] });
+    if (v[3]) return Object.assign([v[3](s)], { seg: times.razavi[s - 1][n - 1] });
     return [`https://everyayah.com/data/${v[2]}/${f}.mp3`, `https://mirrors.quranicaudio.com/everyayah/${v[2]}/${f}.mp3`];
   }
   // صف پخش یک آیه: بسم‌الله برای آیه اول سوره (جز حمد و توبه)، تلاوت، سپس ترجمه گویا.
   function tracksFor(it) {
     const t = [];
     if (prefs.mode !== 'fa') {
-      if (it.n === 1 && it.s !== 1 && it.s !== 9) t.push(arUrls(1, 1));
+      if (it.n === 1 && it.s !== 1 && it.s !== 9 && !reciter()[5]) t.push(arUrls(1, 1));
       t.push(arUrls(it.s, it.n));
     }
     if (prefs.mode !== 'ar') t.push(faUrls(it.s, it.n));
@@ -506,17 +519,18 @@ body.qr-lock{overflow:hidden}
   function label(sub) {
     const it = items[pos];
     if (!it) return;
-    const who = prefs.mode === 'fa' ? voice()[1] : (RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0])[1];
+    const who = prefs.mode === 'fa' ? voice()[1] : reciter()[1];
     setNow(`سوره ${FA_NAME[it.s] || ''} · آیه ${toFa(it.n)}`, sub || who);
   }
   const FA_NAME = {};
 
   function playAt(i) {
     if (i < 0 || !items[i]) return;
-    if (prefs.mode !== 'ar' && voice()[3] && !Array.isArray(razaviTimes)) {
+    const need = [prefs.mode !== 'ar' && voice()[3] && 'razavi', prefs.mode !== 'fa' && reciter()[5] && reciter()[0]].filter(f => f && !times[f]);
+    if (need.length) {
       pos = i; playing = true; highlight(); label('در حال بارگیری صوت…'); setPlayBtn();
       const want = current;
-      return loadRazavi().then(t => { razaviTimes = t; if (playing && want === current && pos === i) playAt(i); })
+      return Promise.all(need.map(loadTimes)).then(() => { if (playing && want === current && pos === i) playAt(i); })
         .catch(() => { playing = false; setPlayBtn(); setNow('پخش این آیه ممکن نشد', 'اتصال اینترنت را بررسی کنید یا صدای دیگری انتخاب کنید'); });
     }
     pos = i; queue = tracksFor(items[i]); qi = 0; srcIdx = 0; playing = true;
@@ -525,10 +539,14 @@ body.qr-lock{overflow:hidden}
   function playTrack() {
     if (!queue[qi]) return advance();
     if (srcIdx === 0) queue[qi] = Object.assign(byHealth(queue[qi]), { seg: queue[qi].seg });
-    const urls = queue[qi], seg = urls.seg;
+    const urls = queue[qi], seg = urls.seg, cur = audio.getAttribute('src')?.split('#')[0];
+    if (seg && srcIdx === 0 && urls.includes(cur)) srcIdx = urls.indexOf(cur);
     // آیه‌ای از وسط فایل یک سوره: اگر همان فایل باز است فقط جابه‌جا می‌شود، وگرنه از همان ثانیه بارگذاری می‌شود.
-    if (seg && audio.getAttribute('src')?.split('#')[0] === urls[srcIdx] && audio.readyState > 0) audio.currentTime = seg[0];
-    else audio.src = seg ? `${urls[srcIdx]}#t=${seg[0]}` : urls[srcIdx];
+    if (seg && cur === urls[srcIdx] && audio.readyState > 0) {
+      // آیه بعدیِ پیوسته در همان فایل: بدون جابه‌جایی و مکث ادامه می‌دهد (تحدیر میان آیه‌ها مکث ندارد).
+      if (!audio.paused && Math.abs(audio.currentTime - seg[0]) < 0.5) { label(); return; }
+      audio.currentTime = seg[0];
+    } else audio.src = seg ? `${urls[srcIdx]}#t=${seg[0]}` : urls[srcIdx];
     label('در حال بارگیری صوت…');
     // سروری که جواب نمی‌دهد (نه خطا، فقط معطلی) هم بعد از چند ثانیه کنار گذاشته می‌شود.
     clearTimeout(wait);
@@ -563,7 +581,17 @@ body.qr-lock{overflow:hidden}
   function trackEnded() { qi++; srcIdx = 0; if (qi < queue.length) playTrack(); else advance(); }
   audio.addEventListener('ended', trackEnded);
   // پایان آیه‌ای که از وسط فایل سوره پخش می‌شود.
-  audio.addEventListener('timeupdate', () => { const seg = queue[qi]?.seg; if (playing && seg && audio.currentTime >= seg[1]) { audio.pause(); trackEnded(); } });
+  audio.addEventListener('timeupdate', () => {
+    const seg = queue[qi]?.seg;
+    if (!playing || !seg || audio.currentTime < seg[1]) return;
+    if (!continues(seg)) audio.pause();
+    trackEnded();
+  });
+  // آیا قطعه بعدی از همان فایل و درست از همین‌جا شروع می‌شود؟
+  function continues(seg) {
+    const it = items[pos + 1], next = queue[qi + 1] || (it && pos + 1 < items.length ? tracksFor(it)[0] : null);
+    return !!(next && next.seg && next.includes(audio.getAttribute('src')?.split('#')[0]) && Math.abs(next.seg[0] - seg[1]) < 0.5);
+  }
   // بعضی مرورگرها #t= را نادیده می‌گیرند؛ پس از رسیدن مشخصات فایل، به ابتدای آیه برده می‌شود.
   audio.addEventListener('loadedmetadata', () => { const seg = queue[qi]?.seg; if (seg && Math.abs(audio.currentTime - seg[0]) > 1) audio.currentTime = seg[0]; });
   audio.addEventListener('error', () => { if (playing && audio.getAttribute('src')) fail(); });
