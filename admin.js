@@ -147,6 +147,9 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .site-notice{background:var(--cream);color:#2f241d;text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:12px 16px;margin:0 0 20px;white-space:pre-line;font-weight:500}
 .adm-ok{color:var(--ok)}.adm-bad{color:var(--danger)}
 .adm-msg{min-height:22px;margin-top:6px;font-weight:700}
+/* در زمینه‌های صفحه اول ‎--deep‎ همان رنگ قاب است و دکمه‌های کادرها هم به رنگ قاب می‌شوند؛ پس نام زبانه‌ها دیده نمی‌شد. */
+html[data-bg] #admTabs button{background:#fffaf0;color:#2b2118;border-color:var(--t-gold,var(--gold))}
+html[data-bg] #admTabs button.on{background:var(--t-frame);color:#fff}
 @media(max-width:600px){.adm-tabs{grid-template-columns:repeat(4,1fr);gap:3px}.adm-tabs button{height:40px;font-size:14px;padding:0 2px}}`;
 
   const $ = id => document.getElementById(id);
