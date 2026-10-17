@@ -27,6 +27,13 @@
 .sm-item small{display:block;color:var(--muted);font-size:13px;font-weight:400;line-height:1.6}
 .sm-item .sm-go{flex:none;color:var(--muted);font-size:18px}
 .sm-note{margin:6px 16px;font-size:14px;color:var(--muted)}
+.sm-grp{display:flex;align-items:center;gap:8px;width:100%;height:auto;min-height:44px;margin:0;padding:6px 16px;background:transparent;border:0;border-radius:0;color:var(--deep);text-align:right;font-size:15px;font-weight:700;line-height:1.6}
+.sm-grp:hover,.sm-grp:focus-visible{background:var(--hover)}
+.sm-grp b{flex:1;font-weight:700}
+.sm-grp small{flex:none;min-width:24px;padding:0 7px;border-radius:999px;background:var(--mint);color:var(--deep);font-size:13px;font-weight:500;text-align:center}
+.sm-grp i{flex:none;font-style:normal;color:var(--muted);font-size:14px;transition:transform .2s}
+.sm-grp[aria-expanded="true"] i{transform:rotate(180deg)}
+.sm-grp-body[hidden]{display:none}
 body.sm-lock{overflow:hidden}
 @media(max-width:600px){header{padding-top:max(8vh,64px)}}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -68,6 +75,33 @@ body.sm-lock{overflow:hidden}
       body.appendChild(box);
     }
     body.appendChild(tail);
+    fold();
+  }
+  // هر عنوان بخش (h3) با چند گزینه زیرش جمع می‌شود و با زدن باز می‌شود؛ باز یا بسته بودن هر دسته روی همین گوشی می‌ماند.
+  // دسته‌های یک‌گزینه‌ای (تنظیمات، نصب، پیشنهادها) همان‌طور باز می‌مانند. «حزب‌خوانی قرآن» برای عضو گروه از اول باز است.
+  const FOLD = 'smOpen';
+  const folds = () => { try { return JSON.parse(localStorage.getItem(FOLD)) || {}; } catch { return {}; } };
+  const isMember = () => { try { return !!JSON.parse(localStorage.getItem('me'))?.id; } catch { return false; } };
+  function fold() {
+    const saved = folds();
+    body.querySelectorAll('.sm-sec h3').forEach(h => {
+      const items = [];
+      for (let n = h.nextSibling; n && n.nodeName !== 'H3'; n = n.nextSibling) items.push(n);
+      const count = items.reduce((c, n) => c + (n.nodeType === 1 ? (n.matches('.sm-item') ? 1 : n.querySelectorAll('.sm-item').length) : 0), 0);
+      if (count === 1) return;
+      const key = h.textContent.trim(), open = key in saved ? saved[key] : key === 'حزب‌خوانی قرآن' && isMember();
+      const box = document.createElement('div'); box.className = 'sm-grp-body'; box.hidden = !open; box.append(...items);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'sm-grp'; b.setAttribute('aria-expanded', open);
+      b.innerHTML = `<b></b>${count ? `<small>${count.toLocaleString('fa-IR')}</small>` : ''}<i>▾</i>`;
+      b.querySelector('b').textContent = key;
+      b.onclick = () => {
+        const on = box.hidden; box.hidden = !on; b.setAttribute('aria-expanded', on);
+        const f = folds(); f[key] = on; try { localStorage.setItem(FOLD, JSON.stringify(f)); } catch {}
+        // دسته تازه‌بازشده تا جای ممکن دیده شود، بی‌آنکه عنوانش از بالا بیرون برود.
+        if (on) { const r = body.getBoundingClientRect(), over = box.getBoundingClientRect().bottom - r.bottom; if (over > 0) body.scrollBy({ top: Math.min(over + 8, b.getBoundingClientRect().top - r.top), behavior: 'smooth' }); }
+      };
+      h.replaceWith(b, box);
+    });
   }
   let lastFocus = null;
   function open() {
