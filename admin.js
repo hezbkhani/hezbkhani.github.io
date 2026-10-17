@@ -120,7 +120,8 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
   const TKEY = 'adminTab';
   const css = `
 .jd-row{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:6px}
-.jd-row select{width:100%}
+.jd-row select{width:100%;padding:0 6px}
+#adminPanel .admin-filters{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
 .jd-quick{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
 .jd-quick button{height:36px;font-size:14px;padding:0 10px;background:#fff;color:var(--deep);border-color:var(--emerald)}
 .jd-quick button:hover{background:var(--hover)}
