@@ -1,4 +1,4 @@
-// مدیریت سایت: ورود ماندگار مدیر، زبانه‌های «گزارش‌ها / گروه‌ها / ثبت‌نام / چله‌ها / اعلان‌ها / تنظیمات»، تقویم شمسی،
+// مدیریت سایت: ورود ماندگار مدیر، زبانه‌های «گزارش‌ها / گروه‌ها / ثبت‌نام / چله‌ها / اعلان‌ها / نظرها / تنظیمات»، تقویم شمسی،
 // و تنظیمات سایت (اطلاعیه بالای صفحه، نمایش بخش ثبت‌نام، منبع فهرست گروه‌ها، فهرست مدیران).
 // داده‌ها در Supabase هستند؛ جدول‌ها در backend/supabase/registration.sql.
 (function () {
@@ -116,7 +116,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
   window.adminSession = session;
 
   // ---------- پوسته مدیریت ----------
-  const TABS = [['reports', 'گزارش‌ها'], ['groups', 'گروه‌ها'], ['reg', 'ثبت‌نام'], ['chl', 'چله‌ها'], ['notify', 'اعلان‌ها'], ['settings', 'تنظیمات']];
+  const TABS = [['reports', 'گزارش‌ها'], ['groups', 'گروه‌ها'], ['reg', 'ثبت‌نام'], ['chl', 'چله‌ها'], ['notify', 'اعلان‌ها'], ['fb', 'نظرها'], ['settings', 'تنظیمات']];
   const TKEY = 'adminTab';
   const css = `
 .jd-row{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:6px}
@@ -130,13 +130,14 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .adm-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
 .adm-bar button{height:38px;font-size:15px}
 #adminPanel [hidden]{display:none!important}
-.adm-tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:0 -8px 12px;padding:6px 8px;border-radius:var(--r-card);background:rgba(40,26,17,.92);box-shadow:0 4px 10px #0004}
+.adm-tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:0 -8px 12px;padding:6px 8px;border-radius:var(--r-card);background:rgba(40,26,17,.92);box-shadow:0 4px 10px #0004}
 .adm-tabs button{height:44px;padding:0 4px;font-size:15px;background:rgba(255,255,255,.9);color:var(--deep);border-color:var(--gold)}
 .adm-tabs button.on{background:var(--deep);color:#fff}
 .adm-pane[hidden]{display:none!important}
 .adm-card{background:#fff;color:#000;text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:12px 14px;margin:12px 0}
 .adm-card h3{margin:0 0 6px;font-size:19px;color:var(--deep)}
 .adm-card label{font-weight:600;font-size:15px;margin:10px 0 4px}
+.intro-adm{border-top:1px solid #eee;padding:6px 0}.intro-adm input[type=text],.intro-adm textarea{width:100%;margin:4px 0}
 .adm-card .hint,body.v2 .adm-card .hint{color:var(--muted);text-shadow:none}
 .adm-card textarea{width:100%;min-height:90px;font:inherit;font-size:16px;line-height:1.8;padding:8px;border:1px solid var(--gold);color:var(--ink);background:#fff}
 .adm-opt{display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-weight:500!important}
@@ -146,7 +147,10 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .site-notice{background:var(--cream);color:#2f241d;text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:12px 16px;margin:0 0 20px;white-space:pre-line;font-weight:500}
 .adm-ok{color:var(--ok)}.adm-bad{color:var(--danger)}
 .adm-msg{min-height:22px;margin-top:6px;font-weight:700}
-@media(max-width:600px){.adm-tabs button{font-size:12.5px;padding:0 2px}.adm-tabs{gap:3px}}`;
+/* در زمینه‌های صفحه اول ‎--deep‎ همان رنگ قاب است و دکمه‌های کادرها هم به رنگ قاب می‌شوند؛ پس نام زبانه‌ها دیده نمی‌شد. */
+html[data-bg] #admTabs button{background:#fffaf0;color:#2b2118;border-color:var(--t-gold,var(--gold))}
+html[data-bg] #admTabs button.on{background:var(--t-frame);color:#fff}
+@media(max-width:600px){.adm-tabs{grid-template-columns:repeat(4,1fr);gap:3px}.adm-tabs button{height:40px;font-size:14px;padding:0 2px}}`;
 
   const $ = id => document.getElementById(id);
   const ui = {
@@ -218,7 +222,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
   }
 
   // ---------- تنظیمات سایت ----------
-  // site_settings: notice {enabled,text} · registration {mode:'auto'|'hidden'} · groups_source {source:'db'|'files'}
+  // site_settings: notice {enabled,text} · intro {[کلید]: {on,title,text}} (home.js) · registration {mode:'auto'|'hidden'} · install {mode:'dismissible'|'always'|'menu'} (install.js) · groups_source {source:'db'|'files'}
   async function saveSetting(key, value) {
     await sbApi('site_settings', { method: 'POST', body: { key, value, updated_at: new Date().toISOString() }, auth: true, prefer: 'resolution=merge-duplicates,return=minimal' });
     window.siteSettings = Object.assign(window.siteSettings || {}, { [key]: value });
@@ -232,10 +236,18 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 <label class="adm-opt"><input type="checkbox" id="setNoticeOn"> نمایش اطلاعیه</label>
 <textarea id="setNoticeText" maxlength="1000" placeholder="متن اطلاعیه"></textarea>
 <div class="reg-tools"><button type="button" id="setNoticeSave">ذخیره اطلاعیه</button></div><div class="adm-msg" id="setNoticeMsg"></div></div>
+<div class="adm-card" id="setIntro"><h3>متن‌های صفحه اول</h3><p class="hint">هر بخش معرفی صفحه اول را می‌توانید پنهان کنید یا متنش را تغییر دهید. اگر عنوان یا متنی را خالی بگذارید، همان متن اولیه نمایش داده می‌شود. در کادر آخر هر خط یک بند جداست.</p>
+<div id="setIntroFields"></div>
+<div class="reg-tools"><button type="button" id="setIntroSave">ذخیره متن‌های صفحه اول</button><button type="button" class="reg-light" id="setIntroReset">بازگرداندن متن‌های اولیه</button></div><div class="adm-msg" id="setIntroMsg"></div></div>
 <div class="adm-card"><h3>بخش «ثبت‌نام دوره جدید»</h3>
 <label class="adm-opt"><input type="radio" name="setReg" value="auto"> <span>خودکار: فقط وقتی ثبت‌نامی باز یا اعلام‌شده هست نمایش داده شود</span></label>
 <label class="adm-opt"><input type="radio" name="setReg" value="hidden"> <span>پنهان برای همه (فقط مدیر در ‎#admin‎ می‌بیند)</span></label>
 <div class="adm-msg" id="setRegMsg"></div></div>
+<div class="adm-card"><h3>بخش «نصب برنامه» در صفحه اول</h3><p class="hint">در منوی ☰ همیشه هست. اینجا تعیین می‌کنید در صفحه اول چطور دیده شود.</p>
+<label class="adm-opt"><input type="radio" name="setIns" value="dismissible"> <span>نمایش با دکمه بستن: هر کس بخواهد می‌بندد و بعد فقط از منو در دسترس است</span></label>
+<label class="adm-opt"><input type="radio" name="setIns" value="always"> <span>همیشه در صفحه اول (بدون دکمه بستن)</span></label>
+<label class="adm-opt"><input type="radio" name="setIns" value="menu"> <span>فقط در منو</span></label>
+<div class="adm-msg" id="setInsMsg"></div></div>
 <div class="adm-card"><h3>حساب کاربری</h3><p class="hint">ساختن حساب و ورود (نام کاربری و رمز) برای بازدیدکنندگان. پیش از روشن کردن، accounts.sql و تنظیمات Supabase (گام ۲۵ راهنمای backend) را انجام دهید. در ‎#admin‎ همیشه برای آزمایش دیده می‌شود.</p>
 <label class="adm-opt"><input type="checkbox" id="setAccOn"> <span>نمایش حساب کاربری به همه</span></label><div class="adm-msg" id="setAccMsg"></div></div>
 <div class="adm-card"><h3>منبع فهرست گروه‌ها</h3>
@@ -250,13 +262,24 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
       try { await saveSetting('notice', { enabled: $('setNoticeOn').checked, text: $('setNoticeText').value.trim() }); renderNotice(); m('setNoticeMsg', 'ذخیره شد.', true); }
       catch (e) { m('setNoticeMsg', e.message); }
     };
+    $('setIntroSave').onclick = async () => {
+      const d = window.introDefaults || {}, v = {};
+      Object.keys(d).forEach(k => {
+        const f = n => p.querySelector(`[data-ik="${k}"][data-f="${n}"]`), title = f('title')?.value.trim() || '', text = f('text').value.trim();
+        v[k] = { on: f('on').checked, title: title === d[k].title ? '' : title, text: text === d[k].text.trim() ? '' : text };
+      });
+      try { await saveSetting('intro', v); window.applyIntro?.(); m('setIntroMsg', 'ذخیره شد؛ صفحه اول برای همه به‌روز می‌شود.', true); }
+      catch (e) { m('setIntroMsg', e.message); }
+    };
+    $('setIntroReset').onclick = () => { fillIntro({}); m('setIntroMsg', 'متن‌های اولیه در فرم گذاشته شد؛ برای اعمال، «ذخیره» را بزنید.', true); };
     p.addEventListener('change', async e => {
       const t = e.target;
       try {
         if (t.name === 'setReg') { await saveSetting('registration', { mode: t.value }); m('setRegMsg', 'ذخیره شد.', true); document.dispatchEvent(new Event('settings:changed')); }
         if (t.id === 'setAccOn') { await saveSetting('accounts', { enabled: t.checked }); m('setAccMsg', t.checked ? 'ذخیره شد؛ حساب کاربری برای همه نمایش داده می‌شود.' : 'ذخیره شد؛ فقط در ‎#admin‎ دیده می‌شود.', true); document.dispatchEvent(new Event('settings:changed')); }
+        if (t.name === 'setIns') { await saveSetting('install', { mode: t.value }); m('setInsMsg', 'ذخیره شد.', true); document.dispatchEvent(new Event('settings:changed')); }
         if (t.name === 'setSrc') { await saveSetting('groups_source', { source: t.value }); m('setSrcMsg', 'ذخیره شد. برای دیدن نتیجه، صفحه را تازه کنید.', true); document.dispatchEvent(new Event('settings:changed')); }
-      } catch (err) { m(t.id === 'setAccOn' ? 'setAccMsg' : t.name === 'setReg' ? 'setRegMsg' : 'setSrcMsg', err.message); }
+      } catch (err) { m(t.id === 'setAccOn' ? 'setAccMsg' : t.name === 'setReg' ? 'setRegMsg' : t.name === 'setIns' ? 'setInsMsg' : 'setSrcMsg', err.message); }
     });
     $('setAdminAdd').onclick = async () => {
       const email = $('setAdminNew').value.trim().toLowerCase();
@@ -272,13 +295,23 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
     });
     document.addEventListener('admin:tab', e => { if (e.detail === 'settings') loadSettingsForm(); });
   }
+  const INTRO_LABELS = { tagline: 'جمله زیر نام نوران', lead: 'جمله اول معرفی', hezb: 'حزب‌خوانی', courses: 'دوره‌های قرآن', chelleh: 'چله‌ها', hint: 'جمله پایانی معرفی', notice: 'کادر ثبت‌نام کنید' };
+  function fillIntro(saved) {
+    const d = window.introDefaults || {};
+    $('setIntroFields').innerHTML = Object.keys(d).map(k => {
+      const c = saved[k] || {}, a = `data-ik="${k}"`;
+      return `<div class="intro-adm"><label class="adm-opt"><input type="checkbox" ${a} data-f="on"${c.on === false ? '' : ' checked'}> <span>نمایش «${INTRO_LABELS[k] || k}»</span></label>${'title' in d[k] ? `<input type="text" ${a} data-f="title" maxlength="80" placeholder="عنوان" value="${esc(c.title || d[k].title)}">` : ''}<textarea ${a} data-f="text" maxlength="1500" rows="${k === 'notice' ? 5 : 2}" placeholder="${esc(d[k].text)}">${esc(c.text || d[k].text)}</textarea></div>`;
+    }).join('');
+  }
   async function loadSettingsForm() {
     await refreshSettings();
     const s = window.siteSettings || {};
     $('setNoticeOn').checked = !!s.notice?.enabled; $('setNoticeText').value = s.notice?.text || '';
     document.querySelectorAll('[name=setReg]').forEach(r => (r.checked = r.value === (s.registration?.mode || 'auto')));
     $('setAccOn').checked = !!s.accounts?.enabled;
+    fillIntro(s.intro || {});
     document.querySelectorAll('[name=setSrc]').forEach(r => (r.checked = r.value === (s.groups_source?.source || 'db')));
+    document.querySelectorAll('[name=setIns]').forEach(r => (r.checked = r.value === (s.install?.mode || 'dismissible')));
     loadAdmins();
   }
   async function loadAdmins() {

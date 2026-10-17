@@ -219,17 +219,20 @@ ${last ? `<div class="qf-card qf-resume"><h3>دفعه قبل تا اینجا خ�
   }
 
   // ---------- منو ----------
+  // در منو کنار دوره‌های قرآن (حزب‌خوانی، جزءخوانی، روزی یک صفحه) در chelleh.js؛
+  // اگر آن فهرست نیامد (مثلاً بدون اینترنت)، همین‌جا جداگانه.
+  function menuItem() {
+    const last = load();
+    const sub = last && ix ? `ادامه از ${placeText(last.g)}` : last ? 'ادامه از جایی که خواندید' : 'از هر سوره، آیه، صفحه یا جزء';
+    return `<button type="button" class="sm-item" data-qf-open><span class="sm-ic">📖</span><span>قرآن آزاد<small>${esc(sub)}</small></span><span class="sm-go">‹</span></button>`;
+  }
   window.siteMenu?.section({
-    id: 'quranFree', order: 0,
-    render(box) {
-      const last = load();
-      const sub = last && ix ? `ادامه از ${placeText(last.g)}` : last ? 'ادامه از جایی که خواندید' : 'از هر سوره، آیه، صفحه یا جزء';
-      box.innerHTML = `<h3>قرآن</h3><button type="button" class="sm-item" data-qf-open><span class="sm-ic">📖</span><span>قرآن آزاد<small>${esc(sub)}</small></span><span class="sm-go">‹</span></button>`;
-      box.querySelector('[data-qf-open]').onclick = () => { window.siteMenu.close(); setTimeout(openSheet, 280); };
-    }
+    id: 'quranFree', order: 2,
+    render(box) { if (!document.querySelector('.sm [data-qf-open]')) box.innerHTML = `<h3>قرآن</h3>${menuItem()}`; }
   });
+  document.addEventListener('click', e => { if (e.target.closest('.sm [data-qf-open]')) { window.siteMenu.close(); setTimeout(openSheet, 280); } });
   if (load()) getIx().catch(() => {});
-  window.quranFree = { open: openSheet };
+  window.quranFree = { open: openSheet, menuItem };
 
   // پیوند ?quran=free
   if (new URLSearchParams(location.search).get('quran') === 'free') {
