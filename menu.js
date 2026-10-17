@@ -111,10 +111,12 @@ body.sm-lock{overflow:hidden}
   }, { passive: true });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
+  const dots = {};
   window.siteMenu = {
     section(s) { const i = sections.findIndex(x => x.id === s.id); if (i >= 0) sections[i] = s; else sections.push(s); if (nav.classList.contains('show')) render(); },
     open, close,
     refresh() { if (nav.classList.contains('show')) render(); },
-    dot(on) { let d = btn.querySelector('.sm-dot'); if (on && !d) { d = document.createElement('i'); d.className = 'sm-dot'; btn.appendChild(d); } else if (!on && d) d.remove(); }
+    // نقطه طلایی روی دکمه منو؛ هر بخش با کلید خودش (مثلاً 'fb' برای پاسخ تازه به پیشنهاد) روشن یا خاموشش می‌کند.
+    dot(on, key = 'chl') { dots[key] = !!on; on = Object.values(dots).some(Boolean); let d = btn.querySelector('.sm-dot'); if (on && !d) { d = document.createElement('i'); d.className = 'sm-dot'; btn.appendChild(d); } else if (!on && d) d.remove(); }
   };
 })();

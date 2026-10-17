@@ -58,6 +58,14 @@ T['garden'] = dict(
   medL=svg(f"<svg viewBox='0 0 28 56'>{med}</svg>"),
   corners=None, tsize='44px 22px', toff='33px', radius='18px',
   divider=divider(tg, t_))
+# 5) dark: near-black + bronze and soft gold, for dark pictures (only as the box style of a background the admin adds; no picture of its own)
+dk, dg, dp = '#8b6b3d', '#c9a35a', '#1d1916'
+T['dark'] = dict(
+  vars=dict(paper=dp, frame=dk, line='#4a3d2c', gold=dg, ink='#eadfc8', ink2='#b8aa8f', head='#d9b56b', base='#0d0b0a', theme='#14110f'),
+  top=svg(f"<svg viewBox='0 0 120 40'><path d='M4 20H44M76 20H116' stroke='{dg}' stroke-width='1.3'/><circle cx='48' cy='20' r='1.8' fill='{dg}'/><circle cx='72' cy='20' r='1.8' fill='{dg}'/><path d='M60 3C66 12 69 16 69 22A9 9 0 0 1 51 22C51 16 54 12 60 3Z' fill='{dp}' stroke='{dg}' stroke-width='1.8'/><path d='M60 11C63 16 64.5 18.5 64.5 22A4.5 4.5 0 0 1 55.5 22C55.5 18.5 57 16 60 11Z' fill='{dg}' opacity='.85'/></svg>"),
+  corners=corners(f"<path d='M3 33V12A9 9 0 0 1 12 3H33' fill='none' stroke='{dg}' stroke-width='1.8'/><path d='M9 33V16A7 7 0 0 1 16 9H33' fill='none' stroke='{dk}' stroke-width='1'/><path d='M13 9L17 13L13 17L9 13Z' fill='{dg}'/>", 36),
+  csize=36, tsize='120px 40px', toff='22px', radius='14px',
+  divider=divider(dg, dp))
 
 out = []
 out.append("""/* زمینه‌های صفحه اول: هر بار که سایت باز می‌شود یکی از چهار زمینه (پوشه bg/) انتخاب می‌شود
@@ -73,6 +81,12 @@ html[data-bg] body::before{content:"";position:fixed;inset:0;z-index:-2;backgrou
 }
 html[data-bg] .site-foot{background:radial-gradient(farthest-side,var(--t-veil) 45%,transparent);text-shadow:0 0 10px var(--t-paper),0 0 4px var(--t-paper),0 0 2px var(--t-paper)}
 html[data-bg] .site-foot .today{color:var(--t-ink);font-weight:600}
+/* رنگ‌های اصلی سایت (سربرگ منو، دکمه‌ها، نشانه‌ها) هم به رنگ قاب همان زمینه */
+html[data-bg]{--deep:var(--t-frame);--emerald:var(--t-head);--mint:color-mix(in srgb,var(--t-frame) 13%,#fff)}
+/* دکمه منو (☰) به رنگ قاب همان زمینه */
+html[data-bg] .sm-btn{background:var(--t-frame);border-color:var(--t-gold)}
+html[data-bg] .sm-btn:hover{background:var(--t-head)}
+html[data-bg] .sm-btn .sm-dot{background:var(--t-gold);box-shadow:0 0 0 2px var(--t-frame)}
 html[data-bg] .shell .panel .tagline{color:var(--t-head)}
 /* پنجره وسط (backdrop.js جای آن را روی تصویر حساب می‌کند): خود صفحه عادی اسکرول می‌شود،
    ولی کادرها فقط داخل قاب وسط تصویر دیده می‌شوند و بالا و پایینش محو است (--m0 و --m1 با اسکرول جابه‌جا می‌شوند) */
@@ -120,9 +134,9 @@ html[data-bg] .shell .panel :is(.hz-mine,.current-group){background:var(--t-fram
 @keyframes bgxUnfold{0%{opacity:0;transform:scale(.9,.55)}60%{opacity:1;transform:scale(1.015,1.02)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.bgx-anim .shell>.panel:not(.bgx-in),.bgx-anim header:not(.bgx-in){opacity:1}.bgx-anim *{animation:none!important}}
 """)
-RATIO=dict(night='.667',sage='.667',blue='.708',garden='.563')
-VEIL=dict(night='#fbf4e2cc',sage='#fcfaf2bf',blue='#fdf8ecd0',garden='#fdf8e8d9')
-anim = dict(night='bgxRise', sage='bgxSoft', blue='bgxOpen', garden='bgxUnfold')
+RATIO=dict(night='.667',sage='.667',blue='.708',garden='.563',dark='.7')
+VEIL=dict(night='#fbf4e2cc',sage='#fcfaf2bf',blue='#fdf8ecd0',garden='#fdf8e8d9',dark='#1d1916d9')
+anim = dict(night='bgxRise', sage='bgxSoft', blue='bgxOpen', garden='bgxUnfold', dark='bgxSoft')
 for k, d in T.items():
     v = d['vars']
     layers, pos, size = [d['top']], [f"center top {d['toff']}"], [d['tsize']]
@@ -136,7 +150,8 @@ for k, d in T.items():
     if k == 'blue':
         # the arched top: corners only at the bottom
         layers = [layers[0]] + layers[3:]; pos = [pos[0]] + pos[3:]; size = [size[0]] + size[3:]
-    out.append(f"/* {k} */\nhtml[data-bg={k}]{{--t-img:url('bg/{k}.webp');" + ''.join(f"--t-{n}:{x};" for n, x in v.items() if n != 'theme') +
+    img = '' if k == 'dark' else f"--t-img:url('bg/{k}.webp');"
+    out.append(f"/* {k} */\nhtml[data-bg={k}]{{{img}" + ''.join(f"--t-{n}:{x};" for n, x in v.items() if n != 'theme') +
                f"--t-radius:{d['radius']};--t-ratio:{RATIO[k]};--t-veil:{VEIL[k]};--t-anim:{anim[k]};--t-orn-pos:{','.join(pos)};--t-orn-size:{','.join(size)}}}")
     out.append(f"html[data-bg={k}] .shell .panel::before{{background-image:{','.join(layers)}}}")
     if d.get('divider'):
@@ -168,7 +183,8 @@ html[data-bg] .bgx-frame{position:relative;display:block;margin:30px 24px;paddin
 html[data-bg] .bgx-frame::before{content:"";position:absolute;pointer-events:none;inset:-11px -22px;background-repeat:no-repeat;background-size:34px 64px,34px 64px,40px 20px,40px 20px;background-position:left 4px center,right 4px center,center top 1px,center bottom 1px}
 html[data-bg] .shell .intro-head{text-align:center;padding-top:22px}
 html[data-bg] .shell .intro-head>h2::after{content:"";display:block;width:160px;height:12px;margin:0 auto;background:var(--t-div) center/contain no-repeat}
-html[data-bg=night] .shell .intro-head>h2::after{display:none}
+/* «نوران» در همه زمینه‌ها ساده و بی‌کادر است (لوح سبز فقط برای عنوان بقیه کادرهای سبز شب) */
+html[data-bg=night] .shell .intro-head>h2.brand{display:block;margin:0;padding:0;background:none;border:0;box-shadow:none;color:var(--t-head);line-height:1.45}
 html[data-bg] .shell .intro-head .lead{margin:6px 0 0}
 html[data-bg] .shell .intro-head .hint{margin:6px 0 0;font-size:15px}
 html[data-bg] .intro-opt{text-decoration:none;text-align:center;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}

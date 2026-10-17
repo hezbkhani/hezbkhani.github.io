@@ -12,7 +12,7 @@
   const TRANSLATIONS = [
     ['makarem', 'مکارم شیرازی'], ['ansarian', 'انصاریان'], ['fooladvand', 'فولادوند'], ['ghomshei', 'الهی قمشه‌ای'],
     ['gharaati', 'قرائتی'], ['khorramshahi', 'خرمشاهی'], ['ayati', 'آیتی'], ['bahrampour', 'بهرام‌پور'],
-    ['mojtabavi', 'مجتبوی'], ['safavi', 'صفوی'], ['sadeqi', 'صادقی تهرانی'], ['khorramdel', 'خرمدل'], ['moezzi', 'معزی']
+    ['mojtabavi', 'مجتبوی'], ['safavi', 'صفوی'], ['sadeqi', 'صادقی تهرانی'], ['khorramdel', 'خرمدل'], ['moezzi', 'معزی'], ['riaei', 'ریاعی']
   ];
   // تفسیر هر آیه: متن تفسیر نمونه (آیت‌الله مکارم شیرازی) با ذکر منبع در quran/tafsir/<سوره>.json است و داخل همین قرآن‌خوان باز می‌شود.
   // اگر فایل سوره‌ای نبود یا بارگذاری نشد، همان آیه در سایت رسمی quran.makarem.ir باز می‌شود.
@@ -39,6 +39,13 @@
     ['hedayatfar', 'فولادوند، صدای هدایت‌فر', 'translations/Fooladvand_Hedayatfar_40Kbps'],
     ['kabiri', 'مکارم، صدای کبیری', 'translations/Makarem_Kabiri_16Kbps']
   ];
+  // ترجمه مسعود ریاعی با صدای بهروز رضوی، از قرآن مهر (موسسه پیامبر مهر و رحمت)؛ ناشر استفاده «عیناً و بدون تغییر و با ذکر منبع» را آزاد گذاشته است.
+  // هر فایل صوتی یک سوره کامل است (quranmehr.ir/files/subtitle/<شماره>-<نام>.mp3، نام‌ها از QuranData.Sura سایت قرآن مهر)
+  // و زمان شروع و پایان هر آیه در quran/razavi.json است، پس هر آیه جدا از وسط همان فایل پخش می‌شود.
+  const RAZAVI_NAMES = 'Fatiha,Baqarah,AalImran,Nisa,Maidah,Anam,Araf,Anfal,Tawbah,Yunus,Hud,Yusuf,Rad,Ibrahim,Hijr,Nahl,Isra,Kahf,Maryam,Taha,Anbiya,Hajj,Muminun,Nur,Furqan,Shuara,Naml,Qasas,Ankabut,Rum,Luqman,Sajdah,Ahzab,Saba,Fatir,YaaSin,Saffat,Saad,Zumar,Ghafir,Fussilat,Shura,Zukhruf,Dukhan,Jathiyah,Ahqaf,Muhammad,Fath,Hujurat,Qaf,Dhariyat,Tur,Najm,Qamar,Rahman,Waqiah,Hadid,Mujadilah,Hashr,Mumtahinah,Saff,Jumuah,Munafiqun,Taghabun,Talaq,Tahrim,Mulk,Qalam,Haqqah,Maarij,Nuh,Jinn,Muzammil,Mudathir,Qiyamah,Insan,Mursalat,Naba,Naziat,Abasa,Takwir,Infitar,Mutaffifin,Inshiqaq,Buruj,Tariq,Alaa,Ghashiyah,Fajr,Balad,Shams,Layl,Dhuha,Sharh,Tin,Alaq,Qadr,Baiyinah,Zalzalah,Adiyat,Qariah,Takathur,Asr,Humazah,Fil,Quraysh,Maaun,Kauthar,Kafirun,Nasr,Masad,Ikhlas,Falaq,Nas'.split(',');
+  VOICES.push(['razavi', 'ریاعی، صدای بهروز رضوی', '', s => `https://quranmehr.ir/files/subtitle/${s}-${RAZAVI_NAMES[s - 1]}.mp3`]);
+  let razaviTimes = null;
+  const loadRazavi = () => razaviTimes || (razaviTimes = fetch('quran/razavi.json').then(r => { if (!r.ok) throw Error(r.status); return r.json(); }).catch(e => { razaviTimes = null; throw e; }));
   const SURAH_AYAHS = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
   const SURAH_START = SURAH_AYAHS.reduce((a, n, i) => (a.push(i ? a[i - 1] + SURAH_AYAHS[i - 1] : 0), a), []);
   const pad3 = n => String(n).padStart(3, '0');
@@ -142,6 +149,7 @@ body.qr-lock{overflow:hidden}
 .qr-end .qr-pnav button{width:auto;height:46px;background:var(--accent);color:#fff;border:0}
 .qr-end .qr-pnav .qr-pmenu{background:transparent;color:var(--accent);border:1px solid var(--line)}
 .qr.night .qr-end .qr-pnav button:not(.qr-pmenu){color:#10201a}
+.qr-note{margin:0 0 12px!important;font-size:14px!important;line-height:1.9;color:var(--muted)}
 .qr-ayah.focus{animation:qrfocus 2.4s ease}
 @keyframes qrfocus{0%,40%{background:rgba(199,154,69,.28)}}
 @media(min-width:700px){.qr-body{padding-left:24px;padding-right:24px}}
@@ -217,11 +225,11 @@ body.qr-lock{overflow:hidden}
       return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small></div>${bism}<div class="qr-seg">${ayahs}</div>`;
     }).join('');
     $('qrSub').textContent = current.range ? `${current.sub ? current.sub + ' · ' : ''}${toFa(count)} آیه` : `${typeof hizbLabel === 'function' && hizbLabel(current.index) ? `حزب ${toFa(current.index + 1)} · ` : ''}${toFa(count)} آیه`;
-    const end = current.range ? `<p>${esc(current.endText || 'پایان. قبول باشد.')}</p>${current.onEnd ? `<button type="button" data-a="rangeEnd">${esc(current.endButton || 'خواندم')}</button>` : ''}`
+    const end = current.range ? `<p>${esc(current.endText || 'پایان. قبول باشد.')}</p>${current.onEnd ? `<button type="button" data-a="rangeEnd">${esc(current.endButton || 'خواندم')}</button>` : ''}${current.note ? `<p class="qr-note">${esc(current.note)}</p>` : ''}`
       : '<p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>';
     const nv = current.nav, navHtml = !nv ? '' : `<div class="qr-pnav">${nv.prev ? `<button type="button" data-a="pprev">→ ${esc(nv.prev)}</button>` : '<span></span>'}${nv.menu ? `<button type="button" class="qr-pmenu" data-a="pmenu">${esc(nv.menu)}</button>` : ''}${nv.next ? `<button type="button" data-a="pnext">${esc(nv.next)} ←</button>` : '<span></span>'}</div>`;
     body.innerHTML = navHtml + html + `<div class="qr-end">${end}${navHtml}
-<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud</span></p></div>`;
+<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud · ترجمه ریاعی و صدای بهروز رضوی: quranmehr.ir (موسسه پیامبر مهر و رحمت)</span></p></div>`;
     items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
     el.scrollTop = 0;
     const f = current.focus != null && items.find(it => gIndex(it) === current.focus);
@@ -467,8 +475,11 @@ body.qr-lock{overflow:hidden}
     u.push(`https://mirrors.quranicaudio.com/everyayah/${r[2]}/${f}.mp3`);
     return u;
   }
+  const voice = () => VOICES.find(x => x[0] === prefs.voice) || VOICES[0];
+  // برای صدای رضوی، razaviTimes پیش از پخش (در playAt) بارگذاری شده و هر شیء صوت بازه [شروع، پایان] آیه را در seg دارد.
   function faUrls(s, n) {
-    const v = VOICES.find(x => x[0] === prefs.voice) || VOICES[0], f = pad3(s) + pad3(n);
+    const v = voice(), f = pad3(s) + pad3(n);
+    if (v[3]) return Object.assign([v[3](s)], { seg: razaviTimes[s - 1][n - 1] });
     return [`https://everyayah.com/data/${v[2]}/${f}.mp3`, `https://mirrors.quranicaudio.com/everyayah/${v[2]}/${f}.mp3`];
   }
   // صف پخش یک آیه: بسم‌الله برای آیه اول سوره (جز حمد و توبه)، تلاوت، سپس ترجمه گویا.
@@ -493,21 +504,29 @@ body.qr-lock{overflow:hidden}
   function label(sub) {
     const it = items[pos];
     if (!it) return;
-    const who = prefs.mode === 'fa' ? (VOICES.find(x => x[0] === prefs.voice) || VOICES[0])[1] : (RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0])[1];
+    const who = prefs.mode === 'fa' ? voice()[1] : (RECITERS.find(x => x[0] === prefs.reciter) || RECITERS[0])[1];
     setNow(`سوره ${FA_NAME[it.s] || ''} · آیه ${toFa(it.n)}`, sub || who);
   }
   const FA_NAME = {};
 
   function playAt(i) {
     if (i < 0 || !items[i]) return;
+    if (prefs.mode !== 'ar' && voice()[3] && !Array.isArray(razaviTimes)) {
+      pos = i; playing = true; highlight(); label('در حال بارگیری صوت…'); setPlayBtn();
+      const want = current;
+      return loadRazavi().then(t => { razaviTimes = t; if (playing && want === current && pos === i) playAt(i); })
+        .catch(() => { playing = false; setPlayBtn(); setNow('پخش این آیه ممکن نشد', 'اتصال اینترنت را بررسی کنید یا صدای دیگری انتخاب کنید'); });
+    }
     pos = i; queue = tracksFor(items[i]); qi = 0; srcIdx = 0; playing = true;
     highlight(); label(); setPlayBtn(); playTrack(); reportView(true);
   }
   function playTrack() {
     if (!queue[qi]) return advance();
-    if (srcIdx === 0) queue[qi] = byHealth(queue[qi]);
-    const urls = queue[qi];
-    audio.src = urls[srcIdx];
+    if (srcIdx === 0) queue[qi] = Object.assign(byHealth(queue[qi]), { seg: queue[qi].seg });
+    const urls = queue[qi], seg = urls.seg;
+    // آیه‌ای از وسط فایل یک سوره: اگر همان فایل باز است فقط جابه‌جا می‌شود، وگرنه از همان ثانیه بارگذاری می‌شود.
+    if (seg && audio.getAttribute('src')?.split('#')[0] === urls[srcIdx] && audio.readyState > 0) audio.currentTime = seg[0];
+    else audio.src = seg ? `${urls[srcIdx]}#t=${seg[0]}` : urls[srcIdx];
     label('در حال بارگیری صوت…');
     // سروری که جواب نمی‌دهد (نه خطا، فقط معطلی) هم بعد از چند ثانیه کنار گذاشته می‌شود.
     clearTimeout(wait);
@@ -518,12 +537,16 @@ body.qr-lock{overflow:hidden}
   }
   // فایل آیه بعد فقط وقتی آیه فعلی شروع شد گرفته می‌شود تا با اینترنت کند پهنای باند آیه فعلی را نگیرد.
   function preloadNext() {
-    const it = items[pos + 1], u = it && byHealth(tracksFor(it)[0])[0];
+    const it = items[pos + 1], t = it && tracksFor(it)[0];
+    // فایل سوره کامل بزرگ است و جداگانه از پیش گرفته نمی‌شود.
+    if (!t || t.seg) return;
+    const u = byHealth(t)[0];
     if (u && nextAudio.src !== u) nextAudio.src = u;
   }
   function fail() {
     clearTimeout(wait);
     const h = host(audio.src); failed[h] = (failed[h] || 0) + 1;
+    audio.removeAttribute('src');
     srcIdx++;
     if (queue[qi] && srcIdx < queue[qi].length) return playTrack();
     playing = false; setPlayBtn();
@@ -532,10 +555,15 @@ body.qr-lock{overflow:hidden}
   function advance() {
     if (pos + 1 < items.length) playAt(pos + 1);
     // قرآن آزاد: در پایان صفحه، صفحه بعد باز می‌شود و پخش ادامه پیدا می‌کند.
-    else if (current?.nav?.next && current.nav.onNext) current.nav.onNext({ autoplay: true });
+    else if (current?.nav?.next && current.nav.onNext && current.nav.autoNext !== false) current.nav.onNext({ autoplay: true });
     else { stopAudio(); setNow('پایان سهم امروز', 'قبول باشد'); }
   }
-  audio.addEventListener('ended', () => { qi++; srcIdx = 0; if (qi < queue.length) playTrack(); else advance(); });
+  function trackEnded() { qi++; srcIdx = 0; if (qi < queue.length) playTrack(); else advance(); }
+  audio.addEventListener('ended', trackEnded);
+  // پایان آیه‌ای که از وسط فایل سوره پخش می‌شود.
+  audio.addEventListener('timeupdate', () => { const seg = queue[qi]?.seg; if (playing && seg && audio.currentTime >= seg[1]) { audio.pause(); trackEnded(); } });
+  // بعضی مرورگرها #t= را نادیده می‌گیرند؛ پس از رسیدن مشخصات فایل، به ابتدای آیه برده می‌شود.
+  audio.addEventListener('loadedmetadata', () => { const seg = queue[qi]?.seg; if (seg && Math.abs(audio.currentTime - seg[0]) > 1) audio.currentTime = seg[0]; });
   audio.addEventListener('error', () => { if (playing && audio.getAttribute('src')) fail(); });
   audio.addEventListener('playing', () => { clearTimeout(wait); failed[host(audio.src)] = 0; label(); preloadNext(); });
   audio.addEventListener('waiting', () => { if (playing) label('در حال بارگیری صوت…'); });
@@ -560,9 +588,9 @@ body.qr-lock{overflow:hidden}
   // برای بخش‌های دیگر سایت (چله‌ها): باز کردن بازه‌ای از آیه‌ها با همین صفحه، ترجمه‌ها و پخش صوت.
   // opts: { title, sub, from, to (اندیس سراسری، to خودش نیست), endText, endButton, onEnd }
   // و برای قرآن آزاد (quran-free.js): focus (اندیس آیه‌ای که صفحه رویش باز شود)، onView(اندیس آیه بالای صفحه)،
-  // nav: { prev, next, menu (نام دکمه‌ها)، onPrev, onNext({autoplay}), onMenu (پس از بستن قرآن‌خوان) }، autoplay
+  // nav: { prev, next, menu (نام دکمه‌ها)، onPrev, onNext({autoplay}), onMenu (پس از بستن قرآن‌خوان)، autoNext: false یعنی پایان صوت به صفحه بعد نرود }، autoplay، note (راهنمای کوتاه پایین صفحه)
   window.quranReader = {
-    openRange(o) { open({ title: o.title, sub: o.sub || '', range: { from: o.from, to: o.to }, endText: o.endText, endButton: o.endButton, onEnd: o.onEnd, focus: o.focus, onView: o.onView, nav: o.nav, autoplay: o.autoplay }); },
+    openRange(o) { open({ title: o.title, sub: o.sub || '', range: { from: o.from, to: o.to }, endText: o.endText, endButton: o.endButton, onEnd: o.onEnd, note: o.note, focus: o.focus, onView: o.onView, nav: o.nav, autoplay: o.autoplay }); },
     index: getIndex
   };
 

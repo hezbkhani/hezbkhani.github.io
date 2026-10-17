@@ -59,10 +59,12 @@ body.ns-lock{overflow:hidden}
   // ساعت‌های اعلان (پیش‌فرض‌ها + تنظیم مدیر) برای نوشتن در متن کارت‌ها.
   let defaults = null;
   const loadDefaults = () => defaults || (defaults = fetch('notifications.json').then(r => r.json()).catch(() => ({ types: {} })));
+  // ساعت‌ها فقط به شکل ‎HH:MM‎ پذیرفته می‌شوند، چون مستقیم در HTML گذاشته می‌شوند.
+  const hhmm = x => typeof x === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(x) ? x : '';
   async function timeOf(type) {
     const d = (await loadDefaults()).types || {}, s = window.siteSettings?.notify?.types || {};
     const p = store.get(PREFS) || {}, own = !d[type]?.event && !d[type]?.same && p.times?.[type];
-    const t = own || s[type]?.time || d[type]?.time || '';
+    const t = hhmm(own) || hhmm(s[type]?.time) || hhmm(d[type]?.time);
     return { on: s[type]?.on !== false && !!d[type] && !(p.off || []).includes(type), time: t ? toFa(+t.slice(0, 2)) + (t.slice(3) === '00' ? '' : ':' + toFa(t.slice(3))) : '' };
   }
 
@@ -220,7 +222,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
   async function typeRows(g) {
     const d = (await loadDefaults()).types || {}, a = window.siteSettings?.notify?.types || {}, p = store.get(PREFS) || {};
     return Object.entries(d).filter(([k, t]) => t.group === g && a[k]?.on !== false).map(([k, t]) => {
-      const base = a[k]?.time || t.time, timed = !t.event && !t.same && base, mine = p.times?.[k] || base;
+      const base = hhmm(a[k]?.time) || hhmm(t.time), timed = !t.event && !t.same && base, mine = hhmm(p.times?.[k]) || base;
       const label = esc(String(t.label || k).replace(/^[^:]*:\s*/, ''));
       return `<label class="rm-t"><input type="checkbox" data-k="${k}"${(p.off || []).includes(k) ? '' : ' checked'}><span>${label}${timed && mine !== base ? ` <small>(پیش‌فرض ${fmt(base)})</small>` : ''}</span>${timed ? `<input type="time" data-time="${k}" data-base="${base}" value="${mine}" aria-label="ساعت">` : ''}</label>`;
     }).join('');

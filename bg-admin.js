@@ -5,7 +5,8 @@
 (function () {
   const cfg = window.APP_CONFIG || {};
   const BUILT = ['night', 'sage', 'blue', 'garden'];
-  const BOX = { night: '#1f5a3a', sage: '#6b8a66', blue: '#3e5f84', garden: '#3c7a66' };
+  const BOX = { night: '#1f5a3a', sage: '#6b8a66', blue: '#3e5f84', garden: '#3c7a66', dark: '#c9a35a' };
+  const STYLES = [...BUILT, 'dark']; // «تیره» فقط سبک کادر است، برای تصویرهای تیره
   const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fa = '۰۱۲۳۴۵۶۷۸۹', toFa = x => String(x).replace(/\d/g, d => fa[d]);
   const $ = id => document.getElementById(id);
@@ -49,22 +50,24 @@
   const publicUrl = name => `${cfg.SUPABASE_URL}/storage/v1/object/public/backgrounds/${name}`;
 
   // تصویر را کوچک می‌کند (بلندترین ضلع ۱۹۲۰) و webp یا jpeg می‌سازد
-  function shrink(file) {
+  function shrink(file, max = 1920, q = .85) {
     return new Promise((ok, bad) => {
       const img = new Image(), u = URL.createObjectURL(file);
       img.onload = () => {
         URL.revokeObjectURL(u);
-        const s = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight));
+        const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
         const w = Math.round(img.naturalWidth * s), h = Math.round(img.naturalHeight * s);
         const c = document.createElement('canvas'); c.width = w; c.height = h;
         c.getContext('2d').drawImage(img, 0, 0, w, h);
         c.toBlob(b => b && b.type === 'image/webp' ? ok({ blob: b, ext: 'webp', w, h })
-          : c.toBlob(j => j ? ok({ blob: j, ext: 'jpg', w, h }) : bad(Error('تصویر خوانده نشد.')), 'image/jpeg', .85), 'image/webp', .85);
+          : c.toBlob(j => j ? ok({ blob: j, ext: 'jpg', w, h }) : bad(Error('تصویر خوانده نشد.')), 'image/jpeg', q), 'image/webp', q);
       };
       img.onerror = () => { URL.revokeObjectURL(u); bad(Error('این فایل تصویر نیست یا خوانده نشد.')); };
       img.src = u;
     });
   }
+
+  window.bgxShrink = shrink; // زمینه خود کاربر هم (bg-mine.js)
 
   let pane = null, form = null; // form: { id?, url?, size, src, blob?, ext? }
   const msg = (t, ok) => { const e = $('bgaMsg'); if (e) { e.className = 'adm-msg ' + (ok ? 'adm-ok' : 'adm-bad'); e.textContent = t; } };
@@ -78,7 +81,7 @@
 
   function list() {
     const c = conf(), all = [...BUILT.map(id => ({ id, style: id, on: !c.off.includes(id) })), ...c.custom.map(x => ({ ...x, on: x.on !== false }))];
-    $('bgaList').innerHTML = all.map(e => `<div class="bga-row" data-id="${esc(e.id)}"><i style="background-image:url('${esc(e.url || `bg/${e.id}.webp`)}')"></i>
+    $('bgaList').innerHTML = all.map(e => `<div class="bga-row" data-id="${esc(e.id)}"><i style="background-image:url('${e.url ? (/^https:\/\/[^"'()\s\\]+$/.test(e.url) ? e.url : '') : `bg/${esc(e.id)}.webp`}')"></i>
 <label><input type="checkbox" data-on${e.on ? ' checked' : ''}><span>${esc(e.name || names()[e.id])}${e.url ? `<small>رنگ کادرها: ${esc(names()[e.style])}</small>` : '<small>زمینه همیشگی سایت</small>'}</span></label>
 <span class="bga-btn"><button type="button" class="reg-light" data-see>دیدن</button>${e.url ? '<button type="button" class="reg-light" data-edit>ویرایش</button><button type="button" class="reg-light" data-del>حذف</button>' : ''}</span></div>`).join('');
   }
@@ -113,7 +116,7 @@
 <div class="bga-form"><label for="bgaFile">افزودن زمینه تازه (تصویر ایستاده، مثل صفحه گوشی)</label><input type="file" id="bgaFile" accept="image/*">
 <div id="bgaEdit" hidden>
 <label for="bgaName">نام</label><input type="text" id="bgaName" maxlength="30" placeholder="مثلاً گل‌های بهاری">
-<label for="bgaStyle">رنگ و نقش کادرها</label><select id="bgaStyle">${BUILT.map(k => `<option value="${k}">مثل «${esc(names()[k])}»</option>`).join('')}</select>
+<label for="bgaStyle">رنگ و نقش کادرها</label><select id="bgaStyle">${STYLES.map(k => `<option value="${k}">${k === 'dark' ? 'تیره (برای تصویرهای تیره)' : `مثل «${esc(names()[k])}»`}</option>`).join('')}</select>
 <p class="hint">کادرها فقط داخل مستطیل خط‌چین دیده می‌شوند. آن را روی بخش ساده و خلوت تصویر بگذارید.</p>
 <div class="bga-edit"><div class="bga-prev" id="bgaPrev"><b></b></div><div class="bga-rng">
 <label for="bgaTop">فاصله از بالا <span id="bgaTopV"></span></label><input type="range" id="bgaTop" min="0" max="45">
