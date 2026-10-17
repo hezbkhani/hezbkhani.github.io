@@ -9,7 +9,7 @@
   const write = v => { try { v ? localStorage.setItem(ME, JSON.stringify(v)) : localStorage.removeItem(ME); } catch {} };
 
   const css = `
-.hz-off{display:none!important}
+.hz-off,.intro-off{display:none!important}
 .intro-list{margin:0 0 4px;padding:0 22px 0 0}
 .intro-list li{margin:0 0 6px}
 .intro-notice{margin:14px 0 0;padding:10px 14px;background:var(--cream);color:var(--ink);text-shadow:none;border:1px solid var(--gold);border-right:5px solid var(--deep);border-radius:var(--r-card)}
@@ -68,9 +68,44 @@
   // پس از ورود به حساب روی گوشی تازه (account.js)، گروه و شناسه حساب همین‌جا آماده می‌شود.
   window.hezbRestore = restore;
 
+  // متن‌های معرفی صفحه اول را مدیر در «تنظیمات» روشن/خاموش و ویرایش می‌کند (site_settings با کلید intro):
+  // { [کلید]: { on: false برای پنهان، title: عنوان، text: متن } }؛ عنوان یا متن خالی یعنی همان متن اولیه index.html.
+  // کلیدها همان data-intro در index.html هستند. پیش‌فرض‌ها در window.introDefaults برای فرم مدیریت (admin.js).
+  const introEl = k => document.querySelector(`#introPanel [data-intro="${k}"]`);
+  const INTRO_KEYS = ['tagline', 'lead', 'hezb', 'courses', 'chelleh', 'hint', 'notice'];
+  const titled = k => k === 'hezb' || k === 'courses' || k === 'chelleh' || k === 'notice';
+  window.introDefaults = Object.fromEntries(INTRO_KEYS.filter(introEl).map(k => {
+    const el = introEl(k);
+    if (k === 'notice') return [k, { title: el.querySelector('b').textContent, text: [...el.querySelectorAll('p')].map(p => p.textContent).join('\n') }];
+    if (titled(k)) return [k, { title: el.querySelector('b').textContent.replace(/:\s*$/, ''), text: el.querySelector('span').textContent }];
+    return [k, { text: el.textContent }];
+  }));
+  function applyIntro() {
+    const s = window.siteSettings?.intro || {};
+    Object.entries(window.introDefaults).forEach(([k, d]) => {
+      const el = introEl(k); if (!el) return;
+      const c = s[k] || {}, title = String(c.title || '').trim() || d.title, text = String(c.text || '').trim() || d.text;
+      el.classList.toggle('intro-off', c.on === false);
+      if (k === 'notice') {
+        const html = `<b>${esc(title)}</b>` + text.split(/\n+/).map(t => t.trim()).filter(Boolean).map(t => `<p>${esc(t)}</p>`).join('');
+        // اگر حساب کاربری روشن باشد، account.js متن این کادر را عوض کرده و از dataset.orig برای بازگرداندن استفاده می‌کند.
+        if (el.dataset.orig !== undefined) el.dataset.orig = html;
+        if (!el.dataset.acc && el.innerHTML !== html) el.innerHTML = html;
+      } else if (titled(k)) {
+        el.querySelector('b').textContent = el.tagName === 'LI' ? title + ':' : title;
+        el.querySelector('span').textContent = text;
+      } else el.textContent = text;
+    });
+  }
+  applyIntro();
+  document.addEventListener('settings:changed', applyIntro);
+  window.applyIntro = applyIntro;
+
   // معرفی صفحه اول: به‌جای یک کادر بزرگ، عنوان و هر گزینه در کادر جدای خودش (شکل و رنگ کادرها با زمینه در backdrop.css)
   // و هر گزینه با یک لمس به همان بخش می‌رود.
+  // در «ظاهر قبلی سایت» (بدون زمینه، انتخاب در منو) معرفی همان یک کادر قبلی می‌ماند.
   (function splitIntro() {
+    if (!document.documentElement.dataset.bg) return;
     const intro = document.getElementById('introPanel');
     const h2 = intro.querySelector(':scope > h2'), tagline = intro.querySelector(':scope > .tagline'), lead = intro.querySelector(':scope > .lead'), hint = intro.querySelector(':scope > .hint');
     const list = intro.querySelector('.intro-list'), notice = intro.querySelector('.intro-notice');
@@ -79,8 +114,8 @@
     const go = ['hezb', 'menu', 'menu'];
     const opts = document.createElement('div'); opts.className = 'intro-opts';
     [...list.children].forEach((li, i) => {
-      const a = document.createElement('a'); a.href = '#'; a.className = 'bgx-frame intro-opt'; a.dataset.go = go[i] || 'menu';
-      a.innerHTML = li.innerHTML.replace(/<b>([^<]*?):?<\/b>\s*/, '<b>$1</b><span>') + '</span>';
+      const a = document.createElement('a'); a.href = '#'; a.className = li.className + ' bgx-frame intro-opt'; a.dataset.go = go[i] || 'menu'; a.dataset.intro = li.dataset.intro;
+      a.innerHTML = `<b>${esc(li.querySelector('b').textContent.replace(/:\s*$/, ''))}</b><span>${esc(li.querySelector('span').textContent)}</span>`;
       opts.append(a);
     });
     list.replaceWith(opts);

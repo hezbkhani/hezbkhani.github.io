@@ -1,8 +1,8 @@
 // نصب سایت به‌صورت برنامه: دکمه نصب (Chrome/Edge/اندروید)، راهنمای آیفون، و پیوند دانلود اندروید، ویندوز و مک.
-// فعلاً فقط در پیش‌نمایش مدیر (آدرس با ‎#admin‎)؛ برای نمایش به همه، PREVIEW_ONLY را false کنید.
+// برای همه بازدیدکنندگان نمایش داده می‌شود؛ برای برگرداندن به پیش‌نمایش مدیر (فقط ‎#admin‎)، PREVIEW_ONLY را true کنید.
 // فایل‌های برنامه را GitHub Actions می‌سازد (.github/workflows/apps.yml) و در بخش Releases همین مخزن می‌گذارد.
 (function () {
-  const PREVIEW_ONLY = true;
+  const PREVIEW_ONLY = false;
   const DL = 'https://github.com/hezbkhani/hezbkhani.github.io/releases/latest/download/';
   const ua = navigator.userAgent;
   const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -17,7 +17,7 @@
   if (inApp) return;
 
   document.head.insertAdjacentHTML('beforeend', `<style>
-.ins-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.ins-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px}
 .ins-grid a{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:76px;padding:8px;background:rgba(255,255,255,.92);color:var(--deep);border:1px solid var(--gold);border-radius:var(--r-card);text-decoration:none;text-shadow:none;font-weight:700;line-height:1.5}
 .ins-grid a small{font-weight:400;font-size:13px;color:var(--muted)}
 .ins-grid a.mine{background:var(--cream);box-shadow:inset 0 0 0 2px var(--gold)}
@@ -25,6 +25,9 @@
 .ins-box ol{margin:4px 0;padding-inline-start:22px;list-style-type:persian}
 .ins-box p{margin:0}
 #insBtn{margin-top:4px}
+#installSection{position:relative}
+.ins-x{position:absolute;top:8px;left:8px;width:40px;height:40px;padding:0;background:transparent;border:0;color:var(--muted);font-size:20px;z-index:1}
+.ins-x:hover{background:transparent;color:var(--deep)}
 @media(max-width:600px){.ins-grid{grid-template-columns:1fr 1fr}.ins-grid a{min-height:64px}}
 </style>`);
 
@@ -39,7 +42,7 @@
   sec.innerHTML = `<h2>نصب برنامه</h2>
 <p class="lead">سایت را مثل یک برنامه روی گوشی یا رایانه خود نصب کنید تا با یک لمس باز شود. همه نسخه‌ها دقیقاً همین سایت‌اند.</p>
 <button type="button" id="insBtn" hidden>نصب برنامه روی این دستگاه</button>
-<div class="ins-box" id="insIOS" hidden><p><strong>آیفون و آیپد:</strong> این سایت را در Safari باز کنید، سپس:</p><ol><li>دکمه اشتراک‌گذاری <span aria-hidden="true">(مربع با فلش رو به بالا)</span> را بزنید.</li><li>گزینه «Add to Home Screen» یا «افزودن به صفحه اصلی» را انتخاب کنید.</li><li>«Add» را بزنید. نماد حزب‌خوانی روی صفحه اصلی می‌آید و یادآوری روزانه هم از همان‌جا کار می‌کند.</li></ol></div>
+<div class="ins-box" id="insIOS" hidden><p><strong>آیفون و آیپد:</strong> این سایت را در Safari باز کنید، سپس:</p><ol><li>دکمه اشتراک‌گذاری <span aria-hidden="true">(مربع با فلش رو به بالا)</span> را بزنید.</li><li>گزینه «Add to Home Screen» یا «افزودن به صفحه اصلی» را انتخاب کنید.</li><li>«Add» را بزنید. نماد نوران روی صفحه اصلی می‌آید و یادآوری روزانه هم از همان‌جا کار می‌کند.</li></ol></div>
 <p class="hint">دانلود برای دستگاه‌های دیگر:</p>
 <nav class="ins-grid">${links.map(l => item(...l)).join('')}<a href="#" id="insIOSLink">آیفون و آیپد<small>افزودن به صفحه اصلی</small></a></nav>
 <div class="ins-box" id="insWarn"><p>این فایل‌ها امضای تجاری ندارند، پس بار اول هشدار می‌بینید:</p><ol><li><strong>اندروید:</strong> اجازه «نصب برنامه‌های ناشناس» را برای مرورگر بدهید.</li><li><strong>ویندوز:</strong> روی «More info» و سپس «Run anyway» بزنید.</li><li><strong>مک:</strong> فایل را باز کنید و برنامه را به Applications بکشید؛ اگر باز نشد، از System Settings ‹ Privacy &amp; Security گزینه «Open Anyway» را بزنید.</li></ol></div>`;
@@ -60,6 +63,28 @@
   });
   addEventListener('appinstalled', () => { btn.hidden = true; deferred = null; });
 
-  const show = () => { sec.hidden = !enabled(); };
-  show(); addEventListener('hashchange', show);
+  // در منوی ☰ هم یک میان‌بر به همین بخش هست.
+  window.siteMenu?.section({
+    id: 'install', order: 92,
+    render(box) {
+      if (!enabled()) return;
+      box.innerHTML = '<h3>نصب برنامه</h3><button type="button" class="sm-item" data-ins-go><span class="sm-ic">📲</span><span>نصب نوران روی گوشی یا رایانه<small>اندروید، آیفون، ویندوز و مک</small></span><span class="sm-go">‹</span></button>';
+      box.querySelector('[data-ins-go]').onclick = () => { window.siteMenu.close(); fromMenu = true; show(); setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 280); };
+    }
+  });
+
+  // نمایش در صفحه اول با تنظیم مدیر (site_settings.install.mode، زبانه «تنظیمات»):
+  // 'always' همیشه · 'dismissible' (پیش‌فرض) با دکمه بستن؛ پس از بستن فقط از منو · 'menu' فقط از منو.
+  const CLOSED = 'installClosed';
+  const mode = () => window.siteSettings?.install?.mode || 'dismissible';
+  const closed = () => { try { return localStorage.getItem(CLOSED) === '1'; } catch { return false; } };
+  let fromMenu = false;
+  sec.insertAdjacentHTML('afterbegin', '<button type="button" class="ins-x" aria-label="بستن" title="بستن">✕</button>');
+  sec.querySelector('.ins-x').onclick = () => { try { localStorage.setItem(CLOSED, '1'); } catch {} fromMenu = false; show(); };
+  function show() {
+    const m = mode();
+    sec.hidden = !enabled() || !(fromMenu || m === 'always' || (m === 'dismissible' && !closed()));
+    sec.querySelector('.ins-x').hidden = m === 'always';
+  }
+  show(); addEventListener('hashchange', show); document.addEventListener('settings:changed', show);
 })();
