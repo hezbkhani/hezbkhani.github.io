@@ -1,4 +1,4 @@
-// مدیریت سایت: ورود ماندگار مدیر، زبانه‌های «گزارش‌ها / گروه‌ها / ثبت‌نام / چله‌ها / اعلان‌ها / تنظیمات»، تقویم شمسی،
+// مدیریت سایت: ورود ماندگار مدیر، زبانه‌های «گزارش‌ها / گروه‌ها / ثبت‌نام / چله‌ها / اعلان‌ها / نظرها / تنظیمات»، تقویم شمسی،
 // و تنظیمات سایت (اطلاعیه بالای صفحه، نمایش بخش ثبت‌نام، منبع فهرست گروه‌ها، فهرست مدیران).
 // داده‌ها در Supabase هستند؛ جدول‌ها در backend/supabase/registration.sql.
 (function () {
@@ -116,7 +116,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
   window.adminSession = session;
 
   // ---------- پوسته مدیریت ----------
-  const TABS = [['reports', 'گزارش‌ها'], ['groups', 'گروه‌ها'], ['reg', 'ثبت‌نام'], ['chl', 'چله‌ها'], ['notify', 'اعلان‌ها'], ['settings', 'تنظیمات']];
+  const TABS = [['reports', 'گزارش‌ها'], ['groups', 'گروه‌ها'], ['reg', 'ثبت‌نام'], ['chl', 'چله‌ها'], ['notify', 'اعلان‌ها'], ['fb', 'نظرها'], ['settings', 'تنظیمات']];
   const TKEY = 'adminTab';
   const css = `
 .jd-row{display:grid;grid-template-columns:1fr 1.6fr 1.2fr;gap:6px}
@@ -130,7 +130,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .adm-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
 .adm-bar button{height:38px;font-size:15px}
 #adminPanel [hidden]{display:none!important}
-.adm-tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:0 -8px 12px;padding:6px 8px;border-radius:var(--r-card);background:rgba(40,26,17,.92);box-shadow:0 4px 10px #0004}
+.adm-tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:0 -8px 12px;padding:6px 8px;border-radius:var(--r-card);background:rgba(40,26,17,.92);box-shadow:0 4px 10px #0004}
 .adm-tabs button{height:44px;padding:0 4px;font-size:15px;background:rgba(255,255,255,.9);color:var(--deep);border-color:var(--gold)}
 .adm-tabs button.on{background:var(--deep);color:#fff}
 .adm-pane[hidden]{display:none!important}
@@ -147,7 +147,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
 .site-notice{background:var(--cream);color:#2f241d;text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:12px 16px;margin:0 0 20px;white-space:pre-line;font-weight:500}
 .adm-ok{color:var(--ok)}.adm-bad{color:var(--danger)}
 .adm-msg{min-height:22px;margin-top:6px;font-weight:700}
-@media(max-width:600px){.adm-tabs button{font-size:12.5px;padding:0 2px}.adm-tabs{gap:3px}}`;
+@media(max-width:600px){.adm-tabs{grid-template-columns:repeat(4,1fr);gap:3px}.adm-tabs button{height:40px;font-size:14px;padding:0 2px}}`;
 
   const $ = id => document.getElementById(id);
   const ui = {
