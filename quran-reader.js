@@ -14,7 +14,9 @@
     ['gharaati', 'قرائتی'], ['khorramshahi', 'خرمشاهی'], ['ayati', 'آیتی'], ['bahrampour', 'بهرام‌پور'],
     ['mojtabavi', 'مجتبوی'], ['safavi', 'صفوی'], ['sadeqi', 'صادقی تهرانی'], ['khorramdel', 'خرمدل'], ['moezzi', 'معزی'], ['riaei', 'ریاعی']
   ];
-  // تفسیر هر آیه: متن تفسیر نمونه مجوز انتشار آزاد ندارد، پس دکمه «تفسیر» همان آیه را در سایت رسمی quran.makarem.ir باز می‌کند.
+  // تفسیر هر آیه: متن تفسیر نمونه (آیت‌الله مکارم شیرازی) با ذکر منبع در quran/tafsir/<سوره>.json است و داخل همین قرآن‌خوان باز می‌شود.
+  // اگر فایل سوره‌ای نبود یا بارگذاری نشد، همان آیه در سایت رسمی quran.makarem.ir باز می‌شود.
+  const TAFSIR_SRC = 'تفسیر نمونه، آیت‌الله ناصر مکارم شیرازی و جمعی از نویسندگان، از سایت quran.makarem.ir';
   const tafsirUrl = (s, n) => `https://quran.makarem.ir/fa/interpretation?sura=${s}&verse=${n}`;
   // فایل صوتی هر آیه از چند سرور: everyayah.com، verses.quran.com، cdn.islamic.network (alquran.cloud)
   // و آینه quranicaudio. اگر یکی جواب نداد یا کند بود سراغ بعدی می‌رود.
@@ -96,6 +98,18 @@ body.qr-lock{overflow:hidden}
 .qr-tf{display:inline-block;margin-right:6px;padding:0 8px;border:1px solid var(--line);color:var(--accent);font-size:.8em;line-height:1.9;text-decoration:none;white-space:nowrap}
 .qr-tf:hover{background:var(--line)}
 .qr.notf .qr-tf{display:none}
+.qr-tfs{position:fixed;inset:0;z-index:3;display:none;align-items:flex-end;justify-content:center;background:#0006}
+.qr-tfs.show{display:flex}
+.qr-tfs-box{display:flex;flex-direction:column;width:100%;max-width:760px;max-height:86vh;background:var(--card);color:var(--text);border-top:3px solid var(--gold);box-shadow:0 -8px 30px #0004}
+.qr-tfs-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.qr-tfs-head b{flex:1;min-width:0;font-size:15.5px;color:var(--accent)}
+.qr-tfs-head small{display:block;font-weight:400;font-size:12.5px;color:var(--muted)}
+.qr-tfs-head button{flex:none;width:40px;height:40px;padding:0;border:0;background:transparent;color:var(--text);font-size:20px}
+.qr-tfs-body{overflow-y:auto;overscroll-behavior:contain;padding:6px 16px calc(14px + env(safe-area-inset-bottom));font-size:max(15px,calc(var(--qs)*.6));line-height:2.05;text-align:justify;color:var(--tr)}
+.qr-tfs-body p{margin:10px 0}
+.qr-tfs-body h4{margin:16px 0 4px;font-size:1em;color:var(--accent)}
+.qr-tfs-src{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.8;color:var(--muted);text-align:center}
+.qr-tfs-src a{color:var(--accent)}
 .qr.flow .qr-fa{display:none}
 .qr.flow .qr-seg{padding:10px 2px;font:normal var(--qs)/2.2 QuranHafs,serif;text-align:justify}
 .qr.flow .qr-ayah{display:inline;padding:0;border:0}
@@ -165,6 +179,7 @@ body.qr-lock{overflow:hidden}
 <button type="button" class="qr-apply" data-a="apply">اعمال تنظیمات</button>
 </div>
 <div class="qr-body" id="qrBody"></div>
+<div class="qr-tfs" id="qrTfs" data-a="tfclose"><div class="qr-tfs-box" role="dialog" aria-modal="true" aria-labelledby="qrTfsTitle"><div class="qr-tfs-head"><b id="qrTfsTitle"></b><button type="button" data-a="tfclose" aria-label="بستن تفسیر">✕</button></div><div class="qr-tfs-body" id="qrTfsBody"></div></div></div>
 <div class="qr-player" id="qrPlayer"><button type="button" class="qr-play" data-a="play" aria-label="پخش">▶</button>
 <div class="qr-now" id="qrNow"><b>پخش صوت</b>از اولین آیه، یا روی شماره یک آیه بزنید</div>
 <button type="button" data-a="next" aria-label="آیه بعد">⏭</button><button type="button" data-a="prev" aria-label="آیه قبل">⏮</button></div>`;
@@ -205,7 +220,7 @@ body.qr-lock{overflow:hidden}
       const bism = seg.from === 1 && seg.s !== 1 && seg.s !== 9 ? `<div class="qr-bism">${BISMILLAH}</div>` : '';
       const ayahs = seg.ayahs.map(([a, t], i) => {
         const n = seg.from + i;
-        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<span class="qr-num" data-a="ayah">${toAr(n)}</span> </p><p class="qr-fa"><i>(${toFa(n)})</i><span>${esc(t)}</span><a class="qr-tf" href="${tafsirUrl(seg.s, n)}" target="_blank" rel="noopener" title="تفسیر نمونه این آیه در سایت آیت‌الله مکارم شیرازی">تفسیر ↖</a></p></div>`;
+        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<span class="qr-num" data-a="ayah">${toAr(n)}</span> </p><p class="qr-fa"><i>(${toFa(n)})</i><span>${esc(t)}</span><a class="qr-tf" data-a="tafsir" data-s="${seg.s}" data-n="${n}" href="${tafsirUrl(seg.s, n)}" target="_blank" rel="noopener" title="تفسیر نمونه این آیه">تفسیر</a></p></div>`;
       }).join('');
       return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small></div>${bism}<div class="qr-seg">${ayahs}</div>`;
     }).join('');
@@ -321,6 +336,7 @@ body.qr-lock{overflow:hidden}
   function close(fromHistory, then) {
     if (el.classList.contains('show')) reportView(true);
     stopAudio();
+    closeTafsir();
     el.classList.remove('show');
     document.body.classList.remove('qr-lock');
     if (pushed && !fromHistory) { pushed = false; afterClose = then || null; history.back(); return; }
@@ -333,7 +349,47 @@ body.qr-lock{overflow:hidden}
     const f = afterClose; afterClose = null;
     if (f) setTimeout(f, 50);
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el.classList.contains('show')) { e.preventDefault(); close(); } });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || !el.classList.contains('show')) return;
+    e.preventDefault();
+    if ($('qrTfs').classList.contains('show')) closeTafsir(); else close();
+  });
+
+  // ---------- تفسیر ----------
+  // quran/tafsir/<سوره>.json: {segments: [{from, to, title?, text}]}؛ سوره‌های بزرگ چند بخش‌اند: {parts: [{from, to, file}]}.
+  // متن هر بخش: پاراگراف‌ها با یک خط خالی جدا شده‌اند و خطی که با «## » شروع شود عنوان است.
+  const tafsirCache = {};
+  const getJson = u => tafsirCache[u] || (tafsirCache[u] = fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(err => { delete tafsirCache[u]; throw err; }));
+  async function tafsirFor(s, n) {
+    let d = await getJson(`quran/tafsir/${s}.json`);
+    if (d.parts) {
+      const part = d.parts.find(p => n >= p.from && n <= p.to);
+      if (!part) return null;
+      d = await getJson(`quran/tafsir/${part.file}`);
+    }
+    return (d.segments || []).find(g => n >= g.from && n <= g.to) || null;
+  }
+  const tafsirHtml = text => String(text).split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+    .map(p => p.startsWith('## ') ? `<h4>${esc(p.slice(3))}</h4>` : `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
+  let tafsirReq = 0;
+  async function openTafsir(s, n) {
+    const req = ++tafsirReq, box = $('qrTfsBody'), link = tafsirUrl(s, n);
+    $('qrTfsTitle').innerHTML = `تفسیر نمونه<small>سوره ${esc(FA_NAME[s] || toFa(s))} · آیه ${toFa(n)}</small>`;
+    box.innerHTML = '<div class="qr-state">در حال بارگذاری تفسیر…</div>';
+    $('qrTfs').classList.add('show');
+    $('qrTfs').querySelector('button').focus();
+    let seg = null;
+    try { seg = await tafsirFor(s, n); } catch {}
+    if (req !== tafsirReq) return;
+    if (!seg || !String(seg.text || '').trim()) { box.innerHTML = `<div class="qr-state">متن تفسیر این آیه اینجا بارگذاری نشد.<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a></div>`; return; }
+    const range = seg.from === seg.to ? `آیه ${toFa(seg.from)}` : `آیه‌های ${toFa(seg.from)} تا ${toFa(seg.to)}`;
+    $('qrTfsTitle').innerHTML = `${esc(seg.title || 'تفسیر نمونه')}<small>سوره ${esc(FA_NAME[s] || toFa(s))} · ${range}</small>`;
+    // عنوان بخش در سربرگ آمده؛ اگر متن با همان عنوان شروع شود، تکرارش نمی‌کنیم.
+    const text = seg.title && seg.text.startsWith(`## ${seg.title}\n`) ? seg.text.slice(seg.title.length + 4) : seg.text;
+    box.innerHTML = tafsirHtml(text) + `<p class="qr-tfs-src">منبع: ${esc(TAFSIR_SRC)}<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a></p>`;
+    box.scrollTop = 0;
+  }
+  function closeTafsir() { tafsirReq++; $('qrTfs').classList.remove('show'); }
 
   function onScroll() {
     const max = el.scrollHeight - el.clientHeight;
@@ -353,6 +409,8 @@ body.qr-lock{overflow:hidden}
     const b = e.target.closest('[data-a]');
     if (!b) return;
     const a = b.dataset.a;
+    if (a === 'tafsir') { e.preventDefault(); return openTafsir(+b.dataset.s, +b.dataset.n); }
+    if (a === 'tfclose') { if (b.id !== 'qrTfs' || e.target === b) closeTafsir(); return; }
     if (a === 'close') return close();
     if (a === 'menu') { const s = menu.classList.toggle('show'); b.setAttribute('aria-expanded', s); return; }
     if (a === 'retry') return load();
