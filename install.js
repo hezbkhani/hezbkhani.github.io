@@ -25,6 +25,9 @@
 .ins-box ol{margin:4px 0;padding-inline-start:22px;list-style-type:persian}
 .ins-box p{margin:0}
 #insBtn{margin-top:4px}
+#installSection{position:relative}
+.ins-x{position:absolute;top:8px;left:8px;width:40px;height:40px;padding:0;background:transparent;border:0;color:var(--muted);font-size:20px;z-index:1}
+.ins-x:hover{background:transparent;color:var(--deep)}
 @media(max-width:600px){.ins-grid{grid-template-columns:1fr 1fr}.ins-grid a{min-height:64px}}
 </style>`);
 
@@ -66,10 +69,22 @@
     render(box) {
       if (!enabled()) return;
       box.innerHTML = '<h3>نصب برنامه</h3><button type="button" class="sm-item" data-ins-go><span class="sm-ic">📲</span><span>نصب نوران روی گوشی یا رایانه<small>اندروید، آیفون، ویندوز و مک</small></span><span class="sm-go">‹</span></button>';
-      box.querySelector('[data-ins-go]').onclick = () => { window.siteMenu.close(); setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 280); };
+      box.querySelector('[data-ins-go]').onclick = () => { window.siteMenu.close(); fromMenu = true; show(); setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 280); };
     }
   });
 
-  const show = () => { sec.hidden = !enabled(); };
-  show(); addEventListener('hashchange', show);
+  // نمایش در صفحه اول با تنظیم مدیر (site_settings.install.mode، زبانه «تنظیمات»):
+  // 'always' همیشه · 'dismissible' (پیش‌فرض) با دکمه بستن؛ پس از بستن فقط از منو · 'menu' فقط از منو.
+  const CLOSED = 'installClosed';
+  const mode = () => window.siteSettings?.install?.mode || 'dismissible';
+  const closed = () => { try { return localStorage.getItem(CLOSED) === '1'; } catch { return false; } };
+  let fromMenu = false;
+  sec.insertAdjacentHTML('afterbegin', '<button type="button" class="ins-x" aria-label="بستن" title="بستن">✕</button>');
+  sec.querySelector('.ins-x').onclick = () => { try { localStorage.setItem(CLOSED, '1'); } catch {} fromMenu = false; show(); };
+  function show() {
+    const m = mode();
+    sec.hidden = !enabled() || !(fromMenu || m === 'always' || (m === 'dismissible' && !closed()));
+    sec.querySelector('.ins-x').hidden = m === 'always';
+  }
+  show(); addEventListener('hashchange', show); document.addEventListener('settings:changed', show);
 })();
