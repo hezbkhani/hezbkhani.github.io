@@ -121,22 +121,26 @@ ${c.parts.map(p => `<div class="mf-part">${p.title ? `<h4>${esc(p.title)}</h4>` 
   }
 
   // ---------- منو: زیر «ادعیه» (ibadat.js)؛ اگر آن بخش نبود، جداگانه ----------
+  // مدیر می‌تواند در «امکانات سایت» خاموشش کند (features.js، پیش‌فرض روشن).
   function menuItem() {
+    if (window.features && !window.features.shown('mafatih')) return '';
     const last = readLast();
     return `<button type="button" class="sm-item" data-mf-open><span class="sm-ic">📚</span><span>مفاتیح‌الجنان<small>${last ? `آخرین: ${esc(last.title)}` : 'همه دعاها، زیارات، مناجات‌ها و اعمال'}</small></span><span class="sm-go">‹</span></button>`;
   }
   window.siteMenu?.section({
     id: 'mafatih', order: 6.5,
-    render(box) { if (!document.querySelector('.sm [data-mf-open]')) box.innerHTML = `<h3>ادعیه</h3>${menuItem()}`; }
+    render(box) { const m = menuItem(); if (m && !document.querySelector('.sm [data-mf-open]')) box.innerHTML = `<h3>ادعیه</h3>${m}`; }
   });
   document.addEventListener('click', e => { if (e.target.closest('.sm [data-mf-open]')) { window.siteMenu.close(); setTimeout(openSheet, 280); } });
-  window.mafatih = { open: openSheet, menuItem };
+  // openKey('336'): باز کردن یک مورد با شماره‌اش (برای کارت «امروز» در daily.js)
+  const openKey = q => loadBook().then(() => { const x = allItems().find(x => x.it.key === q); x ? openItem(x.it, x.where) : openSheet(); }).catch(() => {});
+  window.mafatih = { open: openSheet, menuItem, openKey };
 
   // پیوند ?mafatih=1 یا ?mafatih=<شماره مورد>
   const q = new URLSearchParams(location.search).get('mafatih');
   if (q) {
     try { const u = new URL(location.href); u.searchParams.delete('mafatih'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch {}
-    if (/^\d{3}$/.test(q)) loadBook().then(() => { const x = allItems().find(x => x.it.key === q); x ? openItem(x.it, x.where) : openSheet(); }).catch(() => {});
+    if (/^\d{3}$/.test(q)) openKey(q);
     else openSheet();
   }
 })();

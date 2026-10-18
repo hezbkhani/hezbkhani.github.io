@@ -501,7 +501,7 @@ ${already.length ? `<div class="chs-mine">شما با نام «${esc(already.map
 <p class="chl-note">برای دریافت اخبار دوره، مثل شروع چله. اگر نمی‌خواهید خالی بگذارید؛ همه اخبار در همین سایت، بخش «چله‌های من» هم هست.</p>
 <button type="button" class="chs-main" data-chs-join>${toReserve ? 'ثبت‌نام در فهرست رزرو' : t.kind === 'text' ? 'ثبت‌نام در چله' : 'ثبت‌نام در دوره'}</button><div class="chl-msg" id="chsMsg"></div>
 ${t.reserve && !toReserve ? `<p class="chl-note">وقتی ${fa(t.capacity)} نفر کامل شد، ${fa(t.reserve)} نفر بعدی در فهرست رزرو می‌روند تا اگر کسی انصراف داد، جایش خودکار پر شود.</p>` : ''}
-<button type="button" class="chs-alt chl-read" data-read="${esc(t.text_key)}">${ICON_BOOK}دیدن متن ${t.kind === 'text' ? esc(textTitle(t.text_key, textsList) || '') : 'قرآن'}</button>`;
+<button type="button" class="chs-alt chl-read" data-read="${esc(t.text_key)}">${ICON_BOOK}خواندن متن ${t.kind === 'text' ? esc(textTitle(t.text_key, textsList) || '') : 'قرآن'}</button>`;
   }
   async function onSheetClick(e) {
     const b = e.target.closest('button'); if (!b) return;
@@ -751,7 +751,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
   function buildReader() {
     if (reader) return reader;
     reader = document.createElement('div'); reader.className = 'cr'; reader.setAttribute('role', 'dialog'); reader.setAttribute('aria-modal', 'true');
-    reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات">⚙</button><span class="cr-prog"></span></div>
+    reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات" title="تنظیمات">⚙</button><span class="cr-prog"></span></div>
 <div class="cr-menu"><div class="cr-row"><span>اندازه متن</span><div><button type="button" data-x="smaller">−</button><button type="button" data-x="bigger">+</button></div></div>
 <div class="cr-row"><span>ترجمه</span><div><button type="button" data-x="tr-on">نمایش</button><button type="button" data-x="tr-off">پنهان</button></div></div>
 <div class="cr-row" hidden><span>زبان ترجمه</span><select id="crLang" aria-label="زبان ترجمه"></select></div>
