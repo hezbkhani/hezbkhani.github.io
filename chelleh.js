@@ -274,7 +274,6 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
   function updateDot() {
     window.siteMenu?.dot(mine.some(m => (state(m) === 'run' && !(m.marked || []).includes(today)) || promoNew(m)));
   }
-  window.chlRefresh = refresh;
 
   // وضعیت هر عضویت: wait (در انتظار تکمیل ظرفیت)، soon (تاریخ شروع آینده)، run (در جریان)، end (تمام شده)
   const dayNo = m => (m.start_date ? isoDiff(today, m.start_date) + 1 : 0);
