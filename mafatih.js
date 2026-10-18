@@ -1,156 +1,146 @@
-// کتابخانه ادعیه و زیارات (مفاتیح): یک گزینه در دسته «ادعیه» منو که برگه‌ای با دسته‌ها، جستجوی عنوان، «اخیراً خوانده‌شده» و نشان‌شده‌ها باز می‌کند.
-// متن هر دعا همان chelleh/<key>.json است و با window.chlRead(key) در خواننده چله‌ها (chelleh.js) باز می‌شود؛ این متن‌ها در chelleh/index.json نیستند تا در ثبت‌نام چله نیایند.
-// فقط وقتی features.shown('mafatih') روشن است دیده می‌شود (ibadat.js گزینه منو را از mafatih.menuItem() می‌گیرد). منبع و ویرایش‌های متن‌ها: chelleh/MAFATIH-SOURCES.md
+// مفاتیح‌الجنان: فهرست باب‌ها و فصل‌های کتاب (books/mafatih/index.json) و باز کردن هر دعا، زیارت، مناجات یا عمل
+// در همان خواننده متن چله‌ها (window.chlRead در chelleh.js: متن عربی، ترجمه، صوت، اندازه متن و حالت شب).
+// متن هر مورد در books/mafatih/<شماره>.json به همان قالب متن‌های chelleh است؛ موردهایی که سایت از قبل داشت (کمیل، سمات، توسل،
+// عاشورا، کسا، عهد، مشلول) با ref همان فایل chelleh را باز می‌کنند و سوره‌ها در قرآن‌خوان باز می‌شوند.
+// فایل‌ها را tools/mafatih/build.py می‌سازد. در منو زیر «ادعیه» است؛ پیوند ?mafatih=1 (یا ?mafatih=<شماره>) هم همین را باز می‌کند.
 (function () {
-  const ID = 'mafatih', RK = 'mfRecent', SK = 'mfStar', TK = 'mfTab';
-  // [شناسه دسته, عنوان, عنوان کوتاه زبانه, [[key, عنوان, توضیح کوتاه], …]]
-  const CATS = [
-    ['doa', 'ادعیه مشهور', 'ادعیه', [
-      ['kumayl', 'دعای کمیل', 'شب‌های جمعه'],
-      ['nodbeh', 'دعای ندبه', 'صبح جمعه و عیدها'],
-      ['samat', 'دعای سمات', 'عصر جمعه'],
-      ['tavassul', 'دعای توسل', 'شب‌های چهارشنبه'],
-      ['faraj', 'دعای فرج', 'الهی عظم البلاء'],
-      ['ahd', 'دعای عهد', 'چهل صبح'],
-      ['mashlool', 'دعای مشلول', ''],
-      ['mujir', 'دعای مجیر', 'ایام البیض ماه رمضان'],
-      ['abuhamza', 'دعای ابوحمزه ثمالی', 'سحرهای ماه رمضان'],
-      ['kisa', 'حدیث شریف کسا', '']
-    ]],
-    ['ziyarat', 'زیارات', 'زیارات', [
-      ['ashura', 'زیارت عاشورا', 'امام حسین (ع)'],
-      ['warith', 'زیارت وارث', 'امام حسین (ع)'],
-      ['aminallah', 'زیارت امین‌الله', 'امیرالمؤمنین (ع) و همه ائمه'],
-      ['alyasin', 'زیارت آل یاسین', 'امام زمان (عج)']
-    ]],
-    ['week', 'دعای روزهای هفته', 'روزهای هفته', [
-      ['week_sat', 'دعای روز شنبه', ''], ['week_sun', 'دعای روز یکشنبه', ''], ['week_mon', 'دعای روز دوشنبه', ''],
-      ['week_tue', 'دعای روز سه‌شنبه', ''], ['week_wed', 'دعای روز چهارشنبه', ''], ['week_thu', 'دعای روز پنجشنبه', ''],
-      ['week_fri', 'دعای روز جمعه', '']
-    ]],
-    ['zekr', 'تعقیبات و اذکار', 'اذکار', [
-      ['tasbih_zahra', 'تسبیحات حضرت زهرا (س)', 'پس از هر نماز']
-    ]]
-  ];
-  const ALL = CATS.flatMap(c => c[3]);
-  const byKey = Object.fromEntries(ALL.map(x => [x[0], x]));
-  const WEEK = ['week_sun', 'week_mon', 'week_tue', 'week_wed', 'week_thu', 'week_fri', 'week_sat'];
-  const todayWeek = () => { try { const d = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Tehran', weekday: 'short' }).format(new Date()); return WEEK[['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(d)]; } catch { return WEEK[new Date().getDay()]; } };
+  const fa = '۰۱۲۳۴۵۶۷۸۹', toFa = x => String(x).replace(/\d/g, d => fa[d]);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const norm = s => String(s).replace(/[ً-ٰٟ]/g, '').replace(/[يىئ]/g, 'ی').replace(/ك/g, 'ک').replace(/ة/g, 'ه')
+    .replace(/[أإآٱ]/g, 'ا').replace(/ؤ/g, 'و').replace(/[\s‌()«»:،.]+/g, '').toLowerCase();
+  const LAST = 'mafatihLast';
+  const readLast = () => { try { const v = JSON.parse(localStorage.getItem(LAST)); return v && v.title ? v : null; } catch { return null; } };
 
-  const read = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } };
-  const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-  const recent = () => read(RK, []).filter(k => byKey[k]).slice(0, 3);
-  const stars = () => read(SK, []).filter(k => byKey[k]);
-  const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  // جستجو بی‌اعتنا به ی/ي، ک/ك، نیم‌فاصله و فاصله
-  const norm = s => String(s).replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[أإآ]/g, 'ا').replace(/[ً-ْ‌\s()]/g, '');
-  const shown = () => !!window.features?.shown(ID);
+  let book = null;
+  const loadBook = async () => book || (book = await fetch('books/mafatih/index.json').then(r => { if (!r.ok) throw Error(); return r.json(); }));
+  // همه موردها با جای هر کدام (باب و فصل)، برای جستجو و پیوند مستقیم
+  const allItems = () => book.chapters.flatMap((c, ci) => c.parts.flatMap(p => p.items.map(it => ({ it, ci, where: [c.title, p.title].filter(Boolean).join(' · ') }))));
 
   const css = `
-.mf-shade{position:fixed;inset:0;z-index:60;background:#000a;display:flex;align-items:flex-end;justify-content:center}
-.mf-box{width:100%;max-width:560px;height:88vh;max-height:88vh;display:flex;flex-direction:column;background:#fffaf0;color:var(--ink);text-shadow:none;border:2px solid var(--gold);border-bottom:0;border-radius:var(--r-panel) var(--r-panel) 0 0;box-shadow:0 -10px 40px #0007;animation:ibup .25s ease}
-.mf-top{padding:12px 16px 8px;border-bottom:1px solid var(--line)}
-.mf-x{float:left;width:44px;height:44px;padding:0;background:transparent;border:0;color:var(--muted);font-size:24px}
-.mf-top h2{margin:2px 0 0;font:normal 30px/1.5 SiteFont,Tahoma,serif;color:var(--deep);text-align:center}
-.mf-top p{margin:0 0 8px;text-align:center;color:var(--muted);font-size:14px}
-.mf-q{display:block;width:100%;height:44px;font-size:16px;padding:0 12px;border-radius:var(--r-card);background:#fff}
-.mf-tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}.mf-tabs::-webkit-scrollbar{display:none}
-.mf-tabs button{flex:none;height:40px;padding:0 14px;font-size:15px;font-weight:500;border-radius:999px;background:#fff;color:var(--deep)}
-.mf-tabs button[aria-selected="true"]{background:var(--emerald);color:#fff}
-.mf-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:4px 16px calc(18px + env(safe-area-inset-bottom))}
-.mf-h{margin:12px 0 2px;font-size:14px;font-weight:700;color:var(--muted)}
-.mf-row{display:flex;align-items:center;border-bottom:1px solid var(--line)}
-.mf-row:last-child{border-bottom:0}
-.mf-open{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:auto;min-height:52px;padding:6px 2px;background:transparent;border:0;border-radius:0;color:var(--ink);text-align:right;font-weight:500;font-size:16px;white-space:normal;line-height:1.6}
-.mf-open:hover,.mf-open:focus-visible{background:var(--hover)}
-.mf-open span{flex:1;min-width:0}
-.mf-open small{display:block;color:var(--muted);font-size:13px;font-weight:400}
-.mf-open i{flex:none;font-style:normal;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--cream);color:var(--deep);border:1px solid var(--gold)}
-.mf-star{flex:none;width:44px;height:44px;padding:0;background:transparent;border:0;color:#b9ab92;font-size:22px}
-.mf-star[aria-pressed="true"]{color:var(--gold)}
-.mf-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}
-.mf-chips button{height:auto;min-height:40px;padding:4px 12px;font-size:15px;font-weight:500;border-radius:999px;background:var(--mint);color:var(--deep);white-space:normal}
-.mf-empty{text-align:center;color:var(--muted);padding:20px 0}`;
+.mf-shade{position:fixed;inset:0;z-index:48;background:#000a;display:flex;align-items:flex-end;justify-content:center}
+.mf-box{width:100%;max-width:560px;max-height:94vh;overflow-y:auto;overscroll-behavior:contain;background:#fffaf0;color:var(--ink);text-shadow:none;border:2px solid var(--gold);border-bottom:0;border-radius:var(--r-panel) var(--r-panel) 0 0;padding:10px 18px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px #0007;animation:mfup .25s ease}
+@keyframes mfup{from{transform:translateY(40px);opacity:.4}}
+.mf-x{float:left;width:42px;height:42px;padding:0;background:transparent;border:0;color:var(--muted);font-size:24px}
+.mf-box h2{margin:10px 0 0;text-align:center;font:normal 34px/1.6 SiteFont,Tahoma,serif;color:var(--deep)}
+.mf-sub{margin:0 0 10px;text-align:center;color:var(--muted);font-size:15px}
+.mf-card{background:#fff;border:1px solid var(--gold);border-radius:var(--r-card);padding:10px 14px;margin:10px 0}
+.mf-card h3{margin:0 0 6px;font-size:16px;color:var(--deep)}
+.mf-resume{background:var(--mint);border-right:5px solid var(--deep)}
+.mf-resume button{width:100%;margin-top:6px}
+.mf-ch{margin:8px 0;background:#fff;border:1px solid var(--gold);border-radius:var(--r-card);overflow:hidden}
+.mf-ch>summary{display:flex;align-items:center;gap:8px;min-height:50px;padding:8px 14px;cursor:pointer;list-style:none;font-weight:700;color:var(--deep);font-size:16px}
+.mf-ch>summary::-webkit-details-marker{display:none}
+.mf-ch>summary b{flex:1}
+.mf-ch>summary small{flex:none;padding:0 8px;border-radius:999px;background:var(--mint);font-size:13px;font-weight:500}
+.mf-ch>summary i{flex:none;font-style:normal;color:var(--muted);transition:transform .2s}
+.mf-ch[open]>summary i{transform:rotate(180deg)}
+.mf-ch[open]>summary{border-bottom:1px solid var(--line)}
+.mf-part{padding:4px 0 8px}
+.mf-part h4{margin:8px 14px 2px;font-size:14px;color:var(--muted);font-weight:700}
+.mf-it{display:flex;align-items:center;gap:8px;width:100%;height:auto;min-height:44px;padding:6px 14px;background:transparent;border:0;border-radius:0;color:var(--ink);text-align:right;white-space:normal;line-height:1.7;font-weight:500;font-size:15.5px}
+.mf-it:hover,.mf-it:focus-visible{background:var(--hover)}
+.mf-it span{flex:1;min-width:0}
+.mf-it small{display:block;color:var(--muted);font-size:13px;font-weight:400}
+.mf-it em{flex:none;font-style:normal;font-size:14px}
+.mf-res:empty{display:none}
+.mf-res{margin-top:6px;border-top:1px solid var(--line)}
+.mf-note{margin:6px 0 0;font-size:14px;color:var(--muted)}
+body.mf-lock{overflow:hidden}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
 
-  let shade = null, q = '', tab = read(TK, 'doa');
-  if (!CATS.some(c => c[0] === tab)) tab = 'doa';
+  const itemBtn = (it, where) => `<button type="button" class="mf-it" data-mf-key="${esc(it.key || '')}" data-mf-ref="${esc(it.ref || '')}" data-mf-surah="${it.surah || ''}" data-mf-title="${esc(it.title)}"><span>${esc(it.title)}${where ? `<small>${esc(where)}</small>` : ''}</span>${it.audio || it.ref ? '<em title="صوت دارد" aria-label="صوت دارد">🎧</em>' : it.surah ? '<em aria-hidden="true">📖</em>' : ''}</button>`;
 
-  function row(x) {
-    const [k, t, s] = x, on = stars().includes(k), today = k === todayWeek();
-    return `<div class="mf-row"><button type="button" class="mf-open" data-mf="${k}"><span>${esc(t)}${s ? `<small>${esc(s)}</small>` : ''}</span>${today ? '<i>امروز</i>' : ''}</button><button type="button" class="mf-star" data-mf-star="${k}" aria-pressed="${on}" aria-label="${on ? 'برداشتن نشان' : 'نشان گذاشتن'}: ${esc(t)}">${on ? '★' : '☆'}</button></div>`;
-  }
-  function renderBody() {
-    const body = shade.querySelector('.mf-body');
-    shade.querySelectorAll('.mf-tabs button').forEach(b => b.setAttribute('aria-selected', !q && b.dataset.mfTab === tab));
-    if (q) {
-      const n = norm(q), list = ALL.filter(x => norm(x[1] + x[2]).includes(n));
-      body.innerHTML = list.length ? list.map(row).join('') : '<p class="mf-empty">چیزی با این عنوان پیدا نشد.</p>';
-      return;
-    }
-    let h = '';
-    const r = recent(), s = stars();
-    if (r.length) h += `<h3 class="mf-h">اخیراً خوانده‌شده</h3><div class="mf-chips">${r.map(k => `<button type="button" data-mf="${k}">${esc(byKey[k][1])}</button>`).join('')}</div>`;
-    if (s.length) h += `<h3 class="mf-h">نشان‌شده‌ها ★</h3>${s.map(k => row(byKey[k])).join('')}`;
-    const c = CATS.find(x => x[0] === tab);
-    h += `<h3 class="mf-h">${esc(c[1])}</h3>${c[3].map(row).join('')}`;
-    body.innerHTML = h;
-  }
-  function open() {
-    if (!shown()) return;
-    if (!shade) {
-      shade = document.createElement('div'); shade.className = 'mf-shade';
-      shade.innerHTML = `<div class="mf-box" role="dialog" aria-modal="true" aria-label="مفاتیح: ادعیه و زیارات"><div class="mf-top"><button type="button" class="mf-x" aria-label="بستن">✕</button><h2>ادعیه و زیارات</h2><p>از مفاتیح‌الجنان، با ترجمه فارسی</p><input type="search" class="mf-q" placeholder="جستجوی نام دعا یا زیارت…" aria-label="جستجوی نام دعا یا زیارت"><div class="mf-tabs" role="tablist">${CATS.map(c => `<button type="button" role="tab" data-mf-tab="${c[0]}">${esc(c[2])}</button>`).join('')}</div></div><div class="mf-body"></div></div>`;
-      shade.addEventListener('click', onClick);
-      shade.querySelector('.mf-q').addEventListener('input', e => { q = e.target.value.trim(); renderBody(); });
-    }
-    q = ''; shade.querySelector('.mf-q').value = '';
-    renderBody();
-    shade.querySelector('.mf-body').scrollTop = 0;
-    document.body.appendChild(shade); document.body.classList.add('ib-lock');
+  let shade = null, thenAfter = null;
+  async function openSheet() {
+    if (shade && shade.isConnected) return;
+    try { await loadBook(); } catch { return alert('بارگذاری فهرست مفاتیح‌الجنان انجام نشد. اینترنت را بررسی کنید.'); }
+    shade = document.createElement('div'); shade.className = 'mf-shade';
+    shade.innerHTML = '<div class="mf-box" role="dialog" aria-modal="true" aria-label="مفاتیح‌الجنان"></div>';
+    shade.addEventListener('click', onClick);
+    shade.addEventListener('input', e => { if (e.target.id === 'mfQ') search(e.target.value); });
+    shade.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'mfQ') { e.preventDefault(); shade.querySelector('.mf-res .mf-it')?.click(); } });
+    document.body.appendChild(shade); document.body.classList.add('mf-lock');
+    render();
     try { if (!history.state?.mf) history.pushState({ mf: 1 }, ''); } catch {}
-    setTimeout(() => shade.querySelector('.mf-x')?.focus(), 50);
   }
-  function close(fromHistory) {
-    if (!shade || !shade.isConnected) return;
-    shade.remove(); document.body.classList.remove('ib-lock');
-    if (!fromHistory) { try { if (history.state?.mf) history.back(); } catch {} }
+  function closeSheet(fromHistory, then) {
+    if (!shade || !shade.isConnected) { if (then) then(); return; }
+    shade.remove(); document.body.classList.remove('mf-lock');
+    if (!fromHistory) { try { if (history.state?.mf) { thenAfter = then || null; history.back(); return; } } catch {} }
+    if (then) then();
+  }
+  window.addEventListener('popstate', () => {
+    if (shade && shade.isConnected && !history.state?.mf) closeSheet(true);
+    const f = thenAfter; thenAfter = null;
+    if (f) setTimeout(f, 30);
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && shade && shade.isConnected) closeSheet(); });
+
+  function render() {
+    const box = shade.querySelector('.mf-box'), last = readLast();
+    box.innerHTML = `<button type="button" class="mf-x" data-mf="close" aria-label="بستن">✕</button>
+<h2>مفاتیح‌الجنان</h2><p class="mf-sub">دعاها، زیارات، مناجات‌ها و اعمال سال، با متن عربی، ترجمه فارسی و صوت</p>
+${last ? `<div class="mf-card mf-resume"><h3>آخرین متنی که باز کردید</h3>${itemBtn(last.it, last.where)}</div>` : ''}
+<div class="mf-card"><input id="mfQ" type="search" autocomplete="off" placeholder="جستجوی نام دعا یا زیارت، مثلاً ندبه، عرفه، جامعه" aria-label="جستجو در مفاتیح‌الجنان"><div class="mf-res" id="mfRes"></div></div>
+${book.chapters.map(c => `<details class="mf-ch"><summary><b>${esc(c.title)}</b><small>${toFa(c.parts.reduce((n, p) => n + p.items.length, 0))}</small><i>▾</i></summary>
+${c.parts.map(p => `<div class="mf-part">${p.title ? `<h4>${esc(p.title)}</h4>` : ''}${p.items.map(it => itemBtn(it)).join('')}</div>`).join('')}</details>`).join('')}
+<p class="mf-note">${esc(book.about)} 🎧 یعنی صوت هم دارد.</p><p class="mf-note">منبع: ${esc(book.src)}</p>`;
+  }
+  function search(v) {
+    const res = shade.querySelector('#mfRes'), q = norm(v);
+    if (q.length < 2) { res.innerHTML = ''; return; }
+    const found = allItems().filter(x => norm(x.it.title).includes(q));
+    res.innerHTML = found.length ? found.slice(0, 40).map(x => itemBtn(x.it, x.where)).join('') + (found.length > 40 ? `<p class="mf-note">${toFa(found.length)} مورد؛ ۴۰ مورد اول.</p>` : '')
+      : `<p class="mf-note">موردی با «${esc(v)}» پیدا نشد.</p>`;
+  }
+
+  async function openItem(it, where) {
+    try { localStorage.setItem(LAST, JSON.stringify({ title: it.title, it, where })); } catch {}
+    if (it.surah) {
+      const qr = window.quranReader, ix = qr && await qr.index().catch(() => null);
+      if (!ix) return alert('بارگذاری متن قرآن انجام نشد. اینترنت را بررسی کنید.');
+      const n = it.surah;
+      return qr.openRange({ title: it.title, sub: 'مفاتیح‌الجنان', from: ix.surah[n - 1], to: n < 114 ? ix.surah[n] : ix.total, endText: `پایان ${it.title}. قبول باشد.` });
+    }
+    if (!window.chlRead) return;
+    window.chlRead(it.ref || 'books/mafatih/' + it.key);
   }
   function onClick(e) {
-    if (e.target === shade || e.target.closest('.mf-x')) return close();
-    const t = e.target.closest('[data-mf-tab]');
-    if (t) { tab = t.dataset.mfTab; write(TK, tab); q = ''; shade.querySelector('.mf-q').value = ''; renderBody(); shade.querySelector('.mf-body').scrollTop = 0; return; }
-    const s = e.target.closest('[data-mf-star]');
-    if (s) {
-      const k = s.dataset.mfStar, l = stars();
-      write(SK, l.includes(k) ? l.filter(x => x !== k) : [k, ...l]);
-      const top = shade.querySelector('.mf-body').scrollTop; renderBody(); shade.querySelector('.mf-body').scrollTop = top;
-      return;
-    }
-    const o = e.target.closest('[data-mf]');
-    if (o) {
-      const k = o.dataset.mf;
-      write(RK, [k, ...read(RK, []).filter(x => x !== k)].slice(0, 3));
-      if (!window.chlRead) return;
-      // برگه بسته می‌شود و خواننده جای آن در تاریخچه می‌نشیند (دکمه برگشت خواننده را می‌بندد).
-      close(true); try { if (history.state?.mf) history.replaceState(null, ''); } catch {}
-      window.chlRead(k);
+    if (e.target === shade) return closeSheet();
+    const b = e.target.closest('[data-mf], .mf-it'); if (!b) return;
+    if (b.dataset.mf === 'close') return closeSheet();
+    if (b.classList.contains('mf-it')) {
+      const it = { title: b.dataset.mfTitle };
+      if (b.dataset.mfKey) it.key = b.dataset.mfKey;
+      if (b.dataset.mfRef) it.ref = b.dataset.mfRef;
+      if (b.dataset.mfSurah) it.surah = +b.dataset.mfSurah;
+      const found = allItems().find(x => x.it.title === it.title && (x.it.key || x.it.ref || x.it.surah) === (it.key || it.ref || it.surah));
+      if (found) Object.assign(it, found.it);
+      closeSheet(false, () => openItem(it, found?.where || ''));
     }
   }
-  window.addEventListener('popstate', () => { if (!history.state?.mf) close(true); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-  document.addEventListener('features:changed', () => { if (!shown()) close(); window.siteMenu?.refresh(); });
-  document.addEventListener('click', e => { if (e.target.closest('[data-mf-menu]')) { window.siteMenu?.close(); setTimeout(open, 280); } });
 
-  window.mafatih = {
-    open,
-    // گزینه منو برای دسته «ادعیه» (ibadat.js)؛ وقتی امکان خاموش است چیزی برنمی‌گرداند.
-    menuItem() {
-      if (!shown()) return '';
-      return `<button type="button" class="sm-item" data-mf-menu><span class="sm-ic">📚</span><span>مفاتیح: همه ادعیه و زیارات<small>${ALL.length.toLocaleString('fa-IR')} دعا و زیارت، با ترجمه فارسی</small></span><span class="sm-go">‹</span></button>`;
-    }
-  };
-  // متن‌های مفاتیح در جستجوی سایت (search.js) هم پیدا می‌شوند، فقط وقتی همین امکان روشن است؛ متن‌های چله‌ها را خود search.js دارد.
-  const inSearch = () => { if (!window.siteSearch) return setTimeout(inSearch, 300); ALL.forEach(([k, t, sub]) => { if (!['kumayl', 'samat', 'tavassul', 'ahd', 'mashlool', 'kisa', 'ashura', 'alyasin'].includes(k)) window.siteSearch.add({ group: 'duas', title: t, sub, ic: '📿', keys: 'مفاتیح دعا زیارت', run: () => window.chlRead?.(k), on: () => window.features?.shown(ID) }); }); };
-  inSearch();
+  // ---------- منو: زیر «ادعیه» (ibadat.js)؛ اگر آن بخش نبود، جداگانه ----------
+  // مدیر می‌تواند در «امکانات سایت» خاموشش کند (features.js، پیش‌فرض روشن).
+  function menuItem() {
+    if (window.features && !window.features.shown('mafatih')) return '';
+    const last = readLast();
+    return `<button type="button" class="sm-item" data-mf-open><span class="sm-ic">📚</span><span>مفاتیح‌الجنان<small>${last ? `آخرین: ${esc(last.title)}` : 'همه دعاها، زیارات، مناجات‌ها و اعمال'}</small></span><span class="sm-go">‹</span></button>`;
+  }
+  window.siteMenu?.section({
+    id: 'mafatih', order: 6.5,
+    render(box) { const m = menuItem(); if (m && !document.querySelector('.sm [data-mf-open]')) box.innerHTML = `<h3>ادعیه</h3>${m}`; }
+  });
+  document.addEventListener('click', e => { if (e.target.closest('.sm [data-mf-open]')) { window.siteMenu.close(); setTimeout(openSheet, 280); } });
+  // openKey('336'): باز کردن یک مورد با شماره‌اش (برای کارت «امروز» در daily.js)
+  const openKey = q => loadBook().then(() => { const x = allItems().find(x => x.it.key === q); x ? openItem(x.it, x.where) : openSheet(); }).catch(() => {});
+  window.mafatih = { open: openSheet, menuItem, openKey };
+
+  // پیوند ?mafatih=1 یا ?mafatih=<شماره مورد>
+  const q = new URLSearchParams(location.search).get('mafatih');
+  if (q) {
+    try { const u = new URL(location.href); u.searchParams.delete('mafatih'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch {}
+    if (/^\d{3}$/.test(q)) openKey(q);
+    else openSheet();
+  }
 })();

@@ -8,7 +8,7 @@
     ['today', '🗓️', 'امروز', 'مناسبت امروز و دعا و اعمال سفارش‌شده، در صفحه اول'],
     ['saved', '🔖', 'نشانه‌ها و یادداشت‌ها', 'نشانه گذاشتن، رنگ کردن و یادداشت روی آیه‌ها'],
     ['audioplus', '🔁', 'تکرار آیه و زمان‌سنج خواب', 'در تنظیمات صوت قرآن‌خوان'],
-    ['mafatih', '📚', 'ادعیه و زیارات بیشتر', 'دعاهای بیشتر از مفاتیح‌الجنان با ترجمه'],
+    ['mafatih', '📚', 'مفاتیح‌الجنان', 'همه دعاها، زیارات و اعمال در منوی «ادعیه»', true],
     ['zekr', '📿', 'ذکرشمار', 'شمارنده ذکر و صلوات و نذر جمعی صلوات'],
     ['search', '🔎', 'جستجو', 'یک جستجو برای آیه‌ها، دعاها، دوره‌ها و تنظیمات'],
     ['comfort', '🔠', 'اندازه متن و حالت تاریک', 'اندازه و فاصله خطوط و حالت تاریک برای همه بخش‌ها'],
@@ -19,7 +19,9 @@
   const admin = () => location.hash === '#admin';
   const conf = () => window.siteSettings?.features || {};
   const hidden = () => { try { return JSON.parse(localStorage.getItem(HIDE)) || []; } catch { return []; } };
-  const on = id => admin() || conf()[id] === true;
+  // ستون پنجم فهرست: true یعنی تا مدیر خاموش نکرده روشن است (مثل مفاتیح که پیش از این امکانات هم در سایت بود).
+  const def = id => LIST.some(f => f[0] === id && f[4] === true);
+  const on = id => admin() || (conf()[id] ?? def(id)) === true;
   const shown = id => on(id) && !hidden().includes(id);
   const fire = () => document.dispatchEvent(new Event('features:changed'));
   const setHidden = (id, hide) => {
@@ -93,7 +95,7 @@
       });
     }
     const c = conf();
-    card.innerHTML = `<h3>امکانات سایت</h3><p class="hint">هر امکان روشن باشد برای همه دیده می‌شود؛ خاموش باشد فقط شما در ‎#admin‎ برای آزمایش می‌بینید. هر بازدیدکننده هم می‌تواند در «منوی ☰ › تنظیمات › نمایش امکانات» هر کدام را برای خودش پنهان کند.</p>${LIST.map(f => row(f, c[f[0]] === true, 'data-ft-adm')).join('')}<div class="adm-msg"></div>`;
+    card.innerHTML = `<h3>امکانات سایت</h3><p class="hint">هر امکان روشن باشد برای همه دیده می‌شود؛ خاموش باشد فقط شما در ‎#admin‎ برای آزمایش می‌بینید. هر بازدیدکننده هم می‌تواند در «منوی ☰ › تنظیمات › نمایش امکانات» هر کدام را برای خودش پنهان کند.</p>${LIST.map(f => row(f, (c[f[0]] ?? def(f[0])) === true, 'data-ft-adm')).join('')}<div class="adm-msg"></div>`;
   }
   document.addEventListener('admin:tab', e => { if (e.detail === 'settings') adminCard(); });
   document.addEventListener('settings:changed', () => { if (document.getElementById('setFeatures')) adminCard(); fire(); });
