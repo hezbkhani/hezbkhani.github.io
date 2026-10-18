@@ -68,6 +68,14 @@
     if (!t) throw Error('متن این چله پیدا نشد. اینترنت را بررسی کنید و دوباره امتحان کنید.');
     return (textCache[key] = t);
   }
+  // ترجمه‌های دیگر هر متن (فارسی از مترجم‌های دیگر و زبان‌های دیگر) در پوشه chelleh/tr است:
+  // فهرست مترجم‌ها در index.json و برای هر مترجم یک فایل برای هر متن، { n: تعداد بندها، t: ترجمه هر بند به همان ترتیب }.
+  // ترجمه فارسی خود متن (fa) پیش‌فرض است؛ اگر مدیر متن را ویرایش کرده و تعداد بندها فرق کند، ترجمه پیش‌فرض نشان داده می‌شود.
+  // نام زبان‌ها مثل «زبان ترجمه» در قرآن‌خوان سایت.
+  const TR_LANGS = { fa: 'فارسی', en: 'انگلیسی · English', de: 'آلمانی · Deutsch', fr: 'فرانسوی · Français', es: 'اسپانیایی · Español', tr: 'ترکی استانبولی · Türkçe', ur: 'اردو', hi: 'هندی · हिन्दी', id: 'اندونزیایی · Indonesia', ru: 'روسی · Русский' };
+  const RTL = ['fa', 'ar', 'ur'];
+  let trList = null;
+  const loadTrList = () => trList || (trList = fetch('chelleh/tr/index.json').then(r => (r.ok ? r.json() : [])).catch(() => { trList = null; return []; }));
   const textTitle = (key, list) => (list || []).find(t => t.key === key)?.title || key;
 
   // قالب ساده برای ویرایش متن در بخش مدیریت: هر بند با یک خط خالی جدا می‌شود؛
@@ -184,6 +192,8 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
 .cr-row div{display:flex;gap:6px}
 .cr-row button{height:40px;min-width:44px;padding:0 12px;background:transparent;color:var(--text);border:1px solid var(--line);font-size:15px;font-weight:600}
 .cr-row button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.cr-row select{flex:1;min-width:0;max-width:62%;height:40px;padding:0 8px;font:inherit;font-size:15px;color:var(--text);background:var(--bg);border:1px solid var(--line)}
+.cr-row[hidden]{display:none}
 .cr-body{max-width:760px;margin:0 auto;padding:6px 14px calc(40px + env(safe-area-inset-bottom))}
 .cr-head{margin:22px 0 8px;padding:14px 10px 10px;text-align:center;border:1px solid var(--gold);outline:3px double var(--gold);outline-offset:3px;background:var(--card)}
 .cr-head h3{margin:0;font:normal 34px/1.6 SiteFont,Tahoma,serif;color:var(--accent)}
@@ -196,7 +206,10 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
 .cr-sec.only .cr-note{margin:0;color:var(--muted);font-weight:500}
 .cr-ar{margin:0;font:normal var(--qs)/2.15 ChlArabic,Vazirmatn,serif;text-align:right;word-spacing:1px}
 .cr-fa{margin:6px 0 0;font-size:calc(var(--qs)*.58);line-height:2;color:var(--tr);text-align:justify}
-.cr.no-tr .cr-fa{display:none}
+.cr.no-tr .cr-fa,.cr.no-tr .cr-trsrc{display:none}
+.cr-fa[dir=ltr]{text-align:left;font-family:Georgia,'Times New Roman',serif;line-height:1.75}
+.cr-fa[lang=ur]{font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaleeq',Vazirmatn,serif;line-height:2.3}
+.cr-trsrc{display:block;margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.8}
 .cr-count{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
 .cr-count button{height:48px;min-width:120px;background:var(--accent);border:1px solid var(--gold);color:#fff;font-size:18px;font-weight:700}
 .cr-count button.full{background:var(--gold)}
@@ -274,7 +287,6 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
   function updateDot() {
     window.siteMenu?.dot(mine.some(m => (state(m) === 'run' && !(m.marked || []).includes(today)) || promoNew(m)));
   }
-  window.chlRefresh = refresh;
 
   // وضعیت هر عضویت: wait (در انتظار تکمیل ظرفیت)، soon (تاریخ شروع آینده)، run (در جریان)، end (تمام شده)
   const dayNo = m => (m.start_date ? isoDiff(today, m.start_date) + 1 : 0);
@@ -739,7 +751,9 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     reader = document.createElement('div'); reader.className = 'cr'; reader.setAttribute('role', 'dialog'); reader.setAttribute('aria-modal', 'true');
     reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات">⚙</button><span class="cr-prog"></span></div>
 <div class="cr-menu"><div class="cr-row"><span>اندازه متن</span><div><button type="button" data-x="smaller">−</button><button type="button" data-x="bigger">+</button></div></div>
-<div class="cr-row"><span>ترجمه فارسی</span><div><button type="button" data-x="tr-on">نمایش</button><button type="button" data-x="tr-off">پنهان</button></div></div>
+<div class="cr-row"><span>ترجمه</span><div><button type="button" data-x="tr-on">نمایش</button><button type="button" data-x="tr-off">پنهان</button></div></div>
+<div class="cr-row" hidden><span>زبان ترجمه</span><select id="crLang" aria-label="زبان ترجمه"></select></div>
+<div class="cr-row" hidden><span>مترجم</span><select id="crTr" aria-label="مترجم"></select></div>
 <div class="cr-row"><span>حالت شب</span><div><button type="button" data-x="day">روز</button><button type="button" data-x="night">شب</button></div></div>
 <div class="cr-row"><span>دکمه دانلود صوت</span><div><button type="button" data-x="dl-on">نمایش</button><button type="button" data-x="dl-off">پنهان</button></div></div></div>
 <div class="cr-body"></div>
@@ -751,6 +765,13 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
       prefs.audio = Object.assign(prefs.audio || {}, { [current.key]: a.url }); write(RKEY, prefs);
       const au = reader.querySelector('.cr-aud audio'), was = !au.paused; au.src = a.url; if (was) au.play().catch(() => {});
     });
+    const trChange = async (lang, id) => {
+      prefs.trLang = lang; if (id !== undefined) prefs.trx = Object.assign(prefs.trx || {}, { [lang]: id }); write(RKEY, prefs);
+      if (!current) return;
+      const top = reader.scrollTop; await loadTr(); renderReader(); reader.scrollTop = top;
+    };
+    reader.querySelector('#crLang').addEventListener('change', e => trChange(e.target.value));
+    reader.querySelector('#crTr').addEventListener('change', e => trChange(prefs.trLang || 'fa', e.target.value));
     reader.addEventListener('scroll', () => { const h = reader.scrollHeight - reader.clientHeight; reader.querySelector('.cr-prog').style.width = (h > 0 ? reader.scrollTop / h * 100 : 0) + '%'; }, { passive: true });
     window.addEventListener('popstate', () => { if (reader.classList.contains('show') && !history.state?.chl) closeReader(true); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && reader.classList.contains('show')) closeReader(); });
@@ -763,6 +784,22 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     const on = { 'tr-on': prefs.trans, 'tr-off': !prefs.trans, day: !prefs.night, night: prefs.night, 'dl-on': dl, 'dl-off': !dl };
     reader.querySelectorAll('.cr-row [data-x]').forEach(b => b.classList.toggle('on', !!on[b.dataset.x]));
     write(RKEY, prefs);
+  }
+  // زبان و مترجم مثل قرآن‌خوان: اول زبان، بعد مترجم همان زبان (برای فارسی، ترجمه خود متن پیش‌فرض است).
+  async function loadTr() {
+    const { key, text } = current, lsel = reader.querySelector('#crLang'), sel = reader.querySelector('#crTr');
+    const list = (await loadTrList()).filter(x => (x.texts || []).includes(key));
+    const langs = ['fa', ...new Set(list.map(x => x.lang).filter(l => l !== 'fa'))];
+    const lang = langs.includes(prefs.trLang) ? prefs.trLang : 'fa';
+    const opts = (lang === 'fa' ? [{ id: '', name: 'ترجمه پیش‌فرض سایت' }] : []).concat(list.filter(x => x.lang === lang));
+    lsel.innerHTML = langs.map(l => `<option value="${l}">${esc(TR_LANGS[l] || l)}</option>`).join(''); lsel.value = lang;
+    sel.innerHTML = opts.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+    lsel.closest('.cr-row').hidden = langs.length < 2; sel.closest('.cr-row').hidden = opts.length < 2;
+    const want = (prefs.trx || {})[lang], meta = opts.find(x => x.id === want) || opts[0];
+    const data = meta.id && await fetch(`chelleh/tr/${meta.id}/${key}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+    const ok = data && Array.isArray(data.t) && data.n === (text.sections || []).length;
+    current.tr = ok ? { meta, t: data.t } : null;
+    sel.value = ok ? meta.id : opts[0].id;
   }
   // شمارنده بندهای تکراری (مثلاً صد لعن و صد سلام)، جدا برای هر روز.
   const countKey = () => `chlCount:${current.key}:${today || isoIran()}`;
@@ -783,7 +820,8 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     let t;
     try { t = await getText(key); }
     catch (e) { reader.querySelector('.cr-title b').textContent = 'متن باز نشد'; reader.querySelector('.cr-body').innerHTML = `<p class="cr-sec only" style="margin-top:30px">${esc(e.message)}</p>`; return; }
-    current = { key, member, text: t };
+    current = { key, member, text: t, tr: null };
+    await loadTr();
     reader.querySelector('.cr-title b').textContent = t.title;
     reader.querySelector('.cr-title small').textContent = member && state(member) === 'run' ? `${member.title}، روز ${fa(dayNo(member))} از ${fa(member.days)}` : '';
     renderReader();
@@ -791,11 +829,14 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
   }
   function renderReader() {
     const t = current.text, c = counts(), m = current.member;
-    let html = `<div class="cr-head"><h3>${esc(t.title)}</h3>${t.about ? `<small>${esc(t.about)}</small>` : ''}</div><p class="cr-bism">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</p>`;
+    const tr = current.tr, lang = tr ? tr.meta.lang : 'fa', dir = RTL.includes(lang) ? 'rtl' : 'ltr';
+    const trSrc = tr ? `<small class="cr-trsrc">ترجمه: ${esc(tr.meta.name)}${tr.meta.src ? ` · ${esc(tr.meta.src)}` : ''}</small>` : '';
+    let html = `<div class="cr-head"><h3>${esc(t.title)}</h3>${t.about ? `<small>${esc(t.about)}</small>` : ''}${trSrc}</div><p class="cr-bism">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</p>`;
     html += (t.sections || []).map((s, i) => {
       if (!s.ar) return `<div class="cr-sec only"><p class="cr-note">${esc(s.note)}</p></div>`;
       const n = c[i] || 0, rep = s.repeat ? `<div class="cr-count"><button type="button" data-count="${i}" class="${n >= s.repeat ? 'full' : ''}">${fa(n)} / ${fa(s.repeat)}</button><small>${n >= s.repeat ? 'کامل شد' : 'با هر بار خواندن بزنید'}</small>${n ? `<button type="button" class="cr-reset" data-reset="${i}">از نو</button>` : ''}</div>` : '';
-      return `<div class="cr-sec">${s.note ? `<p class="cr-note">${esc(s.note)}</p>` : ''}<p class="cr-ar" lang="ar" dir="rtl">${esc(s.ar)}</p>${s.fa ? `<p class="cr-fa">${esc(s.fa)}</p>` : ''}${rep}</div>`;
+      const f = tr ? tr.t[i] : s.fa;
+      return `<div class="cr-sec">${s.note ? `<p class="cr-note">${esc(s.note)}</p>` : ''}<p class="cr-ar" lang="ar" dir="rtl">${esc(s.ar)}</p>${f ? `<p class="cr-fa" lang="${lang}" dir="${dir}">${esc(f)}</p>` : ''}${rep}</div>`;
     }).join('');
     if (m && state(m) === 'run') {
       const done = (m.marked || []).includes(today);

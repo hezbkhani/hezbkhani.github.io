@@ -329,7 +329,7 @@ ${extra?.email ? `<button type="button" class="acs-alt" data-do="resend" data-em
     if (act === 'logout') return busy(b, 'در حال خروج…', logout);
   }
   function showMine() {
-    const el = ['chellehPanel', 'regPanel', 'hzTaskPanel'].map(id => document.getElementById(id)).find(x => x && !x.hidden && x.offsetParent !== null);
+    const el = ['chellehPanel', 'registerPanel', 'hzTaskPanel'].map(id => document.getElementById(id)).find(x => x && !x.hidden && x.offsetParent !== null);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     else toast('هنوز در چله یا گروهی ثبت‌نام نکرده‌اید. از منوی سه‌خط یکی را انتخاب کنید.');
   }
