@@ -153,20 +153,9 @@
     return out;
   }
 
-  // ---------- متن‌های مفاتیح ----------
-  // متن‌هایی که از اول در سایت هست همیشه؛ متن‌های تازه مفاتیح (کار دیگری که در chelleh/ اضافه می‌شود) فقط اگر امکان mafatih روشن باشد و فایل باشد.
-  const CORE = new Set(['ashura', 'alyasin', 'kisa', 'mashlool', 'ahd', 'samat', 'kumayl', 'tavassul']);
-  const have = {};
-  function exists(key) {
-    if (CORE.has(key)) return true;
-    if (!shown('mafatih') || !/^[a-z0-9_-]+$/.test(key)) return false;
-    if (!(key in have)) {
-      have[key] = false;
-      fetch(`chelleh/${key}.json`, { method: 'HEAD', cache: 'no-cache' }).then(r => { if (r.ok) { have[key] = true; render(); } }).catch(() => {});
-    }
-    return have[key];
-  }
-  const pick = keys => keys.find(exists);
+  // ---------- مفاتیح‌الجنان ----------
+  // ندبه، جوشن کبیر، عرفه و اربعین از بخش مفاتیح (mafatih.js، books/mafatih/<شماره>.json) باز می‌شوند، اگر آن بخش روشن باشد.
+  const mf = () => !!window.mafatih?.openKey && shown('mafatih');
 
   // ---------- اعمال امروز ----------
   // هر سطر: { ic, t (عنوان)، s (زمان)، go: 'ib:نوع' برای برگه‌های ibadat.js یا 'rd:کلید' برای خواننده متن }
@@ -179,13 +168,13 @@
     const he = hijri(eve) || { m: 0, d: 0 };
     // مناسبت‌ها
     if (h.m === 1 && h.d <= 10 && !beforeFajr) add('rd:ashura', '🏴', 'زیارت عاشورا', h.d === 10 ? 'روز عاشورا' : 'دهه اول محرم');
-    if (he.m === 9 && [19, 21, 23].includes(he.d)) { const k = pick(['jowshan_kabir', 'joshan_kabir', 'jowshan']); if (k) add('rd:' + k, '🌙', 'دعای جوشن کبیر', `${tonight}، شب قدر`); }
+    if (he.m === 9 && [19, 21, 23].includes(he.d)) { if (mf()) add('mf:049', '🌙', 'دعای جوشن کبیر', `${tonight}، شب قدر`); }
     if (he.m === 8 && he.d === 15) add('ib:doa_kumayl', '📿', 'دعای کمیل', `${tonight}، شب نیمه شعبان`);
-    if (h.m === 12 && h.d === 9 && !beforeFajr) { const k = pick(['arafeh', 'arafah', 'arafa']); if (k) add('rd:' + k, '🤲', 'دعای عرفه امام حسین (ع)', 'عصر روز عرفه'); }
-    if (h.m === 2 && h.d === 20 && !beforeFajr) { const k = pick(['arbaeen', 'arbain']); if (k) add('rd:' + k, '🏴', 'زیارت اربعین', 'روز اربعین'); }
+    if (h.m === 12 && h.d === 9 && !beforeFajr) { if (mf()) add('mf:171', '🤲', 'دعای عرفه امام حسین (ع)', 'عصر روز عرفه'); }
+    if (h.m === 2 && h.d === 20 && !beforeFajr) { if (mf()) add('mf:299', '🏴', 'زیارت اربعین', 'روز اربعین'); }
     const eid = (h.m === 10 && h.d === 1) || (h.m === 12 && (h.d === 10 || h.d === 18));
     // هفتگی
-    if ((d === 5 || eid) && day && now < T.dhuhr + 2 * 36e5) { const k = pick(['nodbeh', 'nodbe', 'nudba']); if (k) add('rd:' + k, '🌅', 'دعای ندبه', eid ? 'صبح روز عید' : 'صبح جمعه'); }
+    if ((d === 5 || eid) && day && now < T.dhuhr + 2 * 36e5) { if (mf()) add('mf:336', '🌅', 'دعای ندبه', eid ? 'صبح روز عید' : 'صبح جمعه'); }
     if (d === 3 && day) add('ib:javad_wed', '🤲', 'نماز حاجت امام جواد (ع)', 'امروز، بعد از نماز عصر');
     if (ed === 5 && (d === 4 || beforeFajr)) {
       const k = window.ibadat?.khatm?.(), thu = beforeFajr ? addDays(iso, -1) : iso, i = k ? k.indexOf(thu) : -1;
@@ -320,6 +309,7 @@ html[data-bg=dark] #dlCard .dl-city .dl-gps,html[data-bg=dark] #dlCard .dl-city 
     const [kind, key] = go.split(':');
     if (kind === 'ib') window.ibadat?.open?.(key);
     else if (kind === 'rd') window.chlRead?.(key);
+    else if (kind === 'mf') window.mafatih?.openKey(key);
   }
 
   ['features:changed', 'settings:changed'].forEach(ev => document.addEventListener(ev, () => { lastKey = ''; render(); }));

@@ -1,0 +1,19 @@
+[
+  {"id": "fa-ansarian", "lang": "fa", "name": "استاد حسین انصاریان", "src": "مفاتیح‌الجنان با ترجمه انصاریان، erfan.ir", "texts": ["alyasin", "samat", "kumayl", "tavassul"]},
+  {"id": "fa-makarem", "lang": "fa", "name": "مفاتیح نوین (آیت‌الله مکارم شیرازی)", "src": "مفاتیح نوین، به نقل hadana.ir", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "kumayl", "tavassul"]},
+  {"id": "en-duas", "lang": "en", "name": "Duas.org", "src": "", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "samat", "kumayl", "tavassul"]},
+  {"id": "de-eslam", "lang": "de", "name": "eslam.de (Islamische Gemeinschaft)", "src": "", "texts": ["ashura", "ahd", "kumayl", "tavassul"]},
+  {"id": "ur-duas", "lang": "ur", "name": "Duas.org", "src": "", "texts": ["ashura", "kisa", "samat", "kumayl", "tavassul"]},
+  {"id": "hi-duas", "lang": "hi", "name": "Duas.org", "src": "", "texts": ["kisa", "kumayl", "tavassul"]},
+  {"id": "tr-caferilik", "lang": "tr", "name": "Caferilik.com", "src": "Mefâtîhu'l-Cinân", "texts": ["ashura", "alyasin", "ahd", "kumayl", "tavassul"]},
+  {"id": "es-islamoriente", "lang": "es", "name": "Fundación Cultural Oriente", "src": "islamoriente.com", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "kumayl", "tavassul"]},
+  {"id": "en-nooran", "lang": "en", "name": "ترجمه سایت نوران", "src": "", "texts": ["azan"]},
+  {"id": "fr-nooran", "lang": "fr", "name": "ترجمه سایت نوران", "src": "", "texts": ["azan"]},
+  {"id": "de-nooran", "lang": "de", "name": "ترجمه سایت نوران", "src": "", "texts": ["azan"]},
+  {"id": "es-nooran", "lang": "es", "name": "ترجمه سایت نوران", "src": "", "texts": ["azan"]},
+  {"id": "tr-nooran", "lang": "tr", "name": "ترجمه سایت نوران", "src": "", "texts": ["azan"]},
+  {"id": "ur-nooran", "lang": "ur", "name": "ترجمه سایت نوران", "src": "", "texts": ["azan"]},
+  {"id": "hi-nooran", "lang": "hi", "name": "ترجمه سایت نوران", "src": "", "texts": ["azan"]},
+  {"id": "id-nooran", "lang": "id", "name": "ترجمه سایت نوران", "src": "", "texts": ["azan"]},
+  {"id": "ru-nooran", "lang": "ru", "name": "ترجمه سایت نوران", "src": "", "texts": ["azan"]}
+]

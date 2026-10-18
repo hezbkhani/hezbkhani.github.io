@@ -232,6 +232,8 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     if (Notification.permission === 'denied') return `<div class="rm-card"><p style="margin:0">${ERR.denied}</p></div>`;
     const st = await status(), chl = chlList(), regs = arr('regCodes').length, hz = store.get(LS);
     const hasHezb = !!hz || regs > 0 || (st && st.group_number != null);
+    // خطای اینترنت (نه خاموش بودن): تنظیمات کاربر پنهان نشود و دکمه «روشن کردن» نیاید
+    if (st === undefined) return `<p>وضعیت اعلان‌ها دریافت نشد. اتصال اینترنت را بررسی کنید و دوباره این بخش را باز کنید.</p><div class="rm-msg" aria-live="polite"></div>`;
     if (!st) {
       const items = [hasHezb && 'حزب‌خوانی: شناسه و گروه، سهم هر روز و یادآوری گزارش', chl.length && `${chl.length > 1 ? `${toFa(chl.length)} چله و دوره شما` : 'چله یا دوره شما'}: برنامه هر روز، یادآوری «خواندم» و خبرهای دوره`, 'اعمال و ختم‌ها: نماز امام جواد (ع) و ختم یاسین', 'ادعیه: دعای سمات، کمیل و توسل'].filter(Boolean);
       return `<p>اعلان روی این گوشی خاموش است. با روشن کردنش این‌ها یادتان می‌آید:</p><ul>${items.map(x => `<li>${x}</li>`).join('')}</ul>
@@ -287,7 +289,7 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
     if (msg && note) msg.textContent = note;
     const run = f => async () => {
       box.querySelectorAll('button').forEach(x => x.disabled = true); msg.style.color = ''; msg.textContent = 'لطفاً صبر کنید…';
-      try { const t = await f(); if (t !== false) await renderSettings(t); } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = fail(e); box.querySelectorAll('button').forEach(x => x.disabled = false); }
+      try { const t = await f(); if (t !== false) await renderSettings(t); else { box.querySelectorAll('button').forEach(x => x.disabled = false); if (msg.textContent === 'لطفاً صبر کنید…') msg.textContent = ''; } } catch (e) { msg.style.color = 'var(--danger)'; msg.textContent = fail(e); box.querySelectorAll('button').forEach(x => x.disabled = false); }
     };
     const on = (k, f) => { const b = box.querySelector(`[data-n=${k}]`); if (b) b.onclick = run(f); };
     on('on', async () => {
