@@ -102,16 +102,24 @@ ${m.reply ? `<div class="fb-re"><b>پاسخ نوران${m.replied_at ? ` · ${es
     if (toggle) setTimeout(() => q('body').focus({ preventScroll: true }), 50);
   }
 
+  // نمایش در منو با تنظیم site_settings › feedback.enabled (پیش‌فرض خاموش)؛ در ‎#admin‎ همیشه برای آزمایش دیده می‌شود.
+  const shown = () => location.hash === '#admin' || window.siteSettings?.feedback?.enabled === true;
   window.siteMenu?.section({
     id: 'feedback', order: 95,
     render(box) {
+      if (!shown()) return;
       box.innerHTML = `<h3>پیشنهادها و نظرها</h3><button type="button" class="sm-item" data-fb-open><span class="sm-ic">✉️</span><span>نوشتن پیشنهاد یا نظر<small>پیام کوتاه به ما؛ پاسخ همین‌جا دیده می‌شود</small></span>${hasNew() ? '<span class="fb-new">پاسخ تازه</span>' : '<span class="sm-go">‹</span>'}</button><div class="fb-box"></div>`;
       box.querySelector('[data-fb-open]').onclick = () => openForm(box.querySelector('.fb-box'), true);
       if (formOpen) openForm(box.querySelector('.fb-box'));
     }
   });
   // اگر این گوشی پیش‌تر پیامی فرستاده، پاسخ تازه با نقطه روی دکمه منو خبر داده می‌شود.
-  if (device(false)) setTimeout(() => loadMine().catch(() => {}), 4000);
+  if (device(false)) setTimeout(() => { if (shown()) loadMine().catch(() => {}); }, 4000);
+  document.addEventListener('settings:changed', () => {
+    if (!shown()) window.siteMenu?.dot(false, 'fb');
+    window.siteMenu?.refresh();
+    const c = $('fbaOn'); if (c) c.checked = window.siteSettings?.feedback?.enabled === true;
+  });
 
   // ---------- مدیر: زبانه «نظرها» ----------
   let pane = null, filter = 'all';
@@ -125,11 +133,23 @@ ${m.reply ? `<div class="fb-re"><b>پاسخ نوران${m.replied_at ? ` · ${es
   }
   function build(p) {
     pane = p;
-    p.innerHTML = `<div class="adm-card"><h3>پیشنهادها و نظرها</h3><p class="hint">پیام‌هایی که بازدیدکنندگان از منوی ☰ › «پیشنهادها و نظرها» فرستاده‌اند. پاسخ شما همان‌جا روی گوشی فرستنده نشان داده می‌شود.</p>
+    p.innerHTML = `<div class="adm-card"><h3>نمایش در منو</h3>
+<label class="adm-opt"><input type="checkbox" id="fbaOn"> <span>نمایش بخش «پیشنهادها و نظرها» در منوی ☰ برای همه</span></label>
+<p class="hint">پیش‌فرض خاموش است. وقتی خاموش باشد، این بخش فقط در ‎#admin‎ (برای آزمایش) دیده می‌شود.</p><div class="adm-msg" id="fbaOnMsg"></div></div>
+<div class="adm-card"><h3>پیشنهادها و نظرها</h3><p class="hint">پیام‌هایی که بازدیدکنندگان از منوی ☰ › «پیشنهادها و نظرها» فرستاده‌اند. پاسخ شما همان‌جا روی گوشی فرستنده نشان داده می‌شود.</p>
 <div class="fba-bar"><label><input type="radio" name="fbaF" value="all" checked> همه</label><label><input type="radio" name="fbaF" value="open"> بی‌پاسخ</label><button type="button" class="reg-light" id="fbaReload">تازه کردن</button></div>
 <div class="adm-msg" id="fbaMsg"></div><div id="fbaList" class="hint">…</div></div>`;
     p.querySelectorAll('[name=fbaF]').forEach(r => r.onchange = () => { filter = r.value; list(); });
     $('fbaReload').onclick = list;
+    $('fbaOn').checked = window.siteSettings?.feedback?.enabled === true;
+    $('fbaOn').onchange = async e => {
+      const on = e.target.checked, m = $('fbaOnMsg');
+      try {
+        await window.saveSiteSetting('feedback', { enabled: on });
+        m.className = 'adm-msg adm-ok'; m.textContent = on ? 'روشن شد: همه بازدیدکنندگان این بخش را در منو می‌بینند.' : 'خاموش شد: فقط در ‎#admin‎ دیده می‌شود.';
+        document.dispatchEvent(new Event('settings:changed'));
+      } catch (err) { e.target.checked = !on; m.className = 'adm-msg adm-bad'; m.textContent = err.message; }
+    };
     $('fbaList').addEventListener('click', act);
     list();
   }
