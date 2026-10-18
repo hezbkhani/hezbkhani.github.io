@@ -108,7 +108,7 @@ body.ib-lock{overflow:hidden}`;
 <li>روز چهارشنبه، <b>بعد از نماز عصر</b> بلافاصله <b>دو رکعت نماز هدیه به امام جواد (ع)</b> بخوانید.</li>
 <li>بلافاصله بعد از نماز، <b>۱۴۶ مرتبه</b> این ذکر را بگویید:<div class="ib-zekr">${ZEKR}</div></li>
 <li>سپس حاجات خود را از خدا بخواهید.</li></ol></div>
-<div class="ib-card"><h3>صوت نماز حاجت امام جواد (ع)</h3><audio controls preload="none" src="audio/namaz-imam-javad.mp3"></audio></div>
+<div class="ib-card"><h3>صوت نماز حاجت امام جواد (ع)</h3><audio controls preload="none" src="audio/namaz-imam-javad.mp3"></audio>${window.audioOpt.bar()}</div>
 <div class="ib-card"><h3>شمارنده ذکر</h3><div class="ib-count"><button type="button" class="ib-tap${n >= COUNT ? ' ib-done' : ''}" data-ib="tap">${n >= COUNT ? 'تمام شد؛ قبول باشد' : 'بزنید'}</button><b data-ib-n>${toFa(n)} از ${toFa(COUNT)}</b><button type="button" class="rm-ghost" data-ib="zero">از اول</button></div></div>
 ${await notifyHtml('javad_wed', 'هر چهارشنبه با اذان ظهر')}`;
   }
@@ -123,7 +123,7 @@ ${await notifyHtml('javad_wed', 'هر چهارشنبه با اذان ظهر')}`;
     return `<h2>ختم سوره یاسین حضرت ام‌البنین (س)</h2><p class="ib-sub">برای حاجات مهم، توسل به حضرت ابوالفضل العباس (ع) و مادرشان</p>
 <div class="ib-card"><p style="margin:0 0 8px">در هر ماه قمری، از نزدیک‌ترین پنجشنبه به نیمه ماه، ختم سوره یاسین هدیه به حضرت ام‌البنین (س) شروع می‌شود و چهار هفته، هر پنجشنبه شب (شب جمعه) ادامه دارد:</p>${rows}
 <div class="ib-tools"><button type="button" data-ib="yasin">📖 خواندن سوره یاسین</button></div></div>
-<div class="ib-card"><h3>توسل به حضرت ام‌البنین (س)</h3><audio controls preload="none" src="audio/tavasol-ommolbanin.mp3"></audio></div>
+<div class="ib-card"><h3>توسل به حضرت ام‌البنین (س)</h3><audio controls preload="none" src="audio/tavasol-ommolbanin.mp3"></audio>${window.audioOpt.bar()}</div>
 ${await notifyHtml('ommolbanin', 'شب‌های ختم با اذان مغرب')}`;
   }
   // ادعیه: key متن در پوشه chelleh، روز (getUTCDay) و فاصله پیش‌فرض اعلان از اذان مغرب در notifications.json.
