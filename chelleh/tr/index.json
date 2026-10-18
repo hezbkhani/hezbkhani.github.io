@@ -1,3 +1,10 @@
 [
-  {"id": "en-duas", "lang": "en", "name": "English (Duas.org)", "src": "duas.org", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "samat", "kumayl", "tavassul"]}
+  {"id": "fa-ansarian", "lang": "fa", "name": "استاد حسین انصاریان", "src": "مفاتیح‌الجنان با ترجمه انصاریان، erfan.ir", "texts": ["alyasin", "samat", "kumayl", "tavassul"]},
+  {"id": "fa-makarem", "lang": "fa", "name": "مفاتیح نوین (آیت‌الله مکارم شیرازی)", "src": "مفاتیح نوین، به نقل hadana.ir", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "kumayl", "tavassul"]},
+  {"id": "en-duas", "lang": "en", "name": "English (Duas.org)", "src": "duas.org", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "samat", "kumayl", "tavassul"]},
+  {"id": "de-eslam", "lang": "de", "name": "Deutsch (eslam.de)", "src": "eslam.de, Islamische Gemeinschaft", "texts": ["ashura", "ahd", "kumayl", "tavassul"]},
+  {"id": "ur-duas", "lang": "ur", "name": "اردو (Duas.org)", "src": "duas.org", "texts": ["ashura", "kisa", "samat", "kumayl", "tavassul"]},
+  {"id": "hi-duas", "lang": "hi", "name": "हिन्दी (Duas.org)", "src": "duas.org", "texts": ["kisa", "kumayl", "tavassul"]},
+  {"id": "tr-caferilik", "lang": "tr", "name": "Türkçe (Caferilik.com)", "src": "caferilik.com, Mefâtîhu'l-Cinân", "texts": ["ashura", "alyasin", "ahd", "kumayl", "tavassul"]},
+  {"id": "es-islamoriente", "lang": "es", "name": "Español (Fundación Cultural Oriente)", "src": "islamoriente.com", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "kumayl", "tavassul"]}
 ]
