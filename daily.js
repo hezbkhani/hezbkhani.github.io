@@ -63,8 +63,12 @@
     }
     return day + h * 36e5;
   }
+  // گوشی‌های قدیمی با داده منطقه زمانی پیش از ۱۴۰۱ برای تهران هنوز ساعت تابستانی (یک ساعت جلوتر) می‌گذارند؛ ایران از ۱۴۰۱ ساعت تابستانی ندارد.
+  // روی آن گوشی‌ها وقت ایران با فاصله ثابت ۳:۳۰ از UTC نوشته می‌شود.
+  const IRX = (() => { try { return new Intl.DateTimeFormat('en-GB', { timeZone: IR, hour: '2-digit', hourCycle: 'h23' }).format(Date.UTC(2030, 5, 21)) !== '03'; } catch { return false; } })();
+  const zone = (t, tz) => IRX && tz === IR ? [new Date(t + 126e5), 'UTC'] : [new Date(t), tz];
   // تاریخ محلی (سال، ماه، روز) در منطقه زمانی شهر
-  const ymd = (t, tz) => { const p = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t)); return p; };
+  const ymd = (t, tz) => { const [d, z] = zone(t, tz); return new Intl.DateTimeFormat('en-CA', { timeZone: z, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); };
   const isoMs = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); };
   function times(iso, L) {
     const day = isoMs(iso), one = d => {
@@ -83,7 +87,7 @@
     return t;
   }
   const round = t => Math.round(t / MIN) * MIN;
-  const hm = (t, tz) => new Intl.DateTimeFormat('fa-IR', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(round(t)));
+  const hm = (t, tz) => { const [d, z] = zone(round(t), tz); return new Intl.DateTimeFormat('fa-IR', { timeZone: z, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d); };
   const dur = ms => { const m = Math.max(1, Math.ceil(ms / MIN)), h = Math.floor(m / 60), r = m % 60; return h ? `${toFa(h)} ساعت${r ? ` و ${toFa(r)} دقیقه` : ''}` : `${toFa(r)} دقیقه`; };
   window.prayerTimes = (iso, L) => times(iso, L || CITIES[0]); // برای آزمایش و استفاده‌های بعدی (مثلاً اعلان اذان)
 
@@ -96,7 +100,7 @@
     if (!m || !(+m[2] >= 1 && +m[2] <= 12 && +m[3] >= 1 && +m[3] <= 31)) return real;
     if (m[4] == null) return real + isoMs(`${m[1]}-${m[2]}-${m[3]}`) - isoMs(ymd(real, tz));
     // ساعت داده‌شده به وقت همان شهر؛ از لحظه باز شدن صفحه جلو می‌رود
-    const g = Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]), p = new Intl.DateTimeFormat('en-CA', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(g));
+    const g = Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]), [gd, z] = zone(g, tz), p = new Intl.DateTimeFormat('en-CA', { timeZone: z, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(gd);
     const v = t => +p.find(x => x.type === t).value, local = Date.UTC(v('year'), v('month') - 1, v('day'), v('hour') % 24, v('minute'));
     return g - (local - g) + (real - T0);
   }
@@ -106,7 +110,8 @@
   const off = () => { const h = window.siteSettings?.notify?.hijri; return Number.isInteger(h) && Math.abs(h) <= 2 ? h : 0; };
   let HP = null;
   try { HP = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: 'UTC', day: 'numeric', month: 'numeric' }); if (!/islamic/.test(HP.resolvedOptions().calendar)) HP = null; } catch { HP = null; }
-  const hijri = iso => { if (!HP) return null; const p = HP.formatToParts(new Date(isoMs(iso) + off() * DAY + 432e5)), g = t => +p.find(x => x.type === t).value; return { m: g('month'), d: g('day') }; };
+  // تقویم رسمی ایران (جدول ibadat.js)؛ اگر آن فایل نبود، ام‌القری
+  const hijri = iso => { const h = window.ibadat?.hijri?.(iso, off()); if (h) return h; if (!HP) return null; const p = HP.formatToParts(new Date(isoMs(iso) + off() * DAY + 432e5)), g = t => +p.find(x => x.type === t).value; return { m: g('month'), d: g('day') }; };
   const addDays = (iso, n) => new Date(isoMs(iso) + n * DAY).toISOString().slice(0, 10);
   const hijriLabel = iso => window.ibadat?.hijriLabel?.(iso) || '';
   function shamsi(iso) {

@@ -1,7 +1,7 @@
 // اعمال و ختم‌ها: نماز حاجت امام جواد (ع) چهارشنبه‌ها، ختم سوره یاسین هدیه به حضرت ام‌البنین (س)، و برگه شب‌های قدر، عرفه و اربعین (پیوند به مفاتیح).
 // ادعیه: دعای سمات (عصر جمعه)، کمیل (شب جمعه) و توسل (شب چهارشنبه)، و پیوند مستقیم ندبه، عهد و زیارت عاشورا؛ متن، ترجمه و صوت در خواننده چله‌ها (chelleh/samat.json و …).
 // پیوند اعلان‌ها (?doa=javad_wed، ?doa=ommolbanin، ?doa=doa_kumayl و …) همین برگه‌ها را باز می‌کند؛ در منو هم هستند.
-// اعلان‌ها را تابع daily-reminders با اذان ظهر و مغرب تهران می‌فرستد (نوع‌های javad_wed و ommolbanin در notifications.json).
+// اعلان‌ها را تابع daily-reminders با اذان ظهر و مغرب شهر گوشی (اگر در push_azan هست) یا تهران می‌فرستد (نوع‌های javad_wed و ommolbanin در notifications.json).
 // محاسبه شب‌های ختم همان khatmNight در backend/supabase/functions/daily-reminders/notify.ts است؛ اگر یکی را تغییر دادید دیگری را هم.
 (function () {
   const cfg = window.APP_CONFIG || {};
@@ -41,14 +41,33 @@ body.ib-lock{overflow:hidden}`;
   const ms = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); };
   const tehranToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran' }).format(new Date());
   const offset = () => { const h = window.siteSettings?.notify?.hijri; return Number.isInteger(h) && Math.abs(h) <= 2 ? h : 0; };
-  let HD = null, HL = null;
+  // تقویم قمری رسمی ایران (شورای مرکز تقویم مؤسسه ژئوفیزیک دانشگاه تهران، تقویم رسمی ۱۴۰۵): روز اول ماه‌ها، پشت سر هم از رمضان ۱۴۴۷.
+  // ام‌القری (عربستان) در نیمی از ماه‌ها یک روز با تقویم رسمی ایران فرق دارد؛ بیرون از این جدول همان ام‌القری.
+  // هر سال با تقویم رسمی تازه ادامه‌اش اضافه شود؛ همین جدول در notify.ts تابع اعلان‌ها هم هست. جابه‌جایی مدیر روی هر دو.
+  const IRH = [1447, 9, '2026-02-19', '2026-03-21', '2026-04-19', '2026-05-18', '2026-06-16', '2026-07-16', '2026-08-14', '2026-09-13',
+    '2026-10-12', '2026-11-11', '2026-12-11', '2027-01-10', '2027-02-08', '2027-03-10'];
+  const HM = ['محرم', 'صفر', 'ربیع‌الاول', 'ربیع‌الثانی', 'جمادی‌الاول', 'جمادی‌الثانی', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذیقعده', 'ذیحجه'];
+  let HD = null;
   try {
-    HD = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: 'UTC', day: 'numeric' });
-    HL = new Intl.DateTimeFormat('fa-IR-u-ca-islamic-umalqura', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' });
+    HD = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: 'UTC', day: 'numeric', month: 'numeric', year: 'numeric' });
     if (!/islamic/.test(HD.resolvedOptions().calendar)) HD = null;
   } catch { HD = null; }
-  const hijriDay = (s, off) => +HD.formatToParts(new Date(ms(s) + off * DAY + 432e5)).find(p => p.type === 'day').value;
-  const hijriLabel = (s, off = offset()) => HL ? HL.format(new Date(ms(s) + off * DAY + 432e5)).replace(/\s*ه‍?\.ق\.?$/, '') : '';
+  // { y, m, d } قمری روز s (تاریخ میلادی ‎YYYY-MM-DD‎)
+  function hijri(s, off = offset()) {
+    const t = ms(s) + off * DAY, n = IRH.length - 3, k0 = IRH[0] * 12 + IRH[1] - 1, at = i => ms(IRH[i + 2]);
+    const ym = (k, d) => ({ y: Math.floor(k / 12), m: k % 12 + 1, d });
+    let i = n; while (i >= 0 && t < at(i)) i--;
+    const d = i >= 0 ? Math.round((t - at(i)) / DAY) + 1 : 0;
+    if (i >= 0 && (i < n || d <= 29)) return ym(k0 + i, d);
+    if (!HD) return null;
+    const p = HD.formatToParts(new Date(t + 432e5)), g = x => +p.find(q => q.type === x).value, uk = g('year') * 12 + g('month') - 1;
+    // دو لبه جدول: اگر ام‌القری ماه را یک روز زودتر یا دیرتر عوض کرده، روزی تکرار نشود یا جا نیفتد
+    if (i < 0 && uk >= k0) return ym(k0 - 1, 30);
+    if (i === n && uk <= k0 + n) return ym(k0 + n, d);
+    return ym(uk, g('day'));
+  }
+  const hijriDay = (s, off) => hijri(s, off).d;
+  const hijriLabel = (s, off = offset()) => { const h = hijri(s, off); return h ? `${toFa(h.d)} ${HM[h.m - 1]} ${toFa(h.y)}` : ''; };
   // آیا این پنجشنبه شب اول ختم است؟ (نیمه ماه قمری حداکثر ۳ روز با نزدیک‌ترین پنجشنبه فاصله دارد.)
   const isStart = (s, off) => { for (let j = -3; j <= 3; j++) if (hijriDay(iso(ms(s) + j * DAY), off) === 15) return true; return false; };
   // چهار شب ختمی که امروز در آن است، یا ختم بعدی. خروجی: [تاریخ شب اول تا چهارم].
@@ -64,7 +83,7 @@ body.ib-lock{overflow:hidden}`;
   const dateFa = s => new Intl.DateTimeFormat('fa-IR-u-ca-persian', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(ms(s)));
   const NIGHTS = ['اول', 'دوم', 'سوم', 'چهارم'], TIMES = ['یک بار', 'دو بار', 'سه بار', 'چهار بار'];
   const task = n => `${TIMES[n - 1]} سوره یاسین، ${n < 4 ? 'هدیه به حضرت ابوالفضل العباس (ع)' : 'به نیابت از حضرت عباس (ع) هدیه به مادرشان حضرت ام‌البنین (س)'}`;
-  window.ibadat = { khatm, hijriLabel, tehranToday, dateFa };
+  window.ibadat = { khatm, hijri, hijriLabel, tehranToday, dateFa };
 
   // ---------- اعلان روی این گوشی ----------
   const ERR = { denied: 'اجازه اعلان در تنظیمات مرورگر بسته شده است.', dismissed: 'اجازه اعلان داده نشد.' };
