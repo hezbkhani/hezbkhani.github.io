@@ -48,7 +48,7 @@
   // گروه و شناسه پس از نمایش سهم یا ثبت گزارش روی همین گوشی ذخیره می‌شود.
   const remember = (g, id) => { if (!g || !(id >= 1 && id <= 120)) return; const m = read(); if (m && m.g === g && m.id === id) return; write({ g, id }); apply(); document.dispatchEvent(new Event('me:changed')); };
   document.addEventListener('task:shown', e => remember(selected?.number, e.detail?.id));
-  new MutationObserver(() => { if (/با موفقیت ثبت شد|قبلاً ثبت شده/.test(reportMessage.textContent) && verifiedReport) remember(verifiedReport.groupNumber, verifiedReport.id); })
+  new MutationObserver(() => { if (/با موفقیت ثبت شد|گزارش شما برای (امروز|این روز) قبلاً ثبت شده/.test(reportMessage.textContent) && verifiedReport) remember(verifiedReport.groupNumber, verifiedReport.id); })
     .observe(reportMessage, { childList: true, characterData: true, subtree: true });
 
   // بازدید بعدی: گروه انتخاب و سهم امروز و فرم گزارش با همان شناسه آماده می‌شود.
