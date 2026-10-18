@@ -476,7 +476,7 @@ body.qr-lock{overflow:hidden}
     if (req !== tafsirReq) return;
     const it = d?.surahs?.[s - 1];
     if (!it) { box.innerHTML = '<div class="qr-state">معرفی این سوره بارگذاری نشد. اینترنت را بررسی کنید.</div>'; return; }
-    $('qrTfsTitle').innerHTML = `معرفی سوره ${esc(FA_NAME[s] || toFa(s))}<small>${esc(it.place)} · ${toFa(it.ayat)} آیه${it.order ? ` · ${toFa(it.order)}مین سوره در ترتیب نزول` : ''}</small>`;
+    $('qrTfsTitle').innerHTML = `معرفی سوره ${esc(FA_NAME[s] || toFa(s))}<small>${esc(it.place)} · ${toFa(it.ayat)} آیه${it.order ? ` · ترتیب نزول: ${toFa(it.order)}` : ''}</small>`;
     box.innerHTML = `<h4>محتوای سوره</h4>${tafsirHtml(it.about)}${it.virtue ? `<h4>فضیلت سوره</h4>${tafsirHtml(it.virtue)}` : ''}<p class="qr-tfs-src">منبع: ${esc(d.src)}</p>`;
     box.scrollTop = 0;
   }
