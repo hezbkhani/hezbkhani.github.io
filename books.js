@@ -1,4 +1,4 @@
-// کتاب‌ها: نهج‌البلاغه و صحیفه سجادیه، متن عربی با چند ترجمه (فارسی و زبان‌های دیگر) و صوت.
+// کتاب‌ها: نهج‌البلاغه و صحیفه سجادیه (و در دسته «بیشتر»: منتهی‌الآمال، گزیده غررالحکم و رساله حقوق)، متن عربی با چند ترجمه (فارسی و زبان‌های دیگر) و صوت.
 // - منوی سه‌خط (menu.js): بخش «کتاب‌ها»؛ هر کتاب برگه فهرست (بخش‌ها، جستجو، ادامه خواندن) و خواننده تمام‌صفحه دارد.
 // - داده‌ها در books/<کتاب>/index.json (فهرست، مترجم‌ها، صوت‌ها) و books/<کتاب>/<بخش>/<NNN>.json (یک فایل برای هر خطبه، نامه، حکمت یا دعا).
 //   قالب هر فایل همان قالب متن‌های چله (chelleh/*.json) است: {title, about?, sections: [{ar, fa?, tr?: {<مترجم>: متن}, note?}], audio?: [{name, url}]}؛
@@ -9,7 +9,11 @@
   const BOOKS = [
     // نهج‌البلاغه وقتی داده‌هایش در books/nahj آمد اینجا اضافه می‌شود:
     // { key: 'nahj', title: 'نهج‌البلاغه', icon: '📕', sub: 'خطبه‌ها، نامه‌ها و حکمت‌های امام علی (ع)' },
-    { key: 'sahifa', title: 'صحیفه سجادیه', icon: '📗', sub: 'دعاهای امام سجاد (ع)' }
+    { key: 'sahifa', title: 'صحیفه سجادیه', icon: '📗', sub: 'دعاهای امام سجاد (ع)' },
+    // کتاب‌های دسته «بیشتر» ته منو (more.js)، نه بخش «کتاب‌ها»؛ ساخت با tools/books/build_more.py.
+    { key: 'muntaha', title: 'منتهی‌الآمال', icon: '📜', sub: 'زندگانی چهارده معصوم (ع)، نوشته محدث قمی', more: true },
+    { key: 'ghurar', title: 'غررالحکم (گزیده)', icon: '💬', sub: '۶۰۰ سخن کوتاه امام علی (ع) با ترجمه', more: true },
+    { key: 'huquq', title: 'رساله حقوق', icon: '⚖️', sub: 'پنجاه حق از امام سجاد (ع)', more: true }
   ];
   // نام زبان‌ها برای فهرست «زبان ترجمه» (مثل قرآن‌خوان)؛ مترجم‌های هر کتاب در index.json آن آمده‌اند.
   const LANG_NAMES = { fa: 'فارسی', en: 'انگلیسی · English', ur: 'اردو', fr: 'فرانسوی · Français', de: 'آلمانی · Deutsch', es: 'اسپانیایی · Español', tr: 'ترکی · Türkçe', ru: 'روسی · Русский', id: 'اندونزیایی · Indonesia', az: 'آذربایجانی · Azərbaycan' };
@@ -35,6 +39,9 @@
 .bk-tabs{display:flex;gap:6px;margin:0 0 8px}
 .bk-tabs button{flex:1;height:40px;padding:0 8px;background:#fff;color:var(--deep);border:1px solid var(--line);font-size:15px}
 .bk-tabs button.on{background:var(--deep);color:#fff;border-color:var(--deep)}
+.bk-psel{width:100%;height:44px;margin:0 0 8px;font-size:15px}
+.bk-h{margin:18px 0 4px;font-size:calc(var(--qs)*.66);color:var(--accent)}
+.bk-p{margin:0 0 12px;font-size:calc(var(--qs)*.62);line-height:2.1;text-align:justify}
 .bk-find{width:100%;margin:0 0 8px}
 .bk-list{display:grid;gap:6px}
 .bk-list button{display:flex;gap:10px;align-items:baseline;width:100%;height:auto;min-height:44px;padding:6px 12px;text-align:right;white-space:normal;line-height:1.7;background:#fff;color:var(--ink);border:1px solid var(--line);font-weight:500;font-size:15px}
@@ -89,6 +96,8 @@ body.bk-lock{overflow:hidden}
       shade = document.createElement('div'); shade.className = 'bk-shade';
       shade.addEventListener('click', onSheetClick);
       shade.addEventListener('input', e => { if (e.target.matches('.bk-find')) { query = e.target.value; renderList(); } });
+      // کتاب‌هایی که بخش زیادی دارند (منتهی‌الآمال: چهارده معصوم) به جای زبانه، فهرست کشویی دارند.
+      shade.addEventListener('change', e => { if (e.target.matches('.bk-psel')) { tab = e.target.value; shade.querySelector('.bk-find').value = query = ''; renderList(); } });
       document.body.appendChild(shade);
       try { history.pushState({ bks: 1 }, ''); } catch {}
     } else shade.hidden = false;
@@ -113,7 +122,7 @@ body.bk-lock{overflow:hidden}
     const lp = last && ix.parts.find(p => p.id === last.part), lt = lp && lp.items.find(i => i[0] === last.n);
     shade.querySelector('.bk-in').innerHTML = `${lt ? `<button type="button" class="bk-resume" data-bk-open="${lp.id}-${last.n}">ادامه خواندن<small>${esc(itemLabel(lp, last.n, lt[1]))}</small></button>` : ''}
 ${ix.about ? `<p class="bk-note" style="margin-bottom:8px">${esc(ix.about)}</p>` : ''}
-${ix.parts.length > 1 ? `<div class="bk-tabs" role="tablist">${ix.parts.map(p => `<button type="button" role="tab" data-bk-tab="${p.id}">${esc(p.title)}</button>`).join('')}</div>` : ''}
+${ix.parts.length > 4 ? `<select class="bk-psel" aria-label="بخش">${ix.parts.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}</select>` : ix.parts.length > 1 ? `<div class="bk-tabs" role="tablist">${ix.parts.map(p => `<button type="button" role="tab" data-bk-tab="${p.id}">${esc(p.title)}</button>`).join('')}</div>` : ''}
 <input type="search" class="bk-find" placeholder="جستجوی شماره یا عنوان" aria-label="جستجو" value="${esc(query)}">
 <div class="bk-list"></div>${ix.src ? `<p class="bk-src">${esc(ix.src)}</p>` : ''}`;
     renderList(ix);
@@ -122,6 +131,7 @@ ${ix.parts.length > 1 ? `<div class="bk-tabs" role="tablist">${ix.parts.map(p =>
     ix = ix || await getIndex(sheetBook).catch(() => null);
     if (!ix || !shade) return;
     shade.querySelectorAll('[data-bk-tab]').forEach(b => b.classList.toggle('on', b.dataset.bkTab === tab));
+    const ps = shade.querySelector('.bk-psel'); if (ps) ps.value = tab;
     const last = read(LAST, {})[ix.key], q = norm(query.trim()), qn = /^\d+$/.test(q) ? +q : 0;
     // با جستجو همه بخش‌ها گشته می‌شوند؛ بی‌جستجو فقط بخش انتخاب‌شده.
     const parts = q ? ix.parts : [partOf(ix, tab)], out = [];
@@ -211,6 +221,9 @@ ${ix.parts.length > 1 ? `<div class="bk-tabs" role="tablist">${ix.parts.map(p =>
     let html = `<div class="cr-head"><h3>${esc(short(part, n))}</h3>${item.title && !part.plain ? `<small style="font-size:16px;color:var(--text)">${esc(item.title)}</small>` : ''}${item.about ? `<small>${esc(item.about)}</small>` : ''}</div>`;
     if (item.bism !== false) html += '<p class="cr-bism">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</p>';
     html += (item.sections || []).map(s => {
+      // متن نثر فارسی (منتهی‌الآمال): h عنوان و p بند.
+      if (s.h) return `<h4 class="bk-h">${esc(s.h)}</h4>`;
+      if (s.p) return `<p class="bk-p">${esc(s.p)}</p>`;
       if (!s.ar) return `<div class="cr-sec only"><p class="cr-note">${esc(s.note)}</p></div>`;
       const t = c.tr ? trText(ix, s, c.tr.id) : '';
       return `<div class="cr-sec">${s.note ? `<p class="cr-note">${esc(s.note)}</p>` : ''}<p class="cr-ar" lang="ar" dir="rtl">${esc(s.ar)}</p>${t ? `<p class="cr-fa" lang="${c.lang}" dir="${dir}">${esc(t)}</p>` : ''}</div>`;
@@ -292,11 +305,11 @@ ${ix.parts.length > 1 ? `<div class="bk-tabs" role="tablist">${ix.parts.map(p =>
     id: 'books', order: 7,
     render(box) {
       const last = read(LAST, {});
-      box.innerHTML = `<h3>کتاب‌ها</h3>${BOOKS.map(b => `<button type="button" class="sm-item" data-bk-book="${b.key}"><span class="sm-ic">${b.icon}</span><span>${b.title}<small>${last[b.key] ? 'ادامه از جایی که خواندید' : b.sub}</small></span><span class="sm-go">‹</span></button>`).join('')}`;
+      box.innerHTML = `<h3>کتاب‌ها</h3>${BOOKS.filter(b => !b.more).map(b => `<button type="button" class="sm-item" data-bk-book="${b.key}"><span class="sm-ic">${b.icon}</span><span>${b.title}<small>${last[b.key] ? 'ادامه از جایی که خواندید' : b.sub}</small></span><span class="sm-go">‹</span></button>`).join('')}`;
       box.querySelectorAll('[data-bk-book]').forEach(x => x.onclick = () => { window.siteMenu.close(); setTimeout(() => openSheet(x.dataset.bkBook), 280); });
     }
   });
-  window.books = { open: openSheet, read: openReader };
+  window.books = { open: openSheet, read: openReader, more: BOOKS.filter(b => b.more) };
 
   // پیوند ‎?book=nahj‎ یا ‎?book=sahifa&n=dua-20‎
   const qs = new URLSearchParams(location.search), qb = qs.get('book');
