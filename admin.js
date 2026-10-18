@@ -86,7 +86,14 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
     return data;
   }
   window.sbApi = sbApi;
-  window.sbRpc = (fn, args, auth) => sbApi(`rpc/${fn}`, { method: 'POST', body: args || {}, auth });
+  // دو فهرست عمومی که چند بخش هم‌زمان می‌خواهند (ثبت‌نام و چله‌ها): تا جواب نیامده، همان یک درخواست به همه می‌رسد.
+  const SHARED = new Set(['reg_rounds', 'chl_types']), inflight = new Map();
+  window.sbRpc = (fn, args, auth) => {
+    const k = SHARED.has(fn) && !auth && !(args && Object.keys(args).length) ? fn : '';
+    if (!k) return sbApi(`rpc/${fn}`, { method: 'POST', body: args || {}, auth });
+    if (!inflight.has(k)) inflight.set(k, sbApi(`rpc/${fn}`, { method: 'POST', body: {} }).finally(() => inflight.delete(k)));
+    return inflight.get(k).then(r => structuredClone(r));
+  };
 
   // ---------- ورود ماندگار مدیر ----------
   const SKEY = 'adminSession';
@@ -349,7 +356,13 @@ html[data-bg] #admTabs button.on{background:var(--t-frame);color:#fff}
   // ---------- راه‌اندازی ----------
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
   renderNotice();
-  refreshSettings().then(() => { renderNotice(); document.dispatchEvent(new Event('settings:changed')); });
+  // بار اول همان درخواستی که app.js برای تنظیمات فرستاده به کار می‌رود (دوباره گرفته نمی‌شود).
+  const first = window.siteSettingsFetch ? window.siteSettingsFetch.then(rows => {
+    if (!Array.isArray(rows)) return refreshSettings();
+    window.siteSettings = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    return window.siteSettings;
+  }) : refreshSettings();
+  first.then(() => { renderNotice(); document.dispatchEvent(new Event('settings:changed')); });
 
   $('adminLogin').onclick = doLogin;
   $('adminPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });

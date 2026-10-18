@@ -8,20 +8,7 @@
   const read = () => { try { const m = JSON.parse(localStorage.getItem(ME)); return m && m.g && m.id >= 1 && m.id <= 120 ? m : null; } catch { return null; } };
   const write = v => { try { v ? localStorage.setItem(ME, JSON.stringify(v)) : localStorage.removeItem(ME); } catch {} };
 
-  const css = `
-.hz-off,.intro-off{display:none!important}
-.intro-list{margin:0 0 4px;padding:0 22px 0 0}
-.intro-list li{margin:0 0 6px}
-.intro-notice{margin:14px 0 0;padding:10px 14px;background:var(--cream);color:var(--ink);text-shadow:none;border:1px solid var(--gold);border-right:5px solid var(--deep);border-radius:var(--r-card)}
-.intro-notice b{display:block;color:var(--deep);font-size:18px}
-.intro-notice p{margin:4px 0 0;font-size:15px;line-height:1.8}
-.intro-tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
-.intro-tools button{flex:1 1 auto;height:auto;min-height:48px;white-space:normal;line-height:1.6;padding:6px 14px}
-.hz-mine{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;margin:0 0 10px;padding:6px 12px;background:rgba(0,92,69,.75);border:1px solid var(--gold);border-radius:var(--r-card);font-size:15px}
-.hz-mine[hidden]{display:none}
-.hz-mine button{height:auto;padding:0;background:none;border:0;color:#ffe2a8;text-decoration:underline;font-weight:500;font-size:15px}
-@media(max-width:600px){.intro-tools button{flex-basis:100%}}`;
-  { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
+  // شکل این بخش‌ها در <style> خود index.html است تا پیش از اجرای این فایل هم صفحه به‌هم‌ریخته دیده نشود.
 
   const panels = [...document.querySelectorAll('.hz-panel')];
   const taskPanel = document.getElementById('hzTaskPanel');
@@ -65,6 +52,8 @@
     verifyReportIdentity();
   }
   document.addEventListener('groups:loaded', restore);
+  // اگر گروه‌ها پیش از اجرای این فایل آماده شده باشند (مثلاً از حافظه گوشی)، آن رویداد از دست رفته است.
+  window.initPromise?.then(restore, () => {});
   // پس از ورود به حساب روی گوشی تازه (account.js)، گروه و شناسه حساب همین‌جا آماده می‌شود.
   window.hezbRestore = restore;
 
