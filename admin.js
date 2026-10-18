@@ -360,6 +360,7 @@ html[data-bg] #admTabs button.on{background:var(--t-frame);color:#fff}
   };
   window.addEventListener('hashchange', () => { place(); if (location.hash === '#admin') scrollTo(0, 0); }); place();
   const restore = () => { if (session.data) session.fresh().then(() => { if (session.data) ui.loggedIn(); }); };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restore); else restore();
+  // اسکریپت‌ها defer هستند (readyState هنگام اجرا interactive است)؛ تا پایان اجرای همه اسکریپت‌ها صبر می‌کنیم.
+  if (document.readyState !== 'complete') document.addEventListener('DOMContentLoaded', restore); else restore();
   setInterval(() => { if (session.data) session.fresh(); }, 5 * 60 * 1000);
 })();
