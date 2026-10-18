@@ -1,0 +1,10 @@
+[
+  {"id": "fa-ansarian", "lang": "fa", "name": "استاد حسین انصاریان", "src": "مفاتیح‌الجنان با ترجمه انصاریان، erfan.ir", "texts": ["alyasin", "samat", "kumayl", "tavassul"]},
+  {"id": "fa-makarem", "lang": "fa", "name": "مفاتیح نوین (آیت‌الله مکارم شیرازی)", "src": "مفاتیح نوین، به نقل hadana.ir", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "kumayl", "tavassul"]},
+  {"id": "en-duas", "lang": "en", "name": "Duas.org", "src": "", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "samat", "kumayl", "tavassul"]},
+  {"id": "de-eslam", "lang": "de", "name": "eslam.de (Islamische Gemeinschaft)", "src": "", "texts": ["ashura", "ahd", "kumayl", "tavassul"]},
+  {"id": "ur-duas", "lang": "ur", "name": "Duas.org", "src": "", "texts": ["ashura", "kisa", "samat", "kumayl", "tavassul"]},
+  {"id": "hi-duas", "lang": "hi", "name": "Duas.org", "src": "", "texts": ["kisa", "kumayl", "tavassul"]},
+  {"id": "tr-caferilik", "lang": "tr", "name": "Caferilik.com", "src": "Mefâtîhu'l-Cinân", "texts": ["ashura", "alyasin", "ahd", "kumayl", "tavassul"]},
+  {"id": "es-islamoriente", "lang": "es", "name": "Fundación Cultural Oriente", "src": "islamoriente.com", "texts": ["ashura", "alyasin", "kisa", "mashlool", "ahd", "kumayl", "tavassul"]}
+]
