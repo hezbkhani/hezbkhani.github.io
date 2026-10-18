@@ -223,7 +223,7 @@ html[data-bg] #admTabs button.on{background:var(--t-frame);color:#fff}
   }
 
   // ---------- تنظیمات سایت ----------
-  // site_settings: notice {enabled,text} · intro {[کلید]: {on,title,text}} (home.js) · registration {mode:'auto'|'hidden'} · install {mode:'dismissible'|'always'|'menu'} (install.js) · groups_source {source:'db'|'files'}
+  // site_settings: notice {enabled,text} · intro {[کلید]: {on,title,text}} (home.js) · registration {mode:'auto'|'hidden'} · install {mode:'dismissible'|'always'|'menu'} (install.js) · quran {intro} (quran-reader.js) · groups_source {source:'db'|'files'}
   async function saveSetting(key, value) {
     await sbApi('site_settings', { method: 'POST', body: { key, value, updated_at: new Date().toISOString() }, auth: true, prefer: 'resolution=merge-duplicates,return=minimal' });
     window.siteSettings = Object.assign(window.siteSettings || {}, { [key]: value });
@@ -249,6 +249,9 @@ html[data-bg] #admTabs button.on{background:var(--t-frame);color:#fff}
 <label class="adm-opt"><input type="radio" name="setIns" value="always"> <span>همیشه در صفحه اول (بدون دکمه بستن)</span></label>
 <label class="adm-opt"><input type="radio" name="setIns" value="menu"> <span>فقط در منو</span></label>
 <div class="adm-msg" id="setInsMsg"></div></div>
+<div class="adm-card"><h3>قرآن‌خوان</h3>
+<label class="adm-opt"><input type="checkbox" id="setQIntro"> <span>دکمه «معرفی سوره» (محتوا و فضیلت هر سوره) در قرآن‌خوان</span></label>
+<p class="hint">وقتی روشن باشد، هر کس می‌تواند آن را از تنظیمات قرآن‌خوان برای خودش پنهان کند. وقتی خاموش باشد، نه دکمه دیده می‌شود نه تنظیمش.</p><div class="adm-msg" id="setQMsg"></div></div>
 <div class="adm-card"><h3>حساب کاربری</h3><p class="hint">ساختن حساب و ورود (نام کاربری و رمز) برای بازدیدکنندگان. پیش از روشن کردن، accounts.sql و تنظیمات Supabase (گام ۲۵ راهنمای backend) را انجام دهید. در ‎#admin‎ همیشه برای آزمایش دیده می‌شود.</p>
 <label class="adm-opt"><input type="checkbox" id="setAccOn"> <span>نمایش حساب کاربری به همه</span></label><div class="adm-msg" id="setAccMsg"></div></div>
 <div class="adm-card"><h3>منبع فهرست گروه‌ها</h3>
@@ -278,9 +281,10 @@ html[data-bg] #admTabs button.on{background:var(--t-frame);color:#fff}
       try {
         if (t.name === 'setReg') { await saveSetting('registration', { mode: t.value }); m('setRegMsg', 'ذخیره شد.', true); document.dispatchEvent(new Event('settings:changed')); }
         if (t.id === 'setAccOn') { await saveSetting('accounts', { enabled: t.checked }); m('setAccMsg', t.checked ? 'ذخیره شد؛ حساب کاربری برای همه نمایش داده می‌شود.' : 'ذخیره شد؛ فقط در ‎#admin‎ دیده می‌شود.', true); document.dispatchEvent(new Event('settings:changed')); }
+        if (t.id === 'setQIntro') { await saveSetting('quran', Object.assign({}, window.siteSettings?.quran, { intro: t.checked })); m('setQMsg', t.checked ? 'ذخیره شد؛ «معرفی سوره» برای همه روشن است.' : 'ذخیره شد؛ «معرفی سوره» برای همه پنهان است.', true); document.dispatchEvent(new Event('settings:changed')); }
         if (t.name === 'setIns') { await saveSetting('install', { mode: t.value }); m('setInsMsg', 'ذخیره شد.', true); document.dispatchEvent(new Event('settings:changed')); }
         if (t.name === 'setSrc') { await saveSetting('groups_source', { source: t.value }); m('setSrcMsg', 'ذخیره شد. برای دیدن نتیجه، صفحه را تازه کنید.', true); document.dispatchEvent(new Event('settings:changed')); }
-      } catch (err) { m(t.id === 'setAccOn' ? 'setAccMsg' : t.name === 'setReg' ? 'setRegMsg' : t.name === 'setIns' ? 'setInsMsg' : 'setSrcMsg', err.message); }
+      } catch (err) { if (t.id === 'setQIntro') { t.checked = !t.checked; return m('setQMsg', err.message); } m(t.id === 'setAccOn' ? 'setAccMsg' : t.name === 'setReg' ? 'setRegMsg' : t.name === 'setIns' ? 'setInsMsg' : 'setSrcMsg', err.message); }
     });
     $('setAdminAdd').onclick = async () => {
       const email = $('setAdminNew').value.trim().toLowerCase();
@@ -310,6 +314,7 @@ html[data-bg] #admTabs button.on{background:var(--t-frame);color:#fff}
     $('setNoticeOn').checked = !!s.notice?.enabled; $('setNoticeText').value = s.notice?.text || '';
     document.querySelectorAll('[name=setReg]').forEach(r => (r.checked = r.value === (s.registration?.mode || 'auto')));
     $('setAccOn').checked = !!s.accounts?.enabled;
+    $('setQIntro').checked = s.quran?.intro !== false;
     fillIntro(s.intro || {});
     document.querySelectorAll('[name=setSrc]').forEach(r => (r.checked = r.value === (s.groups_source?.source || 'db')));
     document.querySelectorAll('[name=setIns]').forEach(r => (r.checked = r.value === (s.install?.mode || 'dismissible')));
