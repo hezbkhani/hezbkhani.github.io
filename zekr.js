@@ -406,7 +406,7 @@ body.zk-lock{overflow:hidden}
   const boot = () => { if (shown() && first) { first = false; setTimeout(loadGoals, 2500); } };
   document.addEventListener('features:changed', () => { if (!shown()) close(); boot(); window.siteMenu?.refresh(); });
   boot();
-  window.zekr = { open };
+  window.zekr = { open, list: LIST }; // list: نام ذکرها برای «نوران من» (mine-sheet.js)
 
   // ---------- مدیر: کارت «نذر جمعی ذکر و صلوات» در زبانه تنظیمات ----------
   const NO_SQL = 'ابتدا zekr.sql را در Supabase اجرا کنید (backend/supabase/zekr.sql، گام ۲۸ راهنمای backend).';
