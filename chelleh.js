@@ -71,7 +71,8 @@
   // ترجمه‌های دیگر هر متن (فارسی از مترجم‌های دیگر و زبان‌های دیگر) در پوشه chelleh/tr است:
   // فهرست مترجم‌ها در index.json و برای هر مترجم یک فایل برای هر متن، { n: تعداد بندها، t: ترجمه هر بند به همان ترتیب }.
   // ترجمه فارسی خود متن (fa) پیش‌فرض است؛ اگر مدیر متن را ویرایش کرده و تعداد بندها فرق کند، ترجمه پیش‌فرض نشان داده می‌شود.
-  const TR_LANGS = { fa: 'فارسی', en: 'English', de: 'Deutsch', ur: 'اردو', hi: 'हिन्दी', tr: 'Türkçe', az: 'Azərbaycanca', fr: 'Français', es: 'Español', id: 'Bahasa Indonesia', ms: 'Bahasa Melayu', ru: 'Русский', sw: 'Kiswahili', bn: 'বাংলা' };
+  // نام زبان‌ها مثل «زبان ترجمه» در قرآن‌خوان سایت.
+  const TR_LANGS = { fa: 'فارسی', en: 'انگلیسی · English', de: 'آلمانی · Deutsch', fr: 'فرانسوی · Français', es: 'اسپانیایی · Español', tr: 'ترکی استانبولی · Türkçe', ur: 'اردو', hi: 'هندی · हिन्दी', id: 'اندونزیایی · Indonesia', ru: 'روسی · Русский' };
   const RTL = ['fa', 'ar', 'ur'];
   let trList = null;
   const loadTrList = () => trList || (trList = fetch('chelleh/tr/index.json').then(r => (r.ok ? r.json() : [])).catch(() => { trList = null; return []; }));
@@ -752,10 +753,12 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات">⚙</button><span class="cr-prog"></span></div>
 <div class="cr-menu"><div class="cr-row"><span>اندازه متن</span><div><button type="button" data-x="smaller">−</button><button type="button" data-x="bigger">+</button></div></div>
 <div class="cr-row"><span>ترجمه</span><div><button type="button" data-x="tr-on">نمایش</button><button type="button" data-x="tr-off">پنهان</button></div></div>
-<div class="cr-row" hidden><span>مترجم</span><select id="crTr" aria-label="ترجمه"></select></div>
-<div class="cr-row"><span>حالت شب</span><div><button type="button" data-x="day">روز</button><button type="button" data-x="night">شب</button></div></div></div>
+<div class="cr-row" hidden><span>زبان ترجمه</span><select id="crLang" aria-label="زبان ترجمه"></select></div>
+<div class="cr-row" hidden><span>مترجم</span><select id="crTr" aria-label="مترجم"></select></div>
+<div class="cr-row"><span>حالت شب</span><div><button type="button" data-x="day">روز</button><button type="button" data-x="night">شب</button></div></div>
+<div class="cr-row"><span>دکمه دانلود صوت</span><div><button type="button" data-x="dl-on">نمایش</button><button type="button" data-x="dl-off">پنهان</button></div></div></div>
 <div class="cr-body"></div>
-<div class="cr-aud" hidden><div><span>صوت</span><select aria-label="انتخاب صوت"></select></div><audio controls preload="none"></audio></div>`;
+<div class="cr-aud" hidden><div><span>صوت</span><select aria-label="انتخاب صوت"></select></div><audio controls preload="none"></audio>${window.audioOpt.bar()}</div>`;
     document.body.appendChild(reader);
     reader.addEventListener('click', onReaderClick);
     reader.querySelector('.cr-aud select').addEventListener('change', e => {
@@ -763,11 +766,13 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
       prefs.audio = Object.assign(prefs.audio || {}, { [current.key]: a.url }); write(RKEY, prefs);
       const au = reader.querySelector('.cr-aud audio'), was = !au.paused; au.src = a.url; if (was) au.play().catch(() => {});
     });
-    reader.querySelector('#crTr').addEventListener('change', async e => {
-      prefs.tr = e.target.value; write(RKEY, prefs);
+    const trChange = async (lang, id) => {
+      prefs.trLang = lang; if (id !== undefined) prefs.trx = Object.assign(prefs.trx || {}, { [lang]: id }); write(RKEY, prefs);
       if (!current) return;
       const top = reader.scrollTop; await loadTr(); renderReader(); reader.scrollTop = top;
-    });
+    };
+    reader.querySelector('#crLang').addEventListener('change', e => trChange(e.target.value));
+    reader.querySelector('#crTr').addEventListener('change', e => trChange(prefs.trLang || 'fa', e.target.value));
     reader.addEventListener('scroll', () => { const h = reader.scrollHeight - reader.clientHeight; reader.querySelector('.cr-prog').style.width = (h > 0 ? reader.scrollTop / h * 100 : 0) + '%'; }, { passive: true });
     window.addEventListener('popstate', () => { if (reader.classList.contains('show') && !history.state?.chl) closeReader(true); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && reader.classList.contains('show')) closeReader(); });
@@ -776,22 +781,26 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
   function applyPrefs() {
     reader.style.setProperty('--qs', prefs.size + 'px');
     reader.classList.toggle('night', prefs.night); reader.classList.toggle('no-tr', !prefs.trans);
-    const on = { 'tr-on': prefs.trans, 'tr-off': !prefs.trans, day: !prefs.night, night: prefs.night };
+    const dl = window.audioOpt.get().dl;
+    const on = { 'tr-on': prefs.trans, 'tr-off': !prefs.trans, day: !prefs.night, night: prefs.night, 'dl-on': dl, 'dl-off': !dl };
     reader.querySelectorAll('.cr-row [data-x]').forEach(b => b.classList.toggle('on', !!on[b.dataset.x]));
     write(RKEY, prefs);
   }
+  // زبان و مترجم مثل قرآن‌خوان: اول زبان، بعد مترجم همان زبان (برای فارسی، ترجمه خود متن پیش‌فرض است).
   async function loadTr() {
-    const { key, text } = current, sel = reader.querySelector('#crTr');
+    const { key, text } = current, lsel = reader.querySelector('#crLang'), sel = reader.querySelector('#crTr');
     const list = (await loadTrList()).filter(x => (x.texts || []).includes(key));
-    const opt = x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`, langs = [...new Set(list.map(x => x.lang))].filter(l => l !== 'fa');
-    sel.innerHTML = `<optgroup label="فارسی"><option value="">ترجمه پیش‌فرض سایت</option>${list.filter(x => x.lang === 'fa').map(opt).join('')}</optgroup>`
-      + langs.map(l => `<optgroup label="${esc(TR_LANGS[l] || l)}">${list.filter(x => x.lang === l).map(opt).join('')}</optgroup>`).join('');
-    sel.closest('.cr-row').hidden = !list.length;
-    const meta = list.find(x => x.id === prefs.tr);
-    const data = meta && await fetch(`chelleh/tr/${meta.id}/${key}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+    const langs = ['fa', ...new Set(list.map(x => x.lang).filter(l => l !== 'fa'))];
+    const lang = langs.includes(prefs.trLang) ? prefs.trLang : 'fa';
+    const opts = (lang === 'fa' ? [{ id: '', name: 'ترجمه پیش‌فرض سایت' }] : []).concat(list.filter(x => x.lang === lang));
+    lsel.innerHTML = langs.map(l => `<option value="${l}">${esc(TR_LANGS[l] || l)}</option>`).join(''); lsel.value = lang;
+    sel.innerHTML = opts.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+    lsel.closest('.cr-row').hidden = langs.length < 2; sel.closest('.cr-row').hidden = opts.length < 2;
+    const want = (prefs.trx || {})[lang], meta = opts.find(x => x.id === want) || opts[0];
+    const data = meta.id && await fetch(`chelleh/tr/${meta.id}/${key}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
     const ok = data && Array.isArray(data.t) && data.n === (text.sections || []).length;
     current.tr = ok ? { meta, t: data.t } : null;
-    sel.value = ok ? meta.id : '';
+    sel.value = ok ? meta.id : opts[0].id;
   }
   // شمارنده بندهای تکراری (مثلاً صد لعن و صد سلام)، جدا برای هر روز.
   const countKey = () => `chlCount:${current.key}:${today || isoIran()}`;
@@ -855,6 +864,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     if (x === 'bigger') prefs.size = Math.min(44, prefs.size + 2);
     if (x === 'tr-on' || x === 'tr-off') prefs.trans = x === 'tr-on';
     if (x === 'day' || x === 'night') prefs.night = x === 'night';
+    if (x === 'dl-on' || x === 'dl-off') window.audioOpt.set({ dl: x === 'dl-on' });
     if (x) return applyPrefs();
     if (!current) return;
     if (b.dataset.count || b.dataset.reset) {
