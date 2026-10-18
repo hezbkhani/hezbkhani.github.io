@@ -41,18 +41,18 @@
 
   // ---------- متن‌ها ----------
   // متن آماده از پوشه chelleh؛ اگر مدیر نسخه‌ای با همان key در پایگاه داده گذاشته باشد، آن نسخه خوانده می‌شود.
-  let builtins = null, dbTexts = null;
+  // هر فهرست یک بار گرفته می‌شود؛ درخواست‌های هم‌زمان همان یک درخواست را به کار می‌برند.
+  let builtinsP = null, dbP = null;
   const textCache = {};
-  async function loadBuiltins() {
-    if (!builtins) builtins = await fetch('chelleh/index.json').then(r => r.json()).catch(() => []);
-    return builtins;
+  function loadBuiltins() {
+    return builtinsP ||= fetch('chelleh/index.json').then(r => r.json()).catch(() => { builtinsP = null; return []; });
   }
-  async function loadDbTexts(force) {
-    if (!dbTexts || force) {
-      try { dbTexts = await api('chelleh_texts?select=key,title,about,sections,audio,updated_at&order=title', { timeout: 8000 }); }
-      catch { dbTexts = dbTexts || []; }
-    }
-    return dbTexts;
+  window.chlBuiltins = loadBuiltins;
+  let dbTexts = null;
+  function loadDbTexts(force) {
+    if (!dbP || force) dbP = api('chelleh_texts?select=key,title,about,sections,audio,updated_at&order=title', { timeout: 8000 })
+      .then(d => (dbTexts = d || []), () => dbTexts || []);
+    return dbP;
   }
   async function allTexts(force) {
     const [b, d] = await Promise.all([loadBuiltins(), loadDbTexts(force)]);
@@ -62,11 +62,17 @@
   }
   async function getText(key) {
     if (textCache[key]) return textCache[key];
-    const d = (await loadDbTexts()).find(t => t.key === key);
-    let t = d && Array.isArray(d.sections) && d.sections.length ? d : null;
-    // کلید ساده یعنی پوشه chelleh؛ «books/mafatih/042» یعنی متن مفاتیح‌الجنان (mafatih.js).
-    if (!t && /^(books\/[a-z0-9_-]+\/)?[a-z0-9_-]+$/.test(key)) t = await fetch(key.includes('/') ? `${key}.json` : `chelleh/${key}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
-    if (!t) throw Error('متن این چله پیدا نشد. اینترنت را بررسی کنید و دوباره امتحان کنید.');
+    // کلید ساده یعنی پوشه chelleh؛ «books/mafatih/042» یعنی متن مفاتیح‌الجنان (mafatih.js) که در پایگاه داده نسخه ویرایش‌شده ندارد.
+    // فایل آماده هم‌زمان با پرسش از پایگاه داده گرفته می‌شود (نه پس از آن)؛ اگر پایگاه داده بیش از ۳ ثانیه جواب نداد، همان فایل آماده نشان داده می‌شود.
+    const file = /^(books\/[a-z0-9_-]+\/)?[a-z0-9_-]+$/.test(key) ? fetch(key.includes('/') ? `${key}.json` : `chelleh/${key}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null) : Promise.resolve(null);
+    let t = null;
+    if (!key.includes('/')) {
+      const wait = new Promise(r => setTimeout(r, 3000)).then(() => file).then(f => f ? dbTexts || [] : loadDbTexts());
+      const d = (await Promise.race([loadDbTexts(), wait])).find(x => x.key === key);
+      t = d && Array.isArray(d.sections) && d.sections.length ? d : null;
+    }
+    if (!t) t = await file;
+    if (!t) throw Error('متن باز نشد. اینترنت را بررسی کنید و دوباره امتحان کنید.');
     return (textCache[key] = t);
   }
   // ترجمه‌های دیگر هر متن (فارسی از مترجم‌های دیگر و زبان‌های دیگر) در پوشه chelleh/tr است:
@@ -126,7 +132,7 @@
 .chl-msg:empty{min-height:0;margin:0}
 .chl-ok{color:var(--ok)}.chl-bad{color:var(--danger)}
 .chl-small{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:10px;font-size:14px}
-.chl-small button{height:auto;padding:0;background:none;border:0;color:var(--deep);text-decoration:underline;font-weight:500;font-size:14px}
+.chl-small button{height:auto;min-height:40px;padding:0 6px;background:none;border:0;color:var(--deep);text-decoration:underline;font-weight:500;font-size:14px}
 .chl-small button.chl-red{color:var(--danger)}
 .chl-bar{height:10px;background:#eee4cf;margin:8px 0 4px;overflow:hidden;border-radius:var(--pill)}
 .chl-bar span{display:block;height:100%;background:var(--emerald)}
@@ -134,7 +140,7 @@
 .chl-read svg{width:20px;height:20px}
 .chl-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .chl-head button{height:42px;font-size:15px}
-.chl-fold summary{cursor:pointer;margin:10px 0 0;color:#f4ead8;font-size:15px}
+.chl-fold summary{cursor:pointer;padding:8px 0;margin:10px 0 0;color:#f4ead8;font-size:15px}
 .sm .chl-mi .sm-ic{background:var(--cream)}
 .chs{position:fixed;inset:0;z-index:48;display:none;align-items:flex-end;justify-content:center;background:#0009}
 .chs.show{display:flex}
@@ -164,7 +170,7 @@
 .chl-note{margin:4px 0 0;font-size:14px;color:var(--muted);line-height:1.8}
 .chl-news{white-space:pre-line;margin:8px 0 0;padding:8px 12px;border-radius:var(--r);background:var(--cream);border-right:4px solid var(--gold);font-size:15px;color:var(--ink)}
 .chl-mail{margin-top:8px;font-size:14px;color:var(--muted)}
-.chl-mail summary{cursor:pointer}
+.chl-mail summary{cursor:pointer;padding:8px 0}
 .chl-mail input{direction:ltr;text-align:left}
 .chs-dup{background:#fff;border:1px solid var(--gold);border-right:4px solid var(--deep);border-radius:var(--r-card);padding:10px 14px;margin:10px 0}
 .chs-dup b{color:var(--deep)}
@@ -180,12 +186,16 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
 .cr-aud div{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
 .cr-aud select{flex:1;min-width:0;height:40px;padding:0 8px;font:inherit;font-size:15px;color:var(--text);background:var(--bg);border:1px solid var(--line)}
 .cr-aud audio{width:100%;height:42px}
+/* صفحه پهن: نوار صوت هم‌عرض ستون متن، نه کل صفحه */
+.cr-aud>*{width:100%;max-width:760px;margin-inline:auto}
+/* سرعت پخش در همان ردیف انتخاب صوت، تا نوار صوت جای کمتری از صفحه گوشی بگیرد */
+.cr-aud .au-opt{flex:none;margin:0}.cr-aud .au-opt select{flex:none}
 .cr-bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:6px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:var(--accent);color:#fff;box-shadow:0 2px 10px #0003}
 .cr.night .cr-bar{background:#0f2a22}
 .cr-bar button{flex:none;height:42px;min-width:42px;padding:0 10px;background:transparent;border:0;color:#fff;font-size:22px;line-height:1}
 .cr-title{flex:1;min-width:0;text-align:center;line-height:1.35}
 .cr-title b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cr-title small{font-size:12.5px;opacity:.85}
+.cr-title small{display:block;font-size:12.5px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cr-prog{position:absolute;bottom:0;right:0;height:3px;width:0;background:var(--gold)}
 .cr-menu{position:sticky;top:58px;z-index:2;max-width:760px;margin:0 auto;display:none;gap:12px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line);box-shadow:0 8px 20px #0002}
 .cr-menu.show{display:grid}
@@ -276,7 +286,8 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
   }
   window.chlRefresh = async () => { await refresh(); if (sheet?.classList.contains('show') && sheetType) renderSheet(); };
   window.chlMine = () => mine; // برای «تنظیم اعلان‌ها» (reminders.js): نام هر چله کنار کلید اعلانش
-  window.chlRead = key => openReader(key, null); // برای بخش «ادعیه» (ibadat.js): متن، ترجمه و صوت دعا
+  let readerOnClose = null; // کاری که پس از بستن متن انجام می‌شود (مثلاً باز شدن دوباره فهرست مفاتیح)
+  window.chlRead = (key, onClose) => { readerOnClose = onClose || null; return openReader(key, null); }; // برای بخش «ادعیه» (ibadat.js): متن، ترجمه و صوت دعا
   async function refresh() {
     await Promise.all([loadTypes(), loadMine()]);
     today = today || isoIran();
@@ -759,7 +770,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
 <div class="cr-row"><span>حالت شب</span><div><button type="button" data-x="day">روز</button><button type="button" data-x="night">شب</button></div></div>
 <div class="cr-row"><span>دکمه دانلود صوت</span><div><button type="button" data-x="dl-on">نمایش</button><button type="button" data-x="dl-off">پنهان</button></div></div></div>
 <div class="cr-body"></div>
-<div class="cr-aud" hidden><div><span>صوت</span><select aria-label="انتخاب صوت"></select></div><audio controls preload="none"></audio>${window.audioOpt.bar()}</div>`;
+<div class="cr-aud" hidden><div><span>صوت</span><select aria-label="انتخاب صوت"></select>${window.audioOpt.bar()}</div><audio controls preload="none"></audio></div>`;
     document.body.appendChild(reader);
     reader.addEventListener('click', onReaderClick);
     reader.querySelector('.cr-aud select').addEventListener('change', e => {
@@ -810,9 +821,9 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
   // «ی» و «ک» فارسی در قلم عربی (ChlArabic) نیست و دایره نقطه‌چین دیده می‌شود؛ مثل مصحف مدینه: «ی» میان کلمه «ي»، آخر کلمه «ى»، «ک» → «ك».
   const arFix = t => String(t).replace(/ک/g, 'ك').replace(/ی(?=[\u064B-\u0652\u0670]*(?:[^\u0600-\u06FF]|$))/g, 'ى').replace(/ی/g, 'ي');
   async function openReader(key, member) {
-    if (member && (member.kind === 'juz' || member.kind === 'page')) return openQuran(todaySpec(member), member);
+    if (member && (member.kind === 'juz' || member.kind === 'page')) { readerOnClose = null; return openQuran(todaySpec(member), member); }
     const bt = (await loadBuiltins()).find(x => x.key === key);
-    if (bt?.quran) return openQuran({ surah: bt.quran.surah, title: bt.title }, member);
+    if (bt?.quran) { readerOnClose = null; return openQuran({ surah: bt.quran.surah, title: bt.title }, member); }
     buildReader();
     reader.querySelector('.cr-title b').textContent = 'در حال بارگذاری…';
     reader.querySelector('.cr-title small').textContent = '';
@@ -822,8 +833,16 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     pushState({ chl: 1 });
     applyPrefs();
     let t;
-    try { t = await getText(key); }
-    catch (e) { reader.querySelector('.cr-title b').textContent = 'متن باز نشد'; reader.querySelector('.cr-body').innerHTML = `<p class="cr-sec only" style="margin-top:30px">${esc(e.message)}</p>`; return; }
+    // اگر متن باز نشد، دکمه «تلاش دوباره» همین‌جا دوباره امتحان می‌کند.
+    for (;;) {
+      try { t = await getText(key); break; }
+      catch (e) {
+        reader.querySelector('.cr-title b').textContent = 'متن باز نشد';
+        reader.querySelector('.cr-body').innerHTML = `<p class="cr-sec only" style="margin-top:30px">${esc(e.message)}</p><p style="text-align:center"><button type="button" data-cr-retry>تلاش دوباره</button></p>`;
+        await new Promise(r => { reader.querySelector('[data-cr-retry]').onclick = r; });
+        reader.querySelector('.cr-title b').textContent = 'در حال بارگذاری…'; reader.querySelector('.cr-body').innerHTML = '';
+      }
+    }
     current = { key, member, text: t, tr: null };
     await loadTr();
     reader.querySelector('.cr-title b').textContent = t.title;
@@ -889,7 +908,10 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     try { reader.querySelector('.cr-aud audio').pause(); } catch {}
     if (!sheet?.classList.contains('show')) document.body.classList.remove('chl-lock');
     reader.querySelector('.cr-menu').classList.remove('show');
-    if (!fromHistory) { try { if (history.state?.chl) history.back(); } catch {} }
+    const after = readerOnClose; readerOnClose = null;
+    let back = false;
+    if (!fromHistory) { try { if (history.state?.chl) { history.back(); back = true; } } catch {} }
+    if (after) back ? addEventListener('popstate', () => setTimeout(after, 30), { once: true }) : setTimeout(after, 30);
   }
 
   // ---------- مدیریت: زبانه «چله‌ها» ----------

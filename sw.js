@@ -5,7 +5,8 @@ self.window = self; importScripts('config.js');
 const cfg = self.APP_CONFIG || {};
 
 const CACHE = 'hezb-v2';
-const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'portions.json', 'Vazirmatn.woff2', 'IranNastaliq2.woff2', 'background.jpg'];
+const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'portions.json', 'Vazirmatn.woff2', 'IranNastaliq2.woff2'];
+// background.jpg (ظاهر قبلی) از پیش ذخیره نمی‌شود تا نصب برنامه ۲۰۰ کیلوبایت سبک‌تر شود؛ اگر کسی آن ظاهر را برگزید، بار اول ذخیره می‌شود.
 
 // اسکریپت‌های صفحه (با شماره نسخه‌شان، مثل app.js?v=7) هم از همان index.html برداشته و ذخیره می‌شوند
 // تا برنامه نصب‌شده از همان اولین بار بدون اینترنت هم باز شود.
@@ -51,6 +52,13 @@ self.addEventListener('fetch', e => {
       e.waitUntil(new Promise(r => setTimeout(r, 5000)).then(net).catch(() => {}));
       return hit;
     }));
+    return;
+  }
+  // خود صفحه: اگر اینترنت کند است (بیش از ۳ ثانیه)، نسخه ذخیره‌شده فوراً باز می‌شود و نسخه تازه برای بار بعد ذخیره می‌شود.
+  if (req.mode === 'navigate') {
+    const n = net();
+    const late = new Promise(r => setTimeout(r, 3000)).then(() => caches.match(req, { ignoreSearch: true })).then(r => r || caches.match('./')).then(r => r || n);
+    e.respondWith(Promise.race([n, late]).catch(offline));
     return;
   }
   e.respondWith(net().catch(offline));
