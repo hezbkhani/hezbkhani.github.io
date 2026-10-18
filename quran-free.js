@@ -232,7 +232,8 @@ ${last ? `<div class="qf-card qf-resume"><h3>دفعه قبل تا اینجا خ�
   });
   document.addEventListener('click', e => { if (e.target.closest('.sm [data-qf-open]')) { window.siteMenu.close(); setTimeout(openSheet, 280); } });
   if (load()) getIx().catch(() => {});
-  window.quranFree = { open: openSheet, menuItem, openAt: g => getIx().then(() => openAt(g)), names: NAMES };
+  // openAt(اندیس سراسری آیه): برای جستجوی سایت (search.js)
+  window.quranFree = { open: openSheet, menuItem, names: NAMES, alias: ALIAS, openAt: async g => { await getIx(); openAt(g); } };
 
   // پیوند ?quran=free
   if (new URLSearchParams(location.search).get('quran') === 'free') {
