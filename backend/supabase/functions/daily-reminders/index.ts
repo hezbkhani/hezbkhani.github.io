@@ -3,6 +3,7 @@
 // سهم امروز و یادآوری گزارش حزب‌خوانی، برنامه امروز و یادآوری چله و دوره‌های قرآن، شروع از فردا، رسیدن جا از فهرست رزرو،
 // اعلام شناسه، خبر تازه دوره، و با اذان: نماز امام جواد (ع) چهارشنبه‌ها، ختم یاسین حضرت ام‌البنین (س) شب‌های جمعه و ادعیه (سمات، کمیل، توسل). هیچ اعلانی دو بار نمی‌رود (جدول push_sent).
 // slot=morning و slot=evening (زمان‌بندی قدیمی ساعت ۱۰ و ۱۹) هم کار می‌کند.
+// اعلان اذان شخصی (push_azan، azan.ts): با slot=auto، و با slot=azan (زمان‌بندی سبک هر دقیقه، فقط همین) دقیق‌تر.
 // slot=test: «ارسال آزمایشی» از سایت؛ برنامه امروزِ همان یک دستگاه (endpoint در بدنه) را همین حالا می‌فرستد.
 // slot=sample و slot=broadcast: فقط مدیر (با توکن ورود مدیر): نمونه یک نوع اعلان به گوشی خودش، یا پیام همگانی.
 // Secrets لازم: VAPID_PUBLIC_KEY، VAPID_PRIVATE_KEY، CRON_SECRET. اختیاری: SITE_URL (پیش‌فرض https://hezbkhani.github.io).
@@ -11,6 +12,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 import { type Group, isoToUtc, parseGroupText, portionFor, toFa } from './reminder.ts'
+import { type AzanRow, LATE_MIN, azanMsg, azanPersonalDue } from './azan.ts'
 import { type Item, type Msg, type Prefs, type Settings, azanDue, compose, dueTypes, forDevice, mergeSettings, tehranMinutes } from './notify.ts'
 
 const env = (k: string) => Deno.env.get(k) || ''
@@ -67,34 +69,68 @@ async function isAdmin(req: Request) {
   return data === true
 }
 
+type Stats = Record<string, number | string>
+async function sendPush(db: Db, stats: Stats, s: Sub, msg: Msg, ttl: number) {
+  try {
+    await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(msg), { TTL: ttl, urgency: 'high' })
+    stats.sent = +stats.sent + 1
+    return true
+  } catch (e) {
+    const code = (e as { statusCode?: number }).statusCode
+    // اشتراک منقضی یا لغوشده در مرورگر: حذف.
+    if (code === 404 || code === 410) { stats.removed = +stats.removed + 1; await db.from('push_subscriptions').delete().eq('endpoint', s.endpoint) }
+    else { stats.failed = +stats.failed + 1; console.error('push failed', code, (e as Error).message) }
+    return false
+  }
+}
+
+// اذان شخصی: هر گوشی به افق شهر خودش (azan.ts). کلید هر اذان پیش از ارسال در push_sent ثبت می‌شود (ignoreDuplicates)
+// تا دو اجرای هم‌زمان (auto و azan) آن را دو بار نفرستند؛ اگر ارسال نشد (جز اشتراک منقضی)، کلید برداشته می‌شود تا اجرای بعد بفرستد.
+async function personalAzan(db: Db, stats: Stats) {
+  type Row = AzanRow & { push_subscriptions: { p256dh: string; auth: string } | null }
+  let rows: Row[]
+  try { rows = await all<Row>(() => db.from('push_azan').select('endpoint,lat,lng,tz,prayers,push_subscriptions(p256dh,auth)').order('endpoint')) }
+  catch (e) { console.error('push_azan', (e as Error).message); return } // azan.sql هنوز اجرا نشده
+  const now = Date.now(), due = azanPersonalDue(rows, now)
+  if (!due.length) return
+  const keysOf = new Map(rows.map(r => [r.endpoint, r.push_subscriptions]))
+  const claimed = new Set<string>()
+  for (let i = 0; i < due.length; i += 500) {
+    const { data, error } = await db.from('push_sent').upsert(due.slice(i, i + 500).map(d => ({ endpoint: d.endpoint, key: d.key })), { onConflict: 'endpoint,key', ignoreDuplicates: true }).select('endpoint,key')
+    if (error) { console.error('push_sent', error.message); return }
+    for (const r of data || []) claimed.add(r.endpoint + ' ' + r.key)
+  }
+  const jobs = due.filter(d => claimed.has(d.endpoint + ' ' + d.key) && keysOf.get(d.endpoint)).map(d => async () => {
+    const k = keysOf.get(d.endpoint)!, ttl = Math.max(60, Math.round((d.at + LATE_MIN * 6e4 - now) / 1000))
+    const ok = await sendPush(db, stats, { endpoint: d.endpoint, p256dh: k.p256dh, auth: k.auth, group_number: null, participant_id: null }, azanMsg(d, SITE_URL), ttl)
+    if (!ok) await db.from('push_sent').delete().eq('endpoint', d.endpoint).eq('key', d.key)
+  })
+  for (let i = 0; i < jobs.length; i += 25) await Promise.all(jobs.slice(i, i + 25).map(f => f()))
+  stats.azan_personal = jobs.length
+}
+
 Deno.serve(req => handle(req).catch(e => { console.error(e); return json({ error: String((e as Error).message || e) }, 500) }))
 
 async function handle(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   const slot = new URL(req.url).searchParams.get('slot') || ''
-  if (!['auto', 'morning', 'evening', 'test', 'sample', 'broadcast'].includes(slot)) return json({ error: 'bad_slot' }, 400)
+  if (!['auto', 'azan', 'morning', 'evening', 'test', 'sample', 'broadcast'].includes(slot)) return json({ error: 'bad_slot' }, 400)
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
-  if (['auto', 'morning', 'evening'].includes(slot) && (!env('CRON_SECRET') || req.headers.get('x-cron-secret') !== env('CRON_SECRET'))) return json({ error: 'unauthorized' }, 401)
+  if (['auto', 'azan', 'morning', 'evening'].includes(slot) && (!env('CRON_SECRET') || req.headers.get('x-cron-secret') !== env('CRON_SECRET'))) return json({ error: 'unauthorized' }, 401)
   if (['sample', 'broadcast'].includes(slot) && !(await isAdmin(req))) return json({ error: 'not_admin' }, 403)
 
   webpush.setVapidDetails('https://hezbkhani.github.io', env('VAPID_PUBLIC_KEY'), env('VAPID_PRIVATE_KEY'))
   const db = makeDb()
-  const settings = await loadSettings(db)
-  const stats: Record<string, number | string> = { slot, sent: 0, removed: 0, failed: 0 }
-
-  async function send(s: Sub, msg: Msg, ttl: number) {
-    try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(msg), { TTL: ttl, urgency: 'high' })
-      stats.sent = +stats.sent + 1
-      return true
-    } catch (e) {
-      const code = (e as { statusCode?: number }).statusCode
-      // اشتراک منقضی یا لغوشده در مرورگر: حذف.
-      if (code === 404 || code === 410) { stats.removed = +stats.removed + 1; await db.from('push_subscriptions').delete().eq('endpoint', s.endpoint) }
-      else { stats.failed = +stats.failed + 1; console.error('push failed', code, (e as Error).message) }
-      return false
-    }
+  const stats: Stats = { slot, sent: 0, removed: 0, failed: 0 }
+  // ---------- اذان شخصی: فقط همین، بی‌نیاز به تنظیمات و بقیه اعلان‌ها ----------
+  if (slot === 'azan') {
+    await personalAzan(db, stats)
+    if (+stats.sent || +stats.failed || +stats.removed) await db.from('push_runs').insert({ slot, stats })
+    return json(stats)
   }
+  const settings = await loadSettings(db)
+  const send = (s: Sub, msg: Msg, ttl: number) => sendPush(db, stats, s, msg, ttl)
+  if (slot === 'auto') await personalAzan(db, stats)
 
   // ---------- پیام همگانی مدیر ----------
   if (slot === 'broadcast') {

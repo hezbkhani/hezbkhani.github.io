@@ -98,7 +98,10 @@ body.ns-lock{overflow:hidden}
   }
   // انتخاب‌های کاربر روی همین گوشی هم نگه داشته می‌شود تا اگر اشتراک دوباره ساخته شد، از دست نرود.
   const hasPrefs = p => !!p && ((p.off || []).length || Object.keys(p.times || {}).length);
-  async function restorePrefs(sub) { const p = store.get(PREFS); if (hasPrefs(p)) await rpc('push_prefs', { p_endpoint: sub.endpoint, p_prefs: p }).catch(() => {}); }
+  async function restorePrefs(sub) { const p = store.get(PREFS); if (hasPrefs(p)) await rpc('push_prefs', { p_endpoint: sub.endpoint, p_prefs: p }).catch(() => {}); for (const x of extras()) await x.restore?.(sub); }
+  // بخش‌هایی که فایل‌های دیگر به برگه تنظیم اعلان‌ها می‌افزایند (مثلاً اعلان اذان در azan.js):
+  // { offLabel(), html(), save(sub, box), restore(sub), active() }
+  const extras = () => window.pushExtra || [];
 
   async function status() {
     const sub = await currentSub(); if (!sub) return null;
@@ -235,7 +238,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     // خطای اینترنت (نه خاموش بودن): تنظیمات کاربر پنهان نشود و دکمه «روشن کردن» نیاید
     if (st === undefined) return `<p>وضعیت اعلان‌ها دریافت نشد. اتصال اینترنت را بررسی کنید و دوباره این بخش را باز کنید.</p><div class="rm-msg" aria-live="polite"></div>`;
     if (!st) {
-      const items = [hasHezb && 'حزب‌خوانی: شناسه و گروه، سهم هر روز و یادآوری گزارش', chl.length && `${chl.length > 1 ? `${toFa(chl.length)} چله و دوره شما` : 'چله یا دوره شما'}: برنامه هر روز، یادآوری «خواندم» و خبرهای دوره`, 'اعمال و ختم‌ها: نماز امام جواد (ع) و ختم یاسین', 'ادعیه: دعای سمات، کمیل و توسل'].filter(Boolean);
+      const items = [hasHezb && 'حزب‌خوانی: شناسه و گروه، سهم هر روز و یادآوری گزارش', chl.length && `${chl.length > 1 ? `${toFa(chl.length)} چله و دوره شما` : 'چله یا دوره شما'}: برنامه هر روز، یادآوری «خواندم» و خبرهای دوره`, 'اعمال و ختم‌ها: نماز امام جواد (ع) و ختم یاسین', 'ادعیه: دعای سمات، کمیل و توسل', ...extras().map(x => x.offLabel?.())].filter(Boolean);
       return `<p>اعلان روی این گوشی خاموش است. با روشن کردنش این‌ها یادتان می‌آید:</p><ul>${items.map(x => `<li>${x}</li>`).join('')}</ul>
 <p class="hint" style="margin:0">پس از روشن کردن، هر کدام را می‌توانید خاموش کنید یا ساعتش را عوض کنید.</p>
 <div class="rm-row"><button type="button" data-n="on">🔔 روشن کردن اعلان‌ها</button></div><div class="rm-msg" aria-live="polite"></div>`;
@@ -255,6 +258,7 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
     if (ib) html += `<section><h5>🤲 اعمال و ختم‌ها</h5>${ib}</section>`;
     const doa = await typeRows('doa');
     if (doa) html += `<section><h5>📿 ادعیه</h5>${doa}</section>`;
+    for (const x of extras()) html += (await x.html?.()) || '';
     return html + `<p class="hint" style="margin:8px 0 0">ساعت‌ها به وقت ایران است.</p>
 <div class="rm-row"><button type="button" data-n="save">ذخیره</button><button type="button" data-n="test" class="rm-ghost">اعلان آزمایشی</button><button type="button" data-n="reset" class="rm-ghost">بازگشت به پیش‌فرض</button></div>
 <div class="rm-msg" aria-live="polite"></div>
@@ -316,6 +320,7 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
       }
       await syncCodes(true);
       await savePrefs({ off, times });
+      const s2 = await currentSub(); for (const x of extras()) await x.save?.(s2, box);
       await refreshAll();
       return 'تنظیم اعلان‌ها ذخیره شد.';
     });
@@ -406,7 +411,7 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
       on: async () => { await ensureSub(); store.set(CHL, true); store.set(CHLNO, null); await syncCodes(true); return 'اعلان فعال شد.'; },
       off: async () => {
         const s2 = await currentSub(); store.set(CHL, null);
-        if (s2) { await syncCodes(true); const st = await status(); if (st && st.group_number == null) { await rpc('push_unsubscribe', { p_endpoint: s2.endpoint }); await s2.unsubscribe(); } }
+        if (s2) { await syncCodes(true); const st = await status(); if (st && st.group_number == null && !extras().some(x => x.active?.())) { await rpc('push_unsubscribe', { p_endpoint: s2.endpoint }); await s2.unsubscribe(); } }
         store.set(SENT, null);
         return 'اعلان لغو شد.';
       },

@@ -44,7 +44,7 @@
     }
     return ALL.find(c => c.id === s?.id) || CITIES[0];
   }
-  const saveLoc = v => { try { localStorage.setItem(LKEY, JSON.stringify(v)); } catch {} };
+  const saveLoc = v => { try { localStorage.setItem(LKEY, JSON.stringify(v)); } catch {} document.dispatchEvent(new Event('prayer:loc')); };
 
   // ---------- محاسبه اوقات (همان فرمول خورشیدی fajrTehran) ----------
   // زمان (به ساعت جهانی، از نیمه‌شب UTC همان روز) که خورشید ang درجه زیر افق است؛ dir منفی پیش از ظهر، مثبت پس از ظهر.
@@ -86,6 +86,21 @@
   const hm = (t, tz) => new Intl.DateTimeFormat('fa-IR', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(round(t)));
   const dur = ms => { const m = Math.max(1, Math.ceil(ms / MIN)), h = Math.floor(m / 60), r = m % 60; return h ? `${toFa(h)} ساعت${r ? ` و ${toFa(r)} دقیقه` : ''}` : `${toFa(r)} دقیقه`; };
   window.prayerTimes = (iso, L) => times(iso, L || CITIES[0]); // برای آزمایش و استفاده‌های بعدی (مثلاً اعلان اذان)
+
+  // ---------- پیش‌نمایش مدیر: ‎?date=2027-02-20‎ (یا ‎?date=2027-02-20T17:30‎ به وقت شهر) فقط با ‎#admin‎ امروز را جابه‌جا می‌کند ----------
+  // برای آزمودن حالت رمضان و مناسبت‌ها؛ برای بازدیدکننده عادی (بدون ‎#admin‎) هیچ اثری ندارد.
+  const T0 = Date.now();
+  function clock(tz) {
+    const real = Date.now(); if (location.hash !== '#admin') return real;
+    let m = null; try { m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(new URLSearchParams(location.search).get('date') || ''); } catch {}
+    if (!m || !(+m[2] >= 1 && +m[2] <= 12 && +m[3] >= 1 && +m[3] <= 31)) return real;
+    if (m[4] == null) return real + isoMs(`${m[1]}-${m[2]}-${m[3]}`) - isoMs(ymd(real, tz));
+    // ساعت داده‌شده به وقت همان شهر؛ از لحظه باز شدن صفحه جلو می‌رود
+    const g = Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]), p = new Intl.DateTimeFormat('en-CA', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(g));
+    const v = t => +p.find(x => x.type === t).value, local = Date.UTC(v('year'), v('month') - 1, v('day'), v('hour') % 24, v('minute'));
+    return g - (local - g) + (real - T0);
+  }
+  const faked = () => location.hash === '#admin' && /[?&]date=\d{4}-/.test(location.search);
 
   // ---------- تاریخ قمری (با همان جابه‌جایی مدیر در ibadat.js) ----------
   const off = () => { const h = window.siteSettings?.notify?.hijri; return Number.isInteger(h) && Math.abs(h) <= 2 ? h : 0; };
@@ -250,17 +265,21 @@ html[data-bg=dark] #dlCard .dl-city .dl-gps,html[data-bg=dark] #dlCard .dl-city 
   function render() {
     const P = shown('prayer'), D = shown('today'), foot = document.querySelector('.site-foot');
     if (!P && !D) { clearInterval(timer); timer = 0; if (card) card.remove(); foot?.classList.remove('dl-hide'); return; }
-    const L = loc(), now = Date.now(), iso = ymd(now, L.tz);
+    const L = loc(), now = clock(L.tz), iso = ymd(now, L.tz);
     let T = times(iso, L);
     const occ = D ? occasions(iso) : [], nights = D ? nightOf(now < T.fajr ? iso : addDays(iso, 1)) : [];
     const list = D ? acts(iso, T, now) : [];
-    const hasToday = occ.length || nights.length || list.length;
+    // بلوک‌های دیگر (مثلاً حالت رمضان در ramadan.js) زیر تاریخ و مناسبت‌ها
+    const ctx = { L, iso, T, now };
+    const extra = hooks.block.map(f => { try { return f(ctx) || ''; } catch (e) { console.error(e); return ''; } }).join('');
+    const hasToday = occ.length || nights.length || list.length || extra;
     if (!P && !hasToday) { if (card) card.remove(); foot?.classList.remove('dl-hide'); clearInterval(timer); timer = 0; return; }
     if (!place()) return;
     card.hidden = false;
     foot?.classList.add('dl-hide'); // تاریخ پایین صفحه همین‌جا آمده است
-    let html = `<p class="dl-date">${esc(shamsi(iso))}${hijriLabel(iso) ? `<small>${esc(hijriLabel(iso))}${L.tz !== IR ? `، به وقت ${esc(L.short || L.name)}` : ''}</small>` : ''}</p>`;
+    let html = `<p class="dl-date">${faked() ? '🧪 ' : ''}${esc(shamsi(iso))}${hijriLabel(iso) ? `<small>${esc(hijriLabel(iso))}${L.tz !== IR ? `، به وقت ${esc(L.short || L.name)}` : ''}</small>` : ''}</p>`;
     if (occ.length || nights.length) html += `<ul class="dl-occ">${occ.map(o => `<li${o.soft ? ' class="soft"' : ''}>${esc(o.t)}${o.hol ? '<span class="hol">تعطیل</span>' : ''}</li>`).join('')}${nights.map(t => `<li>امشب: ${esc(t)}</li>`).join('')}</ul>`;
+    html += extra;
     if (P) html += prayerHtml(L, iso, T, now);
     if (list.length) html += `<div class="dl-acts">${list.map(a => `<button type="button" class="dl-act" data-go="${esc(a.go)}"><span class="dl-ic" aria-hidden="true">${a.ic}</span><span><b>${esc(a.t)}</b><small>${esc(a.s)}</small></span><span class="dl-go" aria-hidden="true">‹</span></button>`).join('')}</div>`;
     // جلوگیری از ساختن دوباره وقتی چیزی عوض نشده (فوکوس و انتخاب فهرست شهر از دست نرود)
@@ -283,7 +302,7 @@ html[data-bg=dark] #dlCard .dl-city .dl-gps,html[data-bg=dark] #dlCard .dl-city 
     return `<button type="button" class="dl-next" aria-expanded="${open}" aria-controls="dlMore"><span class="dl-ic" aria-hidden="true">🕌</span><span class="dl-cd">${main}<small>${sub}<span class="dl-chev" aria-hidden="true">▾</span></small></span></button>
 <div class="dl-more" id="dlMore"${open ? '' : ' hidden'}><ul class="dl-times">${ev.map(e => `<li class="${e.k === nextRow ? 'next' : e.t <= now ? 'past' : ''}"><span>${NAMES[e.k]}</span><b>${hm(e.t, L.tz)}</b></li>`).join('')}</ul>
 <div class="dl-city"><select aria-label="شهر">${L.id === 'gps' ? `<option value="gps" selected>${esc(L.name)}</option>` : ''}<optgroup label="ایران">${CITIES.map(opts).join('')}</optgroup><optgroup label="خارج از ایران">${ABROAD.map(opts).join('')}</optgroup></select>${navigator.geolocation ? '<button type="button" class="dl-gps">📍 موقعیت من</button>' : ''}</div>
-<p class="dl-note" aria-live="polite">${esc(note)}</p></div>`;
+${hooks.more.map(f => { try { return f({ L, iso, T, now }) || ''; } catch (e) { console.error(e); return ''; } }).join('')}<p class="dl-note" aria-live="polite">${esc(note)}</p></div>`;
   }
 
   function onClick(e) {
@@ -312,6 +331,14 @@ html[data-bg=dark] #dlCard .dl-city .dl-gps,html[data-bg=dark] #dlCard .dl-city 
     else if (kind === 'mf') window.mafatih?.openKey(key);
   }
 
+  // برای فایل‌های دیگر: شهر انتخابی، اوقات، تاریخ قمری (با جابه‌جایی مدیر) و جای افزودن بلوک به کارت.
+  // block(ctx): زیر تاریخ؛ more(ctx): در بخش باز‌شونده اوقات شرعی، زیر انتخاب شهر. هر کدام HTML برمی‌گرداند (یا '').
+  const hooks = { block: [], more: [] };
+  window.daily = {
+    loc, times, hijri, addDays, hm, dur, round, clock, ymd, toFa, esc,
+    block: f => { hooks.block.push(f); refresh(); }, more: f => { hooks.more.push(f); refresh(); }, refresh: () => refresh()
+  };
+  function refresh() { lastKey = ''; render(); }
   ['features:changed', 'settings:changed'].forEach(ev => document.addEventListener(ev, () => { lastKey = ''; render(); }));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
   render();
