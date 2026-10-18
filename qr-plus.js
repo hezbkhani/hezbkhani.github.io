@@ -538,6 +538,7 @@ ${groups.length ? groups.map(g => `<h3>سوره ${esc(sname(g.s))}</h3>${g.list.
       else box.innerHTML = `<h3>قرآن</h3>${menuItem()}`;
     }
   });
+  window.qpSaved = { open: openList }; // برای «نوران من» (mine-sheet.js)
   document.addEventListener('click', e => { if (e.target.closest('.sm [data-qp-saved]')) { window.siteMenu.close(); setTimeout(openList, 280); } });
   document.addEventListener('features:changed', () => { if (!on('saved')) closeList(); window.siteMenu?.refresh(); });
 
