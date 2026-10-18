@@ -87,6 +87,9 @@ async function sendPush(db: Db, stats: Stats, s: Sub, msg: Msg, ttl: number) {
 // اذان شخصی: هر گوشی به افق شهر خودش (azan.ts). کلید هر اذان پیش از ارسال در push_sent ثبت می‌شود (ignoreDuplicates)
 // تا دو اجرای هم‌زمان (auto و azan) آن را دو بار نفرستند؛ اگر ارسال نشد (جز اشتراک منقضی)، کلید برداشته می‌شود تا اجرای بعد بفرستد.
 async function personalAzan(db: Db, stats: Stats) {
+  // امکان azan را مدیر برای همه خاموش کرده (site_settings.features، پیش‌فرض خاموش): هیچ اعلان اذانی نرود.
+  const ft = await db.from('site_settings').select('value').eq('key', 'features').maybeSingle()
+  if (ft.data?.value?.azan !== true) { stats.azan_personal = 'off'; return }
   type Row = AzanRow & { push_subscriptions: { p256dh: string; auth: string } | null }
   let rows: Row[]
   try { rows = await all<Row>(() => db.from('push_azan').select('endpoint,lat,lng,tz,prayers,push_subscriptions(p256dh,auth)').order('endpoint')) }
