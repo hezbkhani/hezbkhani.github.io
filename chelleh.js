@@ -202,6 +202,7 @@ ${''}.cr{--bg:#fbf6ea;--card:#fffdf7;--text:#1f1a14;--tr:#4b4036;--muted:#7a6d60
 .cr-bism{margin:18px 0 6px;text-align:center;font:normal calc(var(--qs)*1.05)/2 ChlArabic,Vazirmatn,serif}
 .cr-sec{padding:14px 2px;border-bottom:1px solid var(--line)}
 .cr-sec:last-child{border-bottom:0}
+.cr-h{margin:26px 0 4px;padding-bottom:4px;text-align:center;color:var(--accent);font:normal 30px/1.6 SiteFont,Tahoma,serif;border-bottom:2px solid var(--gold)}
 .cr-note{margin:0 0 6px;color:var(--accent);font-weight:700;font-size:15px}
 .cr-sec.only{border:1px dashed var(--line);background:var(--card);padding:10px 12px;margin:14px 0}
 .cr-sec.only .cr-note{margin:0;color:var(--muted);font-weight:500}
@@ -832,8 +833,9 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     const t = current.text, c = counts(), m = current.member;
     const tr = current.tr, lang = tr ? tr.meta.lang : 'fa', dir = RTL.includes(lang) ? 'rtl' : 'ltr';
     const trSrc = tr ? `<small class="cr-trsrc">ترجمه: ${esc(tr.meta.name)}${tr.meta.src ? ` · ${esc(tr.meta.src)}` : ''}</small>` : '';
-    let html = `<div class="cr-head"><h3>${esc(t.title)}</h3>${t.about ? `<small>${esc(t.about)}</small>` : ''}${trSrc}</div><p class="cr-bism">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</p>`;
+    let html = `<div class="cr-head"><h3>${esc(t.title)}</h3>${t.about ? `<small>${esc(t.about)}</small>` : ''}${trSrc}</div>${t.bism === false ? '' : '<p class="cr-bism">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</p>'}`;
     html += (t.sections || []).map((s, i) => {
+      if (s.h) return `<h4 class="cr-h">${esc(s.h)}</h4>`; // عنوان میان متن، مثل «اذان» و «اقامه»
       if (!s.ar) return `<div class="cr-sec only"><p class="cr-note">${esc(s.note)}</p></div>`;
       const n = c[i] || 0, rep = s.repeat ? `<div class="cr-count"><button type="button" data-count="${i}" class="${n >= s.repeat ? 'full' : ''}">${fa(n)} / ${fa(s.repeat)}</button><small>${n >= s.repeat ? 'کامل شد' : 'با هر بار خواندن بزنید'}</small>${n ? `<button type="button" class="cr-reset" data-reset="${i}">از نو</button>` : ''}</div>` : '';
       const f = tr ? tr.t[i] : s.fa;
@@ -843,7 +845,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
       const done = (m.marked || []).includes(today);
       html += `<div class="cr-end"><p>${esc(m.name)}، روز ${fa(dayNo(m))} از ${fa(m.days)} چله</p>${done ? '<div class="chl-done">✓ امروز ثبت شده است. قبول باشد.</div>' : `<button type="button" data-done="1">خواندم؛ ثبت برای امروز</button>`}<div class="chl-msg" id="crMsg"></div></div>`;
     }
-    html += '<p class="cr-bism" style="font-size:20px">صَدَقَ اللّهُ الْعَلِيُّ الْعَظِيم</p>';
+    if (t.end !== false) html += '<p class="cr-bism" style="font-size:20px">صَدَقَ اللّهُ الْعَلِيُّ الْعَظِيم</p>';
     reader.querySelector('.cr-body').innerHTML = html;
     // صوت‌های این متن (اگر هست)؛ آخرین انتخاب هر متن یادش می‌ماند.
     const aud = reader.querySelector('.cr-aud'), list = Array.isArray(t.audio) ? t.audio.filter(a => a && a.url) : [];
