@@ -60,6 +60,7 @@
   const toFa = x => String(x).replace(/\d/g, d => fa[d]);
   const toAr = x => String(x).replace(/\d/g, d => arD[d]);
   const BISMILLAH = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';
+  const AO = window.audioOpt;
   const KEY = 'quranReader';
   const store = {
     get() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } },
@@ -183,13 +184,15 @@ body.qr-lock{overflow:hidden}
 <div class="qr-row qr-x"><span>پخش</span><span class="ctl"><button type="button" class="qr-chip" data-a="mode-ar">تلاوت</button><button type="button" class="qr-chip" data-a="mode-both">تلاوت + ترجمه</button><button type="button" class="qr-chip" data-a="mode-fa">ترجمه</button></span></div>
 <div class="qr-row qr-x"><span>قاری</span><select id="qrReciter" aria-label="قاری">${RECITERS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
 <div class="qr-row qr-x"><span>ترجمه گویا</span><select id="qrVoice" aria-label="ترجمه گویا">${VOICES.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
+<div class="qr-row qr-x"><span>سرعت پخش</span><select id="qrRate" data-au-rate aria-label="سرعت پخش">${AO.RATES.map(r => `<option value="${r}">${AO.num(r)}</option>`).join('')}</select></div>
+<div class="qr-row qr-x"><span>دکمه دانلود صوت</span><span class="ctl"><button type="button" class="qr-chip" data-a="dl-on">نمایش</button><button type="button" class="qr-chip" data-a="dl-off">پنهان</button></span></div>
 <button type="button" class="qr-apply" data-a="apply">اعمال تنظیمات</button>
 </div>
 <div class="qr-body" id="qrBody"></div>
 <div class="qr-tfs" id="qrTfs" data-a="tfclose"><div class="qr-tfs-box" role="dialog" aria-modal="true" aria-labelledby="qrTfsTitle"><div class="qr-tfs-head"><b id="qrTfsTitle"></b><button type="button" data-a="tfclose" aria-label="بستن تفسیر">✕</button></div><div class="qr-tfs-body" id="qrTfsBody"></div></div></div>
 <div class="qr-player" id="qrPlayer"><button type="button" class="qr-play" data-a="play" aria-label="پخش">▶</button>
 <div class="qr-now" id="qrNow"><b>پخش صوت</b>از اولین آیه، یا روی شماره یک آیه بزنید</div>
-<button type="button" data-a="next" aria-label="آیه بعد">⏭</button><button type="button" data-a="prev" aria-label="آیه قبل">⏮</button></div>`;
+<button type="button" data-a="next" aria-label="آیه بعد">⏭</button><button type="button" data-a="prev" aria-label="آیه قبل">⏮</button><button type="button" data-a="dl" aria-label="دانلود صوت این آیه" hidden>⬇</button></div>`;
   document.body.appendChild(el);
   const $ = id => el.querySelector('#' + id);
   const menu = $('qrMenu'), body = $('qrBody');
@@ -209,7 +212,17 @@ body.qr-lock{overflow:hidden}
     el.querySelector('[data-a="night"]').classList.toggle('on', prefs.night);
     for (const m of ['ar', 'both', 'fa']) el.querySelector(`[data-a="mode-${m}"]`).classList.toggle('on', prefs.mode === m);
     $('qrTr').value = prefs.tr; $('qrReciter').value = prefs.reciter; $('qrVoice').value = prefs.voice;
+    applyAudioOpt();
   }
+  // سرعت پخش و دکمه دانلود تنظیم مشترک همه صوت‌های سایت است (audioOpt در app.js).
+  function applyAudioOpt() {
+    const o = AO.get();
+    $('qrRate').value = o.rate;
+    el.querySelector('[data-a="dl-on"]').classList.toggle('on', o.dl);
+    el.querySelector('[data-a="dl-off"]').classList.toggle('on', !o.dl);
+    el.querySelector('[data-a="dl"]').hidden = !o.dl;
+  }
+  document.addEventListener('audioopt', applyAudioOpt);
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
 
@@ -432,6 +445,13 @@ body.qr-lock{overflow:hidden}
       if (playing) playAt(pos);
       return;
     }
+    if (a === 'dl-on' || a === 'dl-off') return AO.set({ dl: a === 'dl-on' });
+    if (a === 'dl') {
+      // صوتی که الان پخش می‌شود؛ وگرنه تلاوت (یا ترجمه گویای) آیه انتخاب‌شده یا اولین آیه
+      const cur = audio.getAttribute('src');
+      const t = !cur && items[Math.max(pos, 0)] && tracksFor(items[Math.max(pos, 0)]).pop();
+      return AO.download(cur ? cur.split('#')[0] : t && t[0]);
+    }
     if (a === 'play') return playing ? pauseAudio() : resumeOrStart();
     if (a === 'next') return playAt(Math.min(items.length - 1, pos + 1));
     if (a === 'prev') return playAt(Math.max(0, pos - 1));
@@ -463,6 +483,7 @@ body.qr-lock{overflow:hidden}
   // ---------- پخش صوت ----------
   const audio = new Audio(), nextAudio = new Audio();
   audio.preload = 'auto'; nextAudio.preload = 'auto';
+  AO.track(audio);
   let pos = -1, step = 0, playing = false, queue = [], qi = 0, srcIdx = 0, wait = 0;
   // سرورهایی که در این بازدید جواب ندادند به آخر صف می‌روند تا آیه‌های بعدی معطل‌شان نشوند.
   const failed = {};
