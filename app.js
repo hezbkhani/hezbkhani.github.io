@@ -14,6 +14,23 @@ function taskFor(g,id){const p=iranParts(),days=Math.floor((Date.UTC(p.year,p.mo
 // برای باز شدن سریع، آخرین فهرست دریافتی روی گوشی نگه داشته می‌شود و در پس‌زمینه تازه می‌شود.
 const readCache=k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},writeCache=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 window.siteSettings=readCache('siteSettingsCache')||{};
+// سرعت پخش و دکمه دانلود همه صوت‌ها (تلاوت و ترجمه گویای قرآن‌خوان، صوت متن‌های چله، صوت‌های اعمال) یک تنظیم مشترک روی همین گوشی است.
+// دکمه دانلود تا کاربر در تنظیمات قرآن‌خوان یا متن چله روشنش نکند پنهان است. audioOpt.bar() نوار سرعت و دانلود را زیر یک <audio> می‌سازد.
+window.audioOpt=(()=>{const RATES=[1,1.25,1.5,1.75,2],p=Object.assign({rate:1,dl:false},readCache('audioPrefs')),tracked=new Set(),num=r=>toFa(r).replace('.','٫')+'×';
+  document.head.insertAdjacentHTML('beforeend','<style>.au-opt{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:14px}.au-opt label{display:flex;align-items:center;gap:6px}.au-opt select{width:auto;height:36px;padding:0 6px;font:inherit}.au-opt .au-dl{height:36px;padding:0 12px;font-size:14px}.au-opt [hidden]{display:none}</style>');
+  const apply=()=>{for(const a of [...tracked,...document.querySelectorAll('audio')]){a.defaultPlaybackRate=a.playbackRate=p.rate;if(a.controls)a.setAttribute('controlslist',p.dl?'':'nodownload')}
+    document.querySelectorAll('select[data-au-rate]').forEach(s=>s.value=p.rate);document.querySelectorAll('[data-au-dl]').forEach(b=>b.hidden=!p.dl);document.dispatchEvent(new Event('audioopt'));};
+  const set=v=>{Object.assign(p,v);writeCache('audioPrefs',p);apply();};
+  async function download(url){if(!url)return;const name=decodeURIComponent(url.split('#')[0].split('?')[0].split('/').pop()||'audio.mp3'),save=h=>{const a=document.createElement('a');a.href=h;a.download=name;document.body.appendChild(a);a.click();a.remove();};
+    if(new URL(url,location.href).origin===location.origin)return save(url);
+    try{const r=await fetch(url);if(!r.ok)throw 0;const h=URL.createObjectURL(await r.blob());save(h);setTimeout(()=>URL.revokeObjectURL(h),60000);}catch{window.open(url,'_blank','noopener');}}
+  new MutationObserver(m=>{if(m.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches('audio')||n.querySelector('audio')))))apply()}).observe(document.documentElement,{childList:true,subtree:true});
+  document.addEventListener('play',e=>{if(e.target instanceof HTMLMediaElement)e.target.playbackRate=p.rate},true);
+  document.addEventListener('change',e=>{if(e.target.matches?.('select[data-au-rate]'))set({rate:+e.target.value})});
+  document.addEventListener('click',e=>{const b=e.target.closest?.('[data-au-dl]');if(!b)return;let n=b.parentElement;while(n&&!n.querySelector('audio'))n=n.parentElement;const a=n?.querySelector('audio');download(a&&(a.currentSrc||a.getAttribute('src')))});
+  const opts=()=>RATES.map(r=>`<option value="${r}"${r===p.rate?' selected':''}>${num(r)}</option>`).join('');
+  return{RATES,num,get:()=>p,set,apply,download,track(a){tracked.add(a);a.defaultPlaybackRate=a.playbackRate=p.rate;a.addEventListener('play',()=>{a.playbackRate=p.rate})},
+    bar:()=>`<div class="au-opt"><label>سرعت <select data-au-rate aria-label="سرعت پخش">${opts()}</select></label><button type="button" class="au-dl" data-au-dl${p.dl?'':' hidden'}>⬇ دانلود</button></div>`};})();
 function sbGet(path,ms){if(!backendReady())return Promise.resolve(null);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms);return fetch(`${cfg.SUPABASE_URL}/rest/v1/${path}`,{headers:{apikey:cfg.SUPABASE_ANON_KEY,Authorization:`Bearer ${cfg.SUPABASE_ANON_KEY}`},cache:'no-store',signal:ac.signal}).then(r=>r.ok?r.json():null).catch(()=>null).finally(()=>clearTimeout(t));}
 function dbToGroups(a){return Array.isArray(a)?a.filter(g=>Array.isArray(g.names)&&g.names.length===120).map(g=>{const [y,m,d]=g.start_date.split('-').map(Number);return{number:g.number,name:g.name,start:Date.UTC(y,m-1,d),names:g.names}}):[];}
 async function loadFileGroups(){const list=await fetch('groups/index.json',{cache:'no-store'}).then(r=>r.json());const x=await Promise.all(list.map(async e=>{const n=+(e.number??e),label=e.name;try{const r=await fetch(`groups/group-${n}.txt`,{cache:'no-store'});return r.ok?parseGroup(await r.text(),n,label):null}catch{return null}}));return x.filter(Boolean);}
