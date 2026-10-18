@@ -356,10 +356,12 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
   window.siteMenu?.section({
     id: 'settings', order: 89,
     render(box) {
-      if (!enabled() || desktopApp) return;
+      // «نمایش امکانات» (features.js) و «اندازه متن و حالت تاریک» (comfort.js) هم در همین دسته است.
+      const ft = (window.features?.menuItem() || '') + (window.comfort?.menuItem() || '');
+      if ((!enabled() || desktopApp) && !ft) return;
       const parts = [(store.get(LS) || arr('regCodes').length) && 'حزب‌خوانی', arr('chlCodes').length && 'چله‌ها و دوره‌ها', 'اعمال و ختم‌ها'].filter(Boolean);
-      box.innerHTML = `<h3>تنظیمات</h3><button type="button" class="sm-item" data-ns-menu><span class="sm-ic">⚙️</span><span>تنظیم اعلان‌ها<small>چه اعلانی و چه ساعتی: ${parts.join('، ')}</small></span><span class="sm-go">‹</span></button>`;
-      box.querySelector('[data-ns-menu]').onclick = () => { window.siteMenu.close(); setTimeout(openSettings, 280); };
+      box.innerHTML = '<h3>تنظیمات</h3>' + (!enabled() || desktopApp ? '' : `<button type="button" class="sm-item" data-ns-menu><span class="sm-ic">⚙️</span><span>تنظیم اعلان‌ها<small>چه اعلانی و چه ساعتی: ${parts.join('، ')}</small></span><span class="sm-go">‹</span></button>`) + ft;
+      const ns = box.querySelector('[data-ns-menu]'); if (ns) ns.onclick = () => { window.siteMenu.close(); setTimeout(openSettings, 280); };
     }
   });
 

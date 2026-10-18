@@ -278,6 +278,7 @@ body.qr-lock{overflow:hidden}
     body.innerHTML = navHtml + html + `<div class="qr-end">${end}${navHtml}
 <p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud · ترجمه ریاعی و صدای بهروز رضوی: quranmehr.ir (موسسه پیامبر مهر و رحمت) · تحدیر معتز آقایی: archive.org</span></p></div>`;
     items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
+    try { hooks.render?.(items); } catch (e) { console.error(e); }
     el.scrollTop = 0;
     const f = current.focus != null && items.find(it => gIndex(it) === current.focus);
     if (f) { el.scrollTop += f.e.getBoundingClientRect().top - el.querySelector('.qr-bar').offsetHeight - 8; f.e.classList.add('focus'); }
@@ -632,6 +633,8 @@ body.qr-lock{overflow:hidden}
     setNow('پخش این آیه ممکن نشد', 'اتصال اینترنت را بررسی کنید یا قاری دیگری انتخاب کنید');
   }
   function advance() {
+    // افزونه‌ها (qr-plus.js: تکرار آیه، مکث، زمان‌سنج خواب) اگر true برگردانند، ادامه پخش با خودشان است.
+    if (hooks.next && hooks.next(pos)) return;
     if (pos + 1 < items.length) playAt(pos + 1);
     // قرآن آزاد: در پایان صفحه، صفحه بعد باز می‌شود و پخش ادامه پیدا می‌کند.
     else if (current?.nav?.next && current.nav.onNext && current.nav.autoNext !== false) current.nav.onNext({ autoplay: true });
@@ -648,6 +651,7 @@ body.qr-lock{overflow:hidden}
   });
   // آیا قطعه بعدی از همان فایل و درست از همین‌جا شروع می‌شود؟
   function continues(seg) {
+    if (!queue[qi + 1] && hooks.hold?.(pos)) return false;
     const it = items[pos + 1], next = queue[qi + 1] || (it && pos + 1 < items.length ? tracksFor(it)[0] : null);
     return !!(next && next.seg && next.includes(audio.getAttribute('src')?.split('#')[0]) && Math.abs(next.seg[0] - seg[1]) < 0.5);
   }
@@ -680,8 +684,13 @@ body.qr-lock{overflow:hidden}
   // nav: { prev, next, menu (نام دکمه‌ها)، onPrev, onNext({autoplay}), onMenu (پس از بستن قرآن‌خوان)، autoNext: false یعنی پایان صوت به صفحه بعد نرود }، autoplay، note (راهنمای کوتاه پایین صفحه)
   window.quranReader = {
     openRange(o) { open({ title: o.title, sub: o.sub || '', range: { from: o.from, to: o.to }, endText: o.endText, endButton: o.endButton, onEnd: o.onEnd, note: o.note, focus: o.focus, onView: o.onView, nav: o.nav, autoplay: o.autoplay }); },
-    index: getIndex
+    index: getIndex,
+    // برای افزونه‌ها (qr-plus.js): hooks.render(items) پس از ساختن آیه‌ها، hooks.next(pos) در پایان هر آیه، hooks.hold(pos) یعنی پخش پیوسته فایل بلند به آیه بعد نرود.
+    hooks: {}, el, audio, items: () => items, task: () => current, state: () => ({ pos, playing }),
+    playAt, pause: pauseAudio, setNow, label, openTafsir, extras, flow: () => !prefs.trans,
+    name: s => FA_NAME[s], ayahs: s => SURAH_AYAHS[s - 1], g: (s, n) => SURAH_START[s - 1] + n - 1, trName, lang: () => lang()
   };
+  const hooks = window.quranReader.hooks;
 
   const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/></svg>';
   document.addEventListener('task:shown', e => {

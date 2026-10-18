@@ -56,7 +56,7 @@
 
   // ---------- ۲) ورود کادرها ----------
   if (root.classList.contains('bgx-anim')) {
-    if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) root.classList.remove('bgx-anim');
+    if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches || root.dataset.motion === 'reduce') root.classList.remove('bgx-anim');
     else {
       // فقط وقتی کادر به پنجره وسط رسید (نه زیر محوشدن پایین)
       const margin = win ? `-${win.T}px 0px -${innerHeight - win.B + 30}px 0px` : '0px 0px -6% 0px';
