@@ -174,11 +174,11 @@
 
   // ---------- اعمال امروز ----------
   // هر سطر: { ic, t (عنوان)، s (زمان)، go: 'ib:نوع' برای برگه‌های ibadat.js یا 'rd:کلید' برای خواننده متن }
-  function acts(iso, T, now) {
+  function acts(iso, T, now, tonight = 'امشب') {
     const out = [], d = wd(iso), h = hijri(iso) || { m: 0, d: 0 };
     const beforeFajr = now < T.fajr, afterMag = now >= T.mag, day = !beforeFajr && !afterMag;
     // «امشب»: پیش از اذان صبح، شبِ امروز است؛ بعد از آن شبِ فردا.
-    const eve = beforeFajr ? iso : addDays(iso, 1), ed = wd(eve), tonight = 'امشب';
+    const eve = beforeFajr ? iso : addDays(iso, 1), ed = wd(eve);
     const add = (go, ic, t, s) => { if (go && !out.some(x => x.go === go)) out.push({ go, ic, t, s }); };
     const he = hijri(eve) || { m: 0, d: 0 };
     // مناسبت‌ها
@@ -192,7 +192,7 @@
     if ((d === 5 || eid) && day && now < T.dhuhr + 2 * 36e5) { if (mf()) add('mf:336', '🌅', 'دعای ندبه', eid ? 'صبح روز عید' : 'صبح جمعه'); }
     if (d === 3 && day) add('ib:javad_wed', '🤲', 'نماز حاجت امام جواد (ع)', 'امروز، بعد از نماز عصر');
     if (ed === 5 && (d === 4 || beforeFajr)) {
-      const k = window.ibadat?.khatm?.(), thu = beforeFajr ? addDays(iso, -1) : iso, i = k ? k.indexOf(thu) : -1;
+      const k = window.ibadat?.khatm?.(undefined, iso), thu = beforeFajr ? addDays(iso, -1) : iso, i = k ? k.indexOf(thu) : -1;
       if (i >= 0) add('ib:ommolbanin', '📖', `ختم یاسین حضرت ام‌البنین (س)`, `${tonight}، شب ${['اول', 'دوم', 'سوم', 'چهارم'][i]} ختم`);
       add('ib:doa_kumayl', '📿', 'دعای کمیل', `${tonight}، شب جمعه`);
     }
@@ -207,6 +207,9 @@
 html[data-bg] #dlCard{--dl-h:var(--t-head);--dl-m:var(--t-ink2);--dl-soft:color-mix(in srgb,var(--t-frame) 13%,var(--t-paper));--dl-line:var(--t-line);background:var(--t-paper);color:var(--t-ink);padding:12px 34px;margin:30px 24px}
 #dlCard[hidden]{display:none}
 #dlCard .dl-date{margin:0;text-align:center;font-size:14.5px;font-weight:600;color:var(--dl-h)}
+#dlCard .dl-date[data-cal]{cursor:pointer;border-radius:var(--r)}
+#dlCard .dl-date[data-cal]:hover{background:var(--dl-soft)}
+#dlCard .dl-date[data-cal]::before{content:"🗓️";margin-inline-end:6px;font-size:13px}
 #dlCard .dl-date small{display:block;font-size:13.5px;font-weight:500;color:var(--dl-m)}
 #dlCard .dl-occ{margin:4px 0 0;padding:0;list-style:none;text-align:center}
 #dlCard .dl-occ li{font-weight:600;color:var(--dl-h);font-size:16px}
@@ -277,7 +280,7 @@ html[data-bg=dark] #dlCard .dl-city .dl-gps,html[data-bg=dark] #dlCard .dl-city 
     if (!place()) return;
     card.hidden = false;
     foot?.classList.add('dl-hide'); // تاریخ پایین صفحه همین‌جا آمده است
-    let html = `<p class="dl-date">${faked() ? '🧪 ' : ''}${esc(shamsi(iso))}${hijriLabel(iso) ? `<small>${esc(hijriLabel(iso))}${L.tz !== IR ? `، به وقت ${esc(L.short || L.name)}` : ''}</small>` : ''}</p>`;
+    let html = `<p class="dl-date"${shown('calendar') ? ' data-cal role="button" tabindex="0" aria-label="تقویم ماه"' : ''}>${faked() ? '🧪 ' : ''}${esc(shamsi(iso))}${hijriLabel(iso) ? `<small>${esc(hijriLabel(iso))}${L.tz !== IR ? `، به وقت ${esc(L.short || L.name)}` : ''}</small>` : ''}</p>`;
     if (occ.length || nights.length) html += `<ul class="dl-occ">${occ.map(o => `<li${o.soft ? ' class="soft"' : ''}>${esc(o.t)}${o.hol ? '<span class="hol">تعطیل</span>' : ''}</li>`).join('')}${nights.map(t => `<li>امشب: ${esc(t)}</li>`).join('')}</ul>`;
     html += extra;
     if (P) html += prayerHtml(L, iso, T, now);
@@ -324,12 +327,27 @@ ${hooks.more.map(f => { try { return f({ L, iso, T, now }) || ''; } catch (e) { 
       }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 6 * 36e5 });
       return;
     }
-    const go = b.dataset.go; if (!go) return;
+    if (b.dataset.go) goTo(b.dataset.go);
+  }
+  function goTo(go) {
     const [kind, key] = go.split(':');
     if (kind === 'ib') window.ibadat?.open?.(key);
     else if (kind === 'rd') window.chlRead?.(key);
     else if (kind === 'mf') window.mafatih?.openKey(key);
   }
+  // برای تقویم ماه (calendar-page.js): مناسبت‌ها و اعمال هر روز از همین داده‌ها، بی‌تکرار.
+  // اعمال روز با «صبح همان روز» حساب می‌شود؛ پس اعمال شبِ پیش رو (کمیل، توسل، شب قدر) هم می‌آید.
+  window.dailyInfo = (iso, full) => {
+    const L = loc(), h = hijri(iso), o = { iso, hijri: h, occ: occasions(iso) };
+    if (full) {
+      const T = times(iso, L);
+      Object.assign(o, { date: shamsi(iso), hl: hijriLabel(iso), nights: nightOf(addDays(iso, 1)), acts: acts(iso, T, T.rise + 36e5, 'از غروب همین روز') });
+    }
+    return o;
+  };
+  window.dailyInfo.today = () => ymd(Date.now(), loc().tz);
+  window.dailyInfo.go = goTo;
+  window.dailyInfo.loc = loc;
 
   // برای فایل‌های دیگر: شهر انتخابی، اوقات، تاریخ قمری (با جابه‌جایی مدیر) و جای افزودن بلوک به کارت.
   // block(ctx): زیر تاریخ؛ more(ctx): در بخش باز‌شونده اوقات شرعی، زیر انتخاب شهر. هر کدام HTML برمی‌گرداند (یا '').
