@@ -144,7 +144,7 @@ ${ix.parts.length > 1 ? `<div class="bk-tabs" role="tablist">${ix.parts.map(p =>
   function buildReader() {
     if (reader) return reader;
     reader = document.createElement('div'); reader.className = 'cr bk-r'; reader.setAttribute('role', 'dialog'); reader.setAttribute('aria-modal', 'true');
-    reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات">⚙</button><span class="cr-prog"></span></div>
+    reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات" title="تنظیمات">⚙</button><span class="cr-prog"></span></div>
 <div class="cr-menu"><div class="cr-row"><span>اندازه متن</span><div><button type="button" data-x="smaller">−</button><button type="button" data-x="bigger">+</button></div></div>
 <div class="cr-row"><span>ترجمه</span><div><button type="button" data-x="tr-on">نمایش</button><button type="button" data-x="tr-off">فقط عربی</button></div></div>
 <div class="cr-row"><span>حالت شب</span><div><button type="button" data-x="day">روز</button><button type="button" data-x="night">شب</button></div></div>
