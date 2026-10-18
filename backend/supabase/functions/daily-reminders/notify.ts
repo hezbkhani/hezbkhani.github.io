@@ -1,8 +1,9 @@
 // منطق خالص اعلان‌ها (بدون شبکه) تا جدا آزمایش شود: کدام نوع اعلان الان وقتش است، و ساختن متن از قالب.
 import { toFa } from './reminder.ts'
+import { localDate, prayerTimes } from './azan.ts'
 
 export type TypeDef = { group?: string; time?: string; event?: boolean; same?: string; azan?: 'dhuhr' | 'maghrib'; offset?: number; weekday?: number; khatm?: boolean; label?: string; title: string; body: string; on?: boolean }
-// hijri: چند روز تاریخ قمری محاسبه‌شده (ام‌القری) جابه‌جا شود تا با تقویم رسمی ایران یکی شود (مدیر تنظیم می‌کند).
+// hijri: چند روز تاریخ قمری (تقویم رسمی ایران، بیرون از جدول IRH ام‌القری) جابه‌جا شود تا با اعلام رسمی ماه یکی شود (مدیر تنظیم می‌کند).
 export type Settings = { public?: boolean; hijri?: number; quiet: { from: string; to: string }; types: Record<string, TypeDef> }
 
 // پیش‌فرض‌ها (notifications.json) با تغییرات مدیر (site_settings.notify) ترکیب می‌شوند.
@@ -145,9 +146,23 @@ const isoToUtcMs = (iso: string) => { const [y, m, d] = iso.split('-').map(Numbe
 const isoOf = (ms: number) => new Date(ms).toISOString().slice(0, 10)
 export const tehranDate = (now: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran' }).format(now)
 
-// روز ماه قمری (تقویم ام‌القری، با جابه‌جایی مدیر).
-const HIJRI = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: 'UTC', day: 'numeric' })
-export const hijriDay = (iso: string, offset = 0) => +HIJRI.formatToParts(new Date(isoToUtcMs(iso) + offset * 864e5 + 432e5)).find(p => p.type === 'day')!.value
+// روز ماه قمری به تقویم رسمی ایران (مؤسسه ژئوفیزیک دانشگاه تهران، تقویم رسمی ۱۴۰۵؛ همان جدول IRH در ibadat.js)، با جابه‌جایی مدیر.
+// IRH: روز اول ماه‌ها پشت سر هم از رمضان ۱۴۴۷ (IRK). بیرون از جدول: ام‌القری.
+const IRK = 1447 * 12 + 8
+const IRH: string[] = ['2026-02-19', '2026-03-21', '2026-04-19', '2026-05-18', '2026-06-16', '2026-07-16', '2026-08-14', '2026-09-13',
+  '2026-10-12', '2026-11-11', '2026-12-11', '2027-01-10', '2027-02-08', '2027-03-10']
+const HIJRI = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { timeZone: 'UTC', day: 'numeric', month: 'numeric', year: 'numeric' })
+export function hijriDay(iso: string, offset = 0): number {
+  const t = isoToUtcMs(iso) + offset * 864e5, n = IRH.length - 1
+  let i = n; while (i >= 0 && t < isoToUtcMs(IRH[i])) i--
+  const d = i >= 0 ? Math.round((t - isoToUtcMs(IRH[i])) / 864e5) + 1 : 0
+  if (i >= 0 && (i < n || d <= 29)) return d
+  const p = HIJRI.formatToParts(new Date(t + 432e5)), g = (x: string) => +p.find(q => q.type === x)!.value, uk = g('year') * 12 + g('month') - 1
+  // دو لبه جدول: اگر ام‌القری ماه را یک روز زودتر یا دیرتر عوض کرده، روزی تکرار نشود یا جا نیفتد (همان ibadat.js)
+  if (i < 0 && uk >= IRK) return 30
+  if (i === n && uk <= IRK + n) return d
+  return g('day')
+}
 
 // ختم یاسین: در هر ماه قمری از نزدیک‌ترین پنجشنبه به نیمه ماه (۱۵ام) شروع می‌شود و ۴ پنجشنبه شب ادامه دارد.
 // خروجی: این پنجشنبه شبِ چندم ختم است (۱ تا ۴)، یا ۰ اگر شب ختم نیست. نیمه ماه حداکثر ۳ روز با نزدیک‌ترین پنجشنبه فاصله دارد.
@@ -165,12 +180,17 @@ const TIMES = ['یک بار', 'دو بار', 'سه بار', 'چهار بار']
 export const khatmTask = (n: number) => n >= 1 && n <= 4
   ? `${TIMES[n - 1]} سوره یاسین، ${n < 4 ? 'هدیه به حضرت ابوالفضل العباس (ع)' : 'به نیابت از حضرت عباس (ع) هدیه به مادرشان حضرت ام‌البنین (س)'}` : ''
 
-// اعلان‌های اذانی که الان وقتشان است (برای همه گوشی‌ها). از ۷ دقیقه پیش از وقتش (اذان + offset؛ اجراها هر ۱۵ دقیقه است) تا ۳ ساعت بعد.
-export function azanDue(s: Settings, now: Date): Item[] {
-  const out: Item[] = [], iso = tehranDate(now), wd = new Date(isoToUtcMs(iso)).getUTCDay()
+// اعلان‌های اذانی که الان وقتشان است. از ۷ دقیقه پیش از وقتش (اذان + offset؛ اجراها هر ۱۵ دقیقه است) تا ۳ ساعت بعد.
+// loc: شهر گوشی (push_azan، شهر کارت «امروز»)؛ روز هفته، تاریخ قمری و اذان به وقت و افق همان شهر. بی‌شهر: تهران.
+export type Loc = { lat: number; lng: number; tz: string }
+export function azanDue(s: Settings, now: Date, loc?: Loc): Item[] {
+  let iso = tehranDate(now)
+  if (loc) { try { iso = localDate(now.getTime(), loc.tz) } catch { loc = undefined } }
+  const out: Item[] = [], wd = new Date(isoToUtcMs(iso)).getUTCDay(), P = loc ? prayerTimes(iso, +loc.lat, +loc.lng) : null
   for (const [k, t] of Object.entries(s.types)) {
     if (!t.azan || !t.on || (t.weekday != null && t.weekday !== wd)) continue
-    const at = tehranAzan(iso, t.azan).getTime() + (t.offset || 0) * 6e4, m = now.getTime()
+    const at = (P ? (t.azan === 'dhuhr' ? P.dhuhr : P.maghrib) : tehranAzan(iso, t.azan).getTime()) + (t.offset || 0) * 6e4, m = now.getTime()
+    if (!isFinite(at)) continue
     // دعای سمات پیش از مغرب است؛ دیرتر از اذان دیگر فرستاده نمی‌شود.
     if (m < at - 7 * 6e4 || m > at + (t.offset && t.offset < 0 ? -t.offset * 6e4 : 3 * 36e5)) continue
     const night = t.khatm ? khatmNight(iso, s.hijri || 0) : 0

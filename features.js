@@ -42,6 +42,40 @@
     fire();
   };
 
+  // بخش‌های صفحه اول که به هیچ امکانی بسته نیستند (کادرهای معرفی، اطلاعیه، نصب): hide-x.js هر کدام را با features.addSection ثبت می‌کند
+  // و بازدیدکننده با ✕ همان بخش یا از همین برگه پنهانش می‌کند (localStorage: secHide). get/set دلخواه برای بخشی که کلید خودش را دارد (نصب).
+  const SEC = 'secHide', sections = [];
+  const secList = () => { try { const a = JSON.parse(localStorage.getItem(SEC)); return Array.isArray(a) ? a : []; } catch { return []; } };
+  const secOf = id => sections.find(s => s.id === id);
+  const secShown = id => { const s = secOf(id); return s?.get ? s.get() : !secList().includes(id); };
+  const setSecHidden = (id, hide) => {
+    const s = secOf(id);
+    if (s?.set) s.set(hide);
+    else { const h = secList().filter(x => x !== id); if (hide) h.push(id); try { localStorage.setItem(SEC, JSON.stringify(h)); } catch {} }
+    fire();
+  };
+  const addSection = d => { const i = sections.findIndex(s => s.id === d.id); i < 0 ? sections.push(d) : sections.splice(i, 1, d); };
+  const secAvail = () => sections.filter(s => !s.avail || s.avail());
+
+  // «بازگشت به حالت پیش‌فرض»: فقط ترجیح‌های نمایش. داده‌های شخصی (نشانه‌ها، ذکرها، ختم و برنامه‌ها، ثبت‌نام‌ها و کدها، شهر اوقات شرعی،
+  // اعلان‌ها، حساب، تصویر زمینه خود شخص) دست نمی‌خورند. از تنظیمات خواننده‌ها فقط اندازه و نمایش؛ قاری و مترجم انتخاب‌شده می‌ماند.
+  const RESET_KEYS = [HIDE, SEC, 'comfort', 'installClosed', 'bgPick', 'smOpen', 'qrPlus'];
+  const RESET_FIELDS = { quranReader: ['size', 'trans', 'night', 'intro', 'tafsir', 'mode'], chlReader: ['size', 'trans', 'night'], bookReader: ['size', 'trans', 'night'] };
+  function resetDisplay() {
+    RESET_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+    Object.entries(RESET_FIELDS).forEach(([k, f]) => {
+      try { const v = JSON.parse(localStorage.getItem(k)); if (v && typeof v === 'object') { f.forEach(x => delete v[x]); localStorage.setItem(k, JSON.stringify(v)); } } catch {}
+    });
+    // تنظیمات خواننده‌ها هنگام بار شدن صفحه خوانده می‌شود؛ پس صفحه از نو بار می‌شود و پیام تأیید پس از آن نشان داده می‌شود.
+    try { sessionStorage.setItem('ftReset', '1'); } catch {}
+    location.reload();
+  }
+  function toast(t) {
+    const d = document.createElement('div'); d.className = 'ft-toast'; d.setAttribute('role', 'status'); d.textContent = t;
+    document.body.appendChild(d); setTimeout(() => d.remove(), 4000);
+  }
+  try { if (sessionStorage.getItem('ftReset')) { sessionStorage.removeItem('ftReset'); setTimeout(() => toast('نمایش سایت به حالت پیش‌فرض برگشت.'), 300); } } catch {}
+
   const css = `
 .ft-shade{position:fixed;inset:0;z-index:62;background:#000a;display:flex;align-items:flex-end;justify-content:center}
 .ft-box{width:100%;max-width:560px;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;background:#fffaf0;color:var(--ink);text-shadow:none;border:2px solid var(--gold);border-bottom:0;border-radius:var(--r-panel) var(--r-panel) 0 0;padding:14px 18px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px #0007}
@@ -59,7 +93,13 @@
 .ft-sw:checked::after{right:22px}
 .ft-sw:focus-visible{outline:2px solid var(--deep);outline-offset:2px}
 .ft-empty{text-align:center;color:var(--muted);padding:16px 0}
-.ft-adm .ft-row{padding:8px 0}`;
+.ft-adm .ft-row{padding:8px 0}
+.ft-box h3{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--line);font-size:16px;color:var(--deep)}
+.ft-reset{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);text-align:center}
+.ft-reset>button{min-height:44px;padding:0 18px;background:transparent;color:var(--deep);border:1px solid var(--gold);border-radius:var(--r);font:inherit;font-weight:500;cursor:pointer}
+.ft-reset p{margin:0 0 10px;color:var(--ink);font-size:14px;line-height:1.8;text-align:right}
+.ft-reset .ft-yes{background:var(--deep);color:#fff;border-color:var(--deep);margin-left:8px}
+.ft-toast{position:fixed;z-index:70;left:16px;right:16px;width:fit-content;margin:0 auto;bottom:calc(24px + env(safe-area-inset-bottom));padding:10px 18px;border-radius:999px;background:var(--deep);color:#fff;font-size:15px;box-shadow:0 6px 20px #0005;text-align:center}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
   const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const row = ([id, ic, t, d], checked, attr) => `<label class="ft-row"><span class="ft-ic">${ic}</span><span>${esc(t)}<small>${esc(d)}</small></span><input type="checkbox" class="ft-sw" ${attr}="${id}"${checked ? ' checked' : ''} aria-label="${esc(t)}"></label>`;
@@ -72,14 +112,25 @@
       shade = document.createElement('div'); shade.className = 'ft-shade';
       shade.innerHTML = '<div class="ft-box" role="dialog" aria-modal="true" aria-label="نمایش امکانات"></div>';
       shade.addEventListener('click', e => { if (e.target === shade || e.target.closest('.ft-x')) close(); });
-      shade.addEventListener('change', e => { const t = e.target.closest('[data-ft-user]'); if (t) setHidden(t.dataset.ftUser, !t.checked); });
+      shade.addEventListener('change', e => {
+        const t = e.target.closest('[data-ft-user]'); if (t) setHidden(t.dataset.ftUser, !t.checked);
+        const s = e.target.closest('[data-ft-sec]'); if (s) setSecHidden(s.dataset.ftSec, !s.checked);
+      });
+      shade.addEventListener('click', e => {
+        const r = shade.querySelector('.ft-reset');
+        if (e.target.closest('[data-ft-reset]')) { r.innerHTML = RESET_ASK; r.querySelector('.ft-yes').focus(); }
+        else if (e.target.closest('.ft-no')) { r.innerHTML = RESET_BTN; r.querySelector('button').focus(); }
+        else if (e.target.closest('.ft-yes')) resetDisplay();
+      });
     }
-    const h = hidden();
-    shade.querySelector('.ft-box').innerHTML = `<button type="button" class="ft-x" aria-label="بستن">✕</button><h2>نمایش امکانات</h2><p>هر چیزی را که لازم ندارید خاموش کنید تا صفحه خلوت‌تر شود. فقط روی همین گوشی است و هر وقت بخواهید برمی‌گردد. امکانات قرآن‌خوان در منوی ⚙ خود قرآن‌خوان است.</p>${list.length ? list.map(f => row(f, !h.includes(f[0]), 'data-ft-user')).join('') : '<p class="ft-empty">فعلاً امکان تازه‌ای روشن نیست.</p>'}`;
+    const h = hidden(), secs = secAvail();
+    shade.querySelector('.ft-box').innerHTML = `<button type="button" class="ft-x" aria-label="بستن">✕</button><h2>نمایش امکانات</h2><p>هر چیزی را که لازم ندارید خاموش کنید تا صفحه خلوت‌تر شود. فقط روی همین گوشی است و هر وقت بخواهید برمی‌گردد. امکانات قرآن‌خوان در منوی ⚙ خود قرآن‌خوان است.</p>${list.length ? list.map(f => row(f, !h.includes(f[0]), 'data-ft-user')).join('') : secs.length ? '' : '<p class="ft-empty">فعلاً امکان تازه‌ای روشن نیست.</p>'}${secs.length ? `<h3>بخش‌های صفحه اول</h3>${secs.map(s => row([s.id, s.ic, s.t, s.d], secShown(s.id), 'data-ft-sec')).join('')}` : ''}<div class="ft-reset">${RESET_BTN}</div>`;
     document.body.appendChild(shade); document.body.classList.add('ib-lock');
     try { if (!history.state?.ft) history.pushState({ ft: 1 }, ''); } catch {}
     setTimeout(() => shade.querySelector('.ft-x')?.focus(), 50);
   }
+  const RESET_BTN = '<button type="button" data-ft-reset>↺ بازگشت به حالت پیش‌فرض</button>';
+  const RESET_ASK = '<p>همه امکانات و بخش‌های پنهان‌شده دوباره نمایش داده می‌شوند و اندازه متن، حالت تاریک، زمینه صفحه و نمایش خواننده‌ها به حالت اول برمی‌گردد. نشانه‌ها، ذکرها، ختم‌ها و برنامه‌ها، ثبت‌نام‌ها، شهر اوقات شرعی و اعلان‌ها دست نمی‌خورند.</p><button type="button" class="ft-yes">بله، برگردان</button><button type="button" class="ft-no">انصراف</button>';
   function close(fromHistory) {
     if (!shade || !shade.isConnected) return;
     shade.remove(); document.body.classList.remove('ib-lock');
@@ -113,12 +164,12 @@
   document.addEventListener('settings:changed', () => { if (document.getElementById('setFeatures')) adminCard(); fire(); });
 
   window.features = {
-    list: LIST, on, shown, openSettings, setHidden,
+    list: LIST, on, shown, openSettings, setHidden, addSection, secShown, setSecHidden, resetDisplay,
     // دکمه منو برای بخش «تنظیمات» (reminders.js)
     menuItem() {
-      const mine = LIST.filter(f => on(f[0]) && !READER.includes(f[0]));
-      if (!mine.length) return '';
-      const n = mine.filter(f => shown(f[0])).length, all = mine.length;
+      const mine = LIST.filter(f => on(f[0]) && !READER.includes(f[0])), secs = secAvail();
+      if (!mine.length && !secs.length) return '';
+      const n = mine.filter(f => shown(f[0])).length + secs.filter(s => secShown(s.id)).length, all = mine.length + secs.length;
       return `<button type="button" class="sm-item" data-ft-menu><span class="sm-ic">🧩</span><span>نمایش امکانات<small>${n === all ? 'همه نمایش داده می‌شوند' : `${n.toLocaleString('fa-IR')} از ${all.toLocaleString('fa-IR')} نمایش داده می‌شوند`}</small></span><span class="sm-go">‹</span></button>`;
     }
   };

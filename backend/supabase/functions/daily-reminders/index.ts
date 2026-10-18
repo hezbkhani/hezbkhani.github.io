@@ -13,7 +13,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 import { type Group, isoToUtc, parseGroupText, portionFor, toFa } from './reminder.ts'
 import { type AzanRow, LATE_MIN, azanMsg, azanPersonalDue } from './azan.ts'
-import { type Item, type Msg, type Prefs, type Settings, azanDue, compose, dueTypes, forDevice, mergeSettings, tehranMinutes } from './notify.ts'
+import { type Item, type Loc, type Msg, type Prefs, type Settings, azanDue, compose, dueTypes, forDevice, mergeSettings, tehranMinutes } from './notify.ts'
 
 const env = (k: string) => Deno.env.get(k) || ''
 const SITE_URL = (env('SITE_URL') || 'https://hezbkhani.github.io').replace(/\/$/, '')
@@ -268,13 +268,21 @@ async function handle(req: Request): Promise<Response> {
   }
 
   // با اذان (نماز امام جواد، ختم یاسین): برای همه گوشی‌هایی که اعلان دارند، مگر کسی این نوع را روی گوشی خودش خاموش کرده باشد.
-  const azan = slot === 'auto' ? azanDue(settings, new Date()) : []
+  // به وقت و افق شهری که هر گوشی در کارت «امروز» انتخاب کرده (push_azan، اگر اعلان اذان داشته)؛ بقیه به افق تهران.
+  const azanNow = new Date(), locOf = new Map<string, Loc>(), dueBy = new Map<string, Item[]>()
+  const dueFor = (l?: Loc) => { const k = l ? `${l.lat},${l.lng},${l.tz}` : ''; if (!dueBy.has(k)) dueBy.set(k, azanDue(settings, azanNow, l)); return dueBy.get(k)! }
+  if (slot === 'auto') {
+    try { for (const r of await all<Loc & { endpoint: string }>(() => db.from('push_azan').select('endpoint,lat,lng,tz').order('endpoint'))) locOf.set(r.endpoint, r) }
+    catch (e) { console.error('push_azan', (e as Error).message) } // azan.sql هنوز اجرا نشده: همه به افق تهران
+    dueFor(); for (const l of locOf.values()) dueFor(l)
+  }
+  const azan = [...new Map([...dueBy.values()].flat().map(a => [a.data.key as string, a])).values()]
   if (azan.length) {
-    stats.azan = azan.map(a => a.type).join(',')
+    stats.azan = [...new Set(azan.map(a => a.type))].join(',')
     const subs = await all<Sub>(() => db.from('push_subscriptions').select('endpoint,p256dh,auth,group_number,participant_id').order('endpoint'))
     const done = await all<{ endpoint: string; key: string }>(() => db.from('push_sent').select('endpoint,key').in('key', azan.map(a => a.data.key as string)).order('endpoint'))
     const sent = new Set(done.map(r => r.endpoint + ' ' + r.key))
-    for (const s of subs) for (const a of azan) {
+    for (const s of subs) for (const a of dueFor(locOf.get(s.endpoint))) {
       if (sent.has(s.endpoint + ' ' + a.data.key) || !dev(s.endpoint).s.types[a.type]?.on) continue
       add(s, a.type, a.data.key as string, a.data)
     }
