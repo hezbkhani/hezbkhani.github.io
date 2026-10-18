@@ -24,6 +24,6 @@ Always use the same key. A different key means users can't update, and the app s
 
 The `.exe` and `.dmg` are not code-signed, so users see a warning the first time they open them. On Windows, click "More info" and then "Run anyway". On Mac, if the app won't open, go to System Settings → Privacy & Security and click "Open Anyway". Removing the warnings needs a paid Apple Developer account ($99/year) and a Windows code-signing certificate.
 
-## Showing it to everyone
+## Who sees what
 
-The install section is visible only at `#admin` for now. To show it to everyone, set `PREVIEW_ONLY = false` in `install.js`.
+Everyone sees the install section, which has the browser's install button and "Add to Home Screen" steps for iPhone, Android and computers. Admins can choose how it shows on the home page in Admin › Settings, and it is always in the ☰ menu. The `.apk`/`.exe`/`.dmg` download links show only at `#admin` for now. Set `FILES_ADMIN_ONLY = false` in `install.js` to show them to everyone.
