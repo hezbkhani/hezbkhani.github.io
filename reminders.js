@@ -205,7 +205,7 @@ ${active ? `<p>یادآوری الان برای ${who(saved)} فعال است و
     if (saved && !sub) store.set(LS, null);
     if (!enabled() || !saved || !sub) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.id = 'rmStatus'; el.className = 'rm-card'; document.getElementById('result').before(el); }
-    el.innerHTML = `<p style="margin:0">🔔 یادآوری روزانه روی این دستگاه فعال است (${who(saved)}) · <button type="button" class="rm-link" data-p>تنظیم اعلان‌ها</button> · <button type="button" class="rm-link" data-x>لغو یادآوری</button></p><div class="rm-msg" aria-live="polite"></div>`;
+    el.innerHTML = `<p style="margin:0">🔔 یادآوری روزانه روی این دستگاه فعال است (${who(saved)}) · <button type="button" class="rm-link" data-p>⚙ تنظیم اعلان‌ها</button> · <button type="button" class="rm-link" data-x>لغو یادآوری</button></p><div class="rm-msg" aria-live="polite"></div>`;
     el.querySelector('[data-p]').onclick = () => togglePrefs(el);
     el.querySelector('[data-x]').onclick = async () => {
       try { await unsubscribeHezb(); el.remove(); const c = document.querySelector('#result .rm-card'); if (c && c._t) render(c, c._t); }
@@ -350,7 +350,7 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
     if (!enabled() || desktopApp) return '';
     const on = !!store.get(CHL);
     return `<div class="ns-hint"><p>🔔 ${on ? 'خبر این ثبت‌نام با اعلان روی همین گوشی می‌آید. چه اعلان‌هایی و چه ساعتی بیاید را خودتان انتخاب کنید.' : 'می‌خواهید برنامه هر روز، یادآوری‌ها و خبرهای این ثبت‌نام با اعلان روی همین گوشی بیاید؟'}</p>
-<button type="button" class="chs-alt" data-ns-open>${on ? 'تنظیم اعلان‌ها' : 'روشن کردن و تنظیم اعلان‌ها'}</button><p class="ns-where">هر وقت خواستید: منوی ☰ › تنظیمات › تنظیم اعلان‌ها</p></div>`;
+<button type="button" class="chs-alt" data-ns-open>⚙ ${on ? 'تنظیم اعلان‌ها' : 'روشن کردن و تنظیم اعلان‌ها'}</button><p class="ns-where">هر وقت خواستید: منوی ☰ › تنظیمات › تنظیم اعلان‌ها</p></div>`;
   }
 
   window.siteMenu?.section({
@@ -360,7 +360,7 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
       const ft = (window.features?.menuItem() || '') + (window.comfort?.menuItem() || '');
       if ((!enabled() || desktopApp) && !ft) return;
       const parts = [(store.get(LS) || arr('regCodes').length) && 'حزب‌خوانی', arr('chlCodes').length && 'چله‌ها و دوره‌ها', 'اعمال و ختم‌ها'].filter(Boolean);
-      box.innerHTML = '<h3>تنظیمات</h3>' + (!enabled() || desktopApp ? '' : `<button type="button" class="sm-item" data-ns-menu><span class="sm-ic">🔔</span><span>تنظیم اعلان‌ها<small>چه اعلانی و چه ساعتی: ${parts.join('، ')}</small></span><span class="sm-go">‹</span></button>`) + ft;
+      box.innerHTML = '<h3>تنظیمات</h3>' + (!enabled() || desktopApp ? '' : `<button type="button" class="sm-item" data-ns-menu><span class="sm-ic">⚙️</span><span>تنظیم اعلان‌ها<small>چه اعلانی و چه ساعتی: ${parts.join('، ')}</small></span><span class="sm-go">‹</span></button>`) + ft;
       const ns = box.querySelector('[data-ns-menu]'); if (ns) ns.onclick = () => { window.siteMenu.close(); setTimeout(openSettings, 280); };
     }
   });
@@ -385,7 +385,7 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
     let html;
     if (on) {
       const what = where === 'chl' ? `${d.on ? `: هر روز ساعت ${d.time} برنامه امروز` : ''}${e.on ? `، ساعت ${e.time} یادآوری «خواندم»` : ''}` : '';
-      html = `<div class="rm-card"><p style="margin:0">🔔 ${h.on}${what}. · <button type="button" class="rm-link" data-a="prefs">تنظیم اعلان‌ها</button>${where === 'chl' ? ' · <button type="button" class="rm-link" data-a="test">اعلان آزمایشی</button>' : ''} · <button type="button" class="rm-link" data-a="off">لغو</button></p><div class="rm-msg" aria-live="polite"></div></div>`;
+      html = `<div class="rm-card"><p style="margin:0">🔔 ${h.on}${what}. · <button type="button" class="rm-link" data-a="prefs">⚙ تنظیم اعلان‌ها</button>${where === 'chl' ? ' · <button type="button" class="rm-link" data-a="test">اعلان آزمایشی</button>' : ''} · <button type="button" class="rm-link" data-a="off">لغو</button></p><div class="rm-msg" aria-live="polite"></div></div>`;
     } else if (!supported) {
       html = `<div class="rm-card">${unsupportedHtml(h.short)}</div>`;
     } else if (Notification.permission === 'denied') {
