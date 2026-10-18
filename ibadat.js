@@ -1,5 +1,5 @@
-// اعمال و ختم‌ها: نماز حاجت امام جواد (ع) چهارشنبه‌ها و ختم سوره یاسین هدیه به حضرت ام‌البنین (س).
-// ادعیه: دعای سمات (عصر جمعه)، کمیل (شب جمعه) و توسل (شب چهارشنبه)؛ متن، ترجمه و صوت در خواننده چله‌ها (chelleh/samat.json و …).
+// اعمال و ختم‌ها: نماز حاجت امام جواد (ع) چهارشنبه‌ها، ختم سوره یاسین هدیه به حضرت ام‌البنین (س)، و برگه شب‌های قدر، عرفه و اربعین (پیوند به مفاتیح).
+// ادعیه: دعای سمات (عصر جمعه)، کمیل (شب جمعه) و توسل (شب چهارشنبه)، و پیوند مستقیم ندبه، عهد و زیارت عاشورا؛ متن، ترجمه و صوت در خواننده چله‌ها (chelleh/samat.json و …).
 // پیوند اعلان‌ها (?doa=javad_wed، ?doa=ommolbanin، ?doa=doa_kumayl و …) همین برگه‌ها را باز می‌کند؛ در منو هم هستند.
 // اعلان‌ها را تابع daily-reminders با اذان ظهر و مغرب تهران می‌فرستد (نوع‌های javad_wed و ommolbanin در notifications.json).
 // محاسبه شب‌های ختم همان khatmNight در backend/supabase/functions/daily-reminders/notify.ts است؛ اگر یکی را تغییر دادید دیگری را هم.
@@ -142,8 +142,31 @@ ${await notifyHtml('ommolbanin', 'شب‌های ختم با اذان مغرب')}
 <div class="ib-tools"><button type="button" data-ib="read" data-key="${d.key}">📖 خواندن دعا: متن، ترجمه و صوت</button></div></div>
 ${await notifyHtml(type, when)}`;
   }
+  // مناسبت‌ها: فقط پیوند به متن‌های مفاتیح‌الجنان (books/mafatih/<شماره>) که در خواننده چله‌ها باز می‌شوند.
+  const M = n => 'books/mafatih/' + n;
+  const OCCS = {
+    occ_qadr: { title: 'شب‌های قدر', sub: 'شب‌های نوزدهم، بیست و یکم و بیست و سوم ماه رمضان', about: 'اعمال مشترک هر سه شب (غسل، دو رکعت نماز، قرآن به سر، دعای جوشن کبیر و زیارت امام حسین (ع)) و اعمال مخصوص هر شب، از مفاتیح‌الجنان.',
+      items: [[M(137), 'اعمال مشترک شب‌های قدر'], [M('049'), 'دعای جوشن کبیر'], [M(290), 'زیارت امام حسین (ع) در شب‌های قدر'], [M(138), 'اعمال شب نوزدهم'], [M(139), 'اعمال شب بیست و یکم'], [M(143), 'اعمال شب بیست و سوم'], [M(144), 'دعای شب بیست و سوم']] },
+    occ_arafah: { title: 'روز عرفه', sub: 'نهم ذی‌الحجه', about: 'روز عرفه روز دعا و توبه است؛ اعمال شب و روز آن، دعای امام حسین (ع) و زیارت آن حضرت در این روز.',
+      items: [[M(169), 'اعمال شب عرفه'], [M(170), 'اعمال روز عرفه'], [M(171), 'دعای امام حسین (ع) در روز عرفه'], [M(292), 'زیارت امام حسین (ع) در روز عرفه']] },
+    occ_arbaeen: { title: 'اربعین حسینی', sub: 'بیستم صفر', about: 'روز اربعین، چهلم شهادت امام حسین (ع)، روز زیارت آن حضرت است.',
+      items: [[M(187), 'اعمال روز اربعین'], [M(299), 'زیارت اربعین'], ['ashura', 'زیارت عاشورا']] },
+  };
+  const occHtml = type => {
+    const o = OCCS[type];
+    return `<h2>${o.title}</h2><p class="ib-sub">${o.sub}</p>
+<div class="ib-card"><p style="margin:0">${o.about}</p>
+<div class="ib-tools" style="flex-direction:column">${o.items.map(([k, t]) => `<button type="button" data-ib="read" data-key="${k}">📖 ${t}</button>`).join('')}</div></div>`;
+  };
+  // ادعیه پرخواننده بی‌اعلان: از منو یک‌راست در خواننده باز می‌شوند.
+  const READS = [
+    { key: M(336), title: 'دعای ندبه', sub: 'صبح‌های جمعه و عیدها' },
+    { key: 'ahd', title: 'دعای عهد', sub: 'هر صبح؛ چهل صبح پیاپی' },
+    { key: 'ashura', title: 'زیارت عاشورا', sub: 'هر روز، به‌ویژه در محرم' },
+  ];
   const PAGES = { javad_wed: javadHtml, ommolbanin: ommolbaninHtml };
   for (const t in DOAS) PAGES[t] = () => doaHtml(t);
+  for (const t in OCCS) PAGES[t] = () => occHtml(t);
 
   let shade = null, current = null;
   async function render(type) {
@@ -208,7 +231,8 @@ ${await notifyHtml(type, when)}`;
       const sub = i >= 0 ? (k[i] === today ? `امشب شب ${NIGHTS[i]} ختم` : `شب ${NIGHTS[i]}: ${dateFa(k[i])}`) : 'هر ماه قمری، چهار شب جمعه';
       box.innerHTML = `<h3>اعمال و ختم‌ها</h3>
 <button type="button" class="sm-item" data-ib-open="javad_wed"><span class="sm-ic">🤲</span><span>نماز حاجت امام جواد (ع)<small>چهارشنبه‌ها بعد از نماز عصر</small></span><span class="sm-go">‹</span></button>
-<button type="button" class="sm-item" data-ib-open="ommolbanin"><span class="sm-ic">📖</span><span>ختم یاسین حضرت ام‌البنین (س)<small>${sub}</small></span><span class="sm-go">‹</span></button>`;
+<button type="button" class="sm-item" data-ib-open="ommolbanin"><span class="sm-ic">📖</span><span>ختم یاسین حضرت ام‌البنین (س)<small>${sub}</small></span><span class="sm-go">‹</span></button>
+${Object.entries(OCCS).map(([k, o]) => `<button type="button" class="sm-item" data-ib-open="${k}"><span class="sm-ic">🌙</span><span>${o.title}<small>${o.sub}</small></span><span class="sm-go">‹</span></button>`).join('')}`;
       box.querySelectorAll('[data-ib-open]').forEach(x => x.onclick = () => { window.siteMenu.close(); setTimeout(() => open(x.dataset.ibOpen), 280); });
     }
   });
@@ -216,8 +240,9 @@ ${await notifyHtml(type, when)}`;
   window.siteMenu?.section({
     id: 'doa', order: 6,
     render(box) {
-      box.innerHTML = `<h3>ادعیه</h3>${Object.entries(DOAS).map(([k, d]) => `<button type="button" class="sm-item" data-ib-open="${k}"><span class="sm-ic">📿</span><span>${d.title}<small>${d.sub}</small></span><span class="sm-go">‹</span></button>`).join('')}${window.mafatih ? window.mafatih.menuItem() : ''}`;
+      box.innerHTML = `<h3>ادعیه</h3>${Object.entries(DOAS).map(([k, d]) => `<button type="button" class="sm-item" data-ib-open="${k}"><span class="sm-ic">📿</span><span>${d.title}<small>${d.sub}</small></span><span class="sm-go">‹</span></button>`).join('')}${READS.map(d => `<button type="button" class="sm-item" data-ib-read="${d.key}"><span class="sm-ic">📿</span><span>${d.title}<small>${d.sub}</small></span><span class="sm-go">‹</span></button>`).join('')}${window.mafatih ? window.mafatih.menuItem() : ''}`;
       box.querySelectorAll('[data-ib-open]').forEach(x => x.onclick = () => { window.siteMenu.close(); setTimeout(() => open(x.dataset.ibOpen), 280); });
+      box.querySelectorAll('[data-ib-read]').forEach(x => x.onclick = () => { window.siteMenu.close(); setTimeout(() => window.chlRead?.(x.dataset.ibRead), 280); });
     }
   });
 
