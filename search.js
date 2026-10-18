@@ -83,10 +83,11 @@ body.srch-lock{overflow:hidden}`;
   const remember = q => { q = q.trim(); if (q.length < 2) return; const a = [q, ...recent().filter(x => tight(x) !== tight(q))].slice(0, 5); try { localStorage.setItem(RK, JSON.stringify(a)); } catch {} };
 
   // ---------- داده‌ها ----------
-  let ix = null, duaList = null, duaListResolved = null, menuList = [], extra = [];
+  let ix = null, duaList = null, duaListResolved = null, menuList = [], extra = [], mafItems = null;
   const getIx = () => ix ? Promise.resolve(ix) : window.quranReader.index().then(x => (ix = x));
-  const getDuas = () => duaList || (duaList = fetch('chelleh/index.json').then(r => { if (!r.ok) throw Error(r.status); return r.json(); })
-    .then(a => a.filter(d => d && d.key && d.title && !d.quran)).catch(() => { duaList = null; return []; }));
+  // همان فهرستی که chelleh.js گرفته به کار می‌رود (دوباره دانلود نمی‌شود).
+  const getDuas = () => duaList || (duaList = (window.chlBuiltins ? window.chlBuiltins() : fetch('chelleh/index.json').then(r => { if (!r.ok) throw Error(r.status); return r.json(); }))
+    .then(a => { if (!a.length) throw Error('empty'); return a.filter(d => d && d.key && d.title && !d.quran); }).catch(() => { duaList = null; return []; }));
   const ayahCount = s => (s < 114 ? ix.surah[s] : ix.total) - ix.surah[s - 1];
 
   // کلمه‌های دیگری که مردم برای هر بخش می‌نویسند
@@ -102,12 +103,12 @@ body.srch-lock{overflow:hidden}`;
     [/سهم|حزب/, 'حزب حزب خوانی سهم'],
     [/چله/, 'چله دوره ثبت نام']
   ];
-  const GROUPS = [['surahs', 'سوره‌ها'], ['ayahs', 'آیه‌ها'], ['duas', 'ادعیه و زیارات'], ['courses', 'دوره‌ها و چله‌ها'], ['sections', 'تنظیمات و بخش‌ها']];
+  const GROUPS = [['surahs', 'سوره‌ها'], ['ayahs', 'آیه‌ها'], ['duas', 'ادعیه، زیارات و کتاب‌ها'], ['courses', 'دوره‌ها و چله‌ها'], ['sections', 'تنظیمات و بخش‌ها']];
   // گزینه‌های منو: هر گزینه با نشانی خودش (شناسه بخش، شماره گزینه در بخش و عنوان) تا هنگام زدن دوباره پیدا شود.
   function readMenu() {
     menuList = [];
     const body = window.siteMenu?.items?.(); if (!body) return;
-    const groupOf = (sec, head) => /chelleh/.test(sec) || /چله|دوره/.test(head) ? 'courses' : /ibadat|doa|dua|mafatih|ziarat/.test(sec) || /ادعیه|دعا|زیار|اعمال|ختم|مفاتیح/.test(head) ? 'duas' : 'sections';
+    const groupOf = (sec, head) => /chelleh/.test(sec) || /چله|دوره/.test(head) ? 'courses' : /ibadat|doa|dua|mafatih|ziarat|books|more|zekr/.test(sec) || /ادعیه|دعا|زیار|اعمال|ختم|مفاتیح|کتاب|ذکر|اذان/.test(head) ? 'duas' : 'sections';
     body.querySelectorAll('.sm-sec').forEach((sec, si) => {
       const id = sec.dataset.sec || `#${si}`;
       const items = [...sec.querySelectorAll('.sm-item')];
@@ -180,6 +181,8 @@ body.srch-lock{overflow:hidden}`;
     readMenu(); draw();
     getIx().then(() => { if (shade.isConnected && input.value) draw(); }).catch(() => {});
     getDuas().then(a => { duaListResolved = a; if (shade.isConnected && input.value) draw(); });
+    // موردهای مفاتیح‌الجنان هم در جستجو هستند (فهرستش ۱۰ کیلوبایت است و فقط بار اول گرفته می‌شود).
+    if (!mafItems && (!window.features || window.features.shown('mafatih'))) window.mafatih?.items().then(a => { mafItems = a; if (shade.isConnected && input.value) draw(); }).catch(() => {});
     setTimeout(() => input.focus(), 30);
   }
   function close(fromHistory, then) {
@@ -206,10 +209,11 @@ body.srch-lock{overflow:hidden}`;
   const item = (act, ic, title, sub, extraHtml = '') => `<button type="button" class="srch-it" data-act="${esc(act)}"><span class="srch-ic" aria-hidden="true">${ic}</span><span>${title}${extraHtml}${sub ? `<small>${sub}</small>` : ''}</span></button>`;
   const acts = [];
   const act = fn => (acts.push(fn), acts.length - 1);
-  function group(key, rows, limit = 6, tail = '') {
-    if (!rows.length && !tail) return '';
+  // total: تعداد همه پیداشده‌ها وقتی فقط ردیف‌های دیده‌شدنی ساخته شده‌اند (آیه‌ها).
+  function group(key, rows, limit = 6, tail = '', total = rows.length) {
+    if (!total && !tail) return '';
     const name = GROUPS.find(g => g[0] === key)[1], n = more[key] || limit;
-    return `<section class="srch-g"><h3>${name}${rows.length > 1 ? `<small>${toFa(rows.length)}</small>` : ''}</h3>${rows.slice(0, n).join('')}${rows.length > n ? `<button type="button" class="srch-more" data-more="${key}" data-n="${n + (key === 'ayahs' ? 20 : 10)}">نمایش بیشتر (${toFa(rows.length - n)} مورد دیگر)</button>` : ''}${tail}</section>`;
+    return `<section class="srch-g"><h3>${name}${total > 1 ? `<small>${toFa(total)}</small>` : ''}</h3>${rows.slice(0, n).join('')}${total > n ? `<button type="button" class="srch-more" data-more="${key}" data-n="${n + (key === 'ayahs' ? 20 : 10)}">نمایش بیشتر (${toFa(total - n)} مورد دیگر)</button>` : ''}${tail}</section>`;
   }
   // امتیاز یک گزینه: عنوان با پرسش شروع شود بهتر از وقتی وسطش باشد، بهتر از وقتی فقط در توضیح یا کلمه‌های دیگر باشد.
   function score(title, keys, qw) {
@@ -255,22 +259,30 @@ body.srch-lock{overflow:hidden}`;
     // آیه‌ها: متن عربی و ترجمه
     let tail = '';
     const ayahRows = [...direct];
+    let ayahTotal = direct.length;
     if (qn.length >= 2 && !/^\d+$/.test(qn)) {
       if (all && ayahWanted) {
         const found = all.filter(a => a.art.includes(q) || a.trt.includes(q));
-        found.forEach(a => ayahRows.push(item(act(() => window.quranFree.openAt(a.g)), toFa(a.n), `سوره ${esc(names[a.s - 1])}، آیه ${toFa(a.n)}`, snip(a.tr, a.trt.includes(q) ? q : ''), `<span class="srch-ar">${snip(a.ar, a.art.includes(q) ? q : '', 70)}</span>`)));
+        // فقط ردیف‌هایی که دیده می‌شوند ساخته می‌شوند (جستجوی کوتاه هزاران آیه پیدا می‌کند).
+        ayahTotal = direct.length + found.length;
+        found.slice(0, Math.max(0, (more.ayahs || 20) - direct.length)).forEach(a => ayahRows.push(item(act(() => window.quranFree.openAt(a.g)), toFa(a.n), `سوره ${esc(names[a.s - 1])}، آیه ${toFa(a.n)}`, snip(a.tr, a.trt.includes(q) ? q : ''), `<span class="srch-ar">${snip(a.ar, a.art.includes(q) ? q : '', 70)}</span>`)));
         if (!found.length) tail = `<p class="srch-note">آیه‌ای با «${esc(raw)}» در متن عربی یا ترجمه پیدا نشد.</p>`;
       } else if (loading) tail = `<p class="srch-note">در حال دریافت متن قرآن برای جستجو…</p><div class="srch-bar"><i></i></div>`;
       else tail = `<button type="button" class="srch-more" data-s="ayahs">🔎 جستجوی «${esc(raw)}» در متن عربی و ترجمه آیه‌ها</button>${all ? '' : '<p class="srch-note">بار اول متن کامل قرآن (حدود ۳ مگابایت) دریافت می‌شود.</p>'}`;
     }
     // آیه مشخص («بقره ۲۵۵») بالا؛ پیداشده‌های متن آیه‌ها که زیادند، ته فهرست
-    const ayahHtml = group('ayahs', ayahRows, 20, tail);
+    const ayahHtml = group('ayahs', ayahRows, 20, tail, ayahTotal);
     if (direct.length) html.push(ayahHtml);
     // ادعیه، دوره‌ها، تنظیمات (از منو و chelleh/index.json)
     const pool = { duas: [], courses: [], sections: [] };
     const duas = Array.isArray(duaListResolved) ? duaListResolved : [];
     const duaTitles = duas.map(d => tight(d.title));
     duas.forEach(d => pool.duas.push([score(d.title, d.title + ' ' + (d.keys || ''), qw), item(act(() => window.chlRead?.(d.key)), '📿', mark(d.title, q), 'متن، ترجمه و صوت')]));
+    (mafItems || []).forEach(x => {
+      if (duaTitles.includes(tight(x.it.title))) return; // همان دعا از فهرست بالا
+      const sc = score(x.it.title, x.it.title + ' ' + x.where, qw);
+      if (sc >= 0) pool.duas.push([sc, item(act(() => window.mafatih.openItem(x.it, x.where)), x.it.surah ? '📖' : '📚', mark(x.it.title, q), esc('مفاتیح‌الجنان · ' + x.where))]);
+    });
     menuList.forEach(m => {
       if (m.group === 'duas' && duaTitles.some(t => tight(m.title).includes(t))) return; // همان دعا از فهرست بالا
       pool[m.group].push([score(m.title, m.keys, qw), item(act(() => runMenu(m.loc)), esc(m.ic), mark(m.title, q), esc(m.sub))]);

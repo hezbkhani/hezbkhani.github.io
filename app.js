@@ -17,7 +17,7 @@ window.siteSettings=readCache('siteSettingsCache')||{};
 // سرعت پخش و دکمه دانلود همه صوت‌ها (تلاوت و ترجمه گویای قرآن‌خوان، صوت متن‌های چله، صوت‌های اعمال) یک تنظیم مشترک روی همین گوشی است.
 // دکمه دانلود تا کاربر در تنظیمات قرآن‌خوان یا متن چله روشنش نکند پنهان است. audioOpt.bar() نوار سرعت و دانلود را زیر یک <audio> می‌سازد.
 window.audioOpt=(()=>{const RATES=[1,1.25,1.5,1.75,2],p=Object.assign({rate:1,dl:false},readCache('audioPrefs')),tracked=new Set(),num=r=>toFa(r).replace('.','٫')+'×';
-  document.head.insertAdjacentHTML('beforeend','<style>.au-opt{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:14px}.au-opt label{display:flex;align-items:center;gap:6px}.au-opt select{width:auto;height:36px;padding:0 6px;font:inherit}.au-opt .au-dl{height:36px;padding:0 12px;font-size:14px}.au-opt [hidden]{display:none}</style>');
+  document.head.insertAdjacentHTML('beforeend','<style>.au-opt{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:14px}.au-opt label{display:flex;align-items:center;gap:6px}.au-opt select{width:auto;height:40px;padding:0 6px;font:inherit}.au-opt .au-dl{height:36px;padding:0 12px;font-size:14px}.au-opt [hidden]{display:none}</style>');
   const apply=()=>{for(const a of [...tracked,...document.querySelectorAll('audio')]){a.defaultPlaybackRate=a.playbackRate=p.rate;if(a.controls)a.setAttribute('controlslist',p.dl?'':'nodownload')}
     document.querySelectorAll('select[data-au-rate]').forEach(s=>s.value=p.rate);document.querySelectorAll('[data-au-dl]').forEach(b=>b.hidden=!p.dl);document.dispatchEvent(new Event('audioopt'));};
   const set=v=>{Object.assign(p,v);writeCache('audioPrefs',p);apply();};
@@ -35,7 +35,8 @@ function sbGet(path,ms){if(!backendReady())return Promise.resolve(null);const ac
 function dbToGroups(a){return Array.isArray(a)?a.filter(g=>Array.isArray(g.names)&&g.names.length===120).map(g=>{const [y,m,d]=g.start_date.split('-').map(Number);return{number:g.number,name:g.name,start:Date.UTC(y,m-1,d),names:g.names}}):[];}
 async function loadFileGroups(){const list=await fetch('groups/index.json',{cache:'no-store'}).then(r=>r.json());const x=await Promise.all(list.map(async e=>{const n=+(e.number??e),label=e.name;try{const r=await fetch(`groups/group-${n}.txt`,{cache:'no-store'});return r.ok?parseGroup(await r.text(),n,label):null}catch{return null}}));return x.filter(Boolean);}
 async function loadGroups(){const admin=location.hash==='#admin',cached=admin?null:readCache('groupsCache');
-  const fresh=Promise.all([sbGet('site_settings?select=key,value',admin?8000:5000),sbGet('site_groups?select=number,name,start_date,names&visible=eq.true&order=number',admin?8000:5000)]).then(([s,g])=>{if(Array.isArray(s)){window.siteSettings=Object.fromEntries(s.map(r=>[r.key,r.value]));writeCache('siteSettingsCache',window.siteSettings)}const db=g===null?null:dbToGroups(g);if(db)writeCache('groupsCache',g);return db;});
+  // همین درخواست تنظیمات را admin.js هم به کار می‌برد (window.siteSettingsFetch) تا دو بار گرفته نشود.
+  const fresh=Promise.all([window.siteSettingsFetch=sbGet('site_settings?select=key,value',admin?8000:5000),sbGet('site_groups?select=number,name,start_date,names&visible=eq.true&order=number',admin?8000:5000)]).then(([s,g])=>{if(Array.isArray(s)){window.siteSettings=Object.fromEntries(s.map(r=>[r.key,r.value]));writeCache('siteSettingsCache',window.siteSettings)}const db=g===null?null:dbToGroups(g);if(db)writeCache('groupsCache',g);return db;});
   const useDb=()=>(window.siteSettings.groups_source?.source||'db')!=='files';
   if(cached&&useDb()){const c=dbToGroups(cached);if(c.length){window.groupsSource='db';
     // اگر نسخه تازه با حافظه گوشی فرق داشت و کاربر هنوز کاری نکرده، بی‌صدا جایگزین می‌شود.
@@ -46,7 +47,8 @@ async function loadGroups(){const admin=location.hash==='#admin',cached=admin?nu
   const db=await fresh;if(useDb()&&db&&db.length){window.groupsSource='db';return db}
   window.groupsSource='files';return loadFileGroups();}
 groupsNav.addEventListener('click',()=>{window.groupTouched=true});
-async function init(){todayHead.textContent='امروز به وقت ایران: '+orderedDate(new Date());portions=await fetch('portions.json').then(r=>r.json());groups.push(...await loadGroups());renderGroups();document.dispatchEvent(new Event('groups:loaded'));}
+async function init(){todayHead.textContent='امروز به وقت ایران: '+orderedDate(new Date());// سهم‌ها و گروه‌ها هم‌زمان خوانده می‌شوند، نه یکی پس از دیگری.
+const [p,g]=await Promise.all([fetch('portions.json').then(r=>r.json()),loadGroups()]);portions=p;groups.push(...g);renderGroups();document.dispatchEvent(new Event('groups:loaded'));}
 function renderGroups(){groupsNav.innerHTML=groups.map((g,i)=>`<button type="button" class="group ${i?'':'active'}" data-n="${g.number}">${esc(g.name)}</button>`).join('');groupsNav.querySelectorAll('button').forEach(b=>b.onclick=()=>selectGroup(+b.dataset.n,b));adminGroupSelect.innerHTML=groups.map(g=>`<option value="${g.number}">${esc(g.name)}</option>`).join('');adminDate.value=isoIran();if(groups[0])selectGroup(groups[0].number,groupsNav.querySelector('button'));}
 function selectGroup(n,b){selected=groups.find(g=>g.number===n);document.querySelectorAll('.group').forEach(x=>x.classList.remove('active'));b.classList.add('active');groupInfo.textContent=`${selected.name}، تاریخ شروع: ${new Intl.DateTimeFormat('fa-IR-u-ca-persian',{timeZone:TZ,year:'numeric',month:'long',day:'numeric'}).format(new Date(selected.start))}`;reportGroup.textContent='گروه انتخاب‌شده: '+selected.name;result.classList.remove('show');if(typeof resetReportVerification==='function')resetReportVerification();}
 // شماره حزب: سهم‌ها همان ۱۲۰ حزب قرآن به ترتیب هستند، پس حزب = جایگاه سهم در portions.json.

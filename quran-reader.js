@@ -108,7 +108,7 @@ body.qr-lock{overflow:hidden}
 .qr-title b{display:block;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qr-title small{font-size:12.5px;opacity:.85}
 .qr-progress{position:absolute;bottom:0;right:0;height:3px;width:0;background:var(--gold);transition:width .1s}
-.qr-menu{position:sticky;top:58px;z-index:2;margin:0 auto;max-width:760px;display:none;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line);box-shadow:0 8px 20px #0002}
+.qr-menu{position:sticky;top:var(--barh,58px);z-index:2;margin:0 auto;max-width:760px;display:none;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line);box-shadow:0 8px 20px #0002}
 .qr-menu.show{display:grid;gap:12px}
 .qr-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15.5px}
 .qr-row .ctl{display:flex;gap:6px}
@@ -118,18 +118,21 @@ body.qr-lock{overflow:hidden}
 .qr-sura{margin:22px 0 6px;padding:12px 10px 8px;text-align:center;border:1px solid var(--gold);outline:3px double var(--gold);outline-offset:3px;background:var(--card)}
 .qr-sura h3{margin:0;font:normal 30px/1.6 QuranHafs,serif;color:var(--accent)}
 .qr-sura small{display:block;font-size:13px;color:var(--muted)}
-.qr-intro{margin-top:6px;height:34px;padding:0 14px;background:transparent;color:var(--accent);border:1px solid var(--line);font:600 14px Vazirmatn,sans-serif}
+.qr-intro{margin-top:6px;height:40px;padding:0 14px;background:transparent;color:var(--accent);border:1px solid var(--line);font:600 14px Vazirmatn,sans-serif}
 .qr-intro:hover{background:var(--line)}
 .qr.noin .qr-intro,.qr.noin .qr-in-row{display:none}
 .qr-bism{margin:16px 0 4px;text-align:center;font:normal calc(var(--qs)*1.05)/2 QuranHafs,serif}
-.qr-ayah{padding:14px 2px;border-bottom:1px solid var(--line)}
+/* آیه‌های بیرون از صفحه چیده نمی‌شوند تا بازه بلند (مثلاً بقره) و تغییر اندازه متن صفحه را قفل نکنند. */
+.qr-ayah{padding:14px 2px;border-bottom:1px solid var(--line);content-visibility:auto;contain-intrinsic-size:auto 260px}
 .qr-ayah:last-child{border-bottom:0}
 .qr-ar{margin:0;font:normal var(--qs)/2.15 QuranHafs,serif;text-align:right;word-spacing:1px}
-.qr-num{color:var(--accent);white-space:nowrap}
+/* شماره آیه دکمه است تا با صفحه‌کلید هم بشود از همان آیه پخش کرد؛ ظاهرش همان عدد داخل متن می‌ماند. */
+.qr-num{display:inline-block;min-width:40px;height:auto;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:none;color:var(--accent);font:inherit;text-align:center;vertical-align:baseline;white-space:nowrap;text-shadow:none}
+.qr-num:hover{background:none}
 .qr-fa{margin:8px 0 0;font-size:max(15px,calc(var(--qs)*.6));line-height:2;color:var(--tr);text-align:justify}
 .qr-fa i{font-style:normal;color:var(--muted);font-size:.85em;margin-left:4px}
 .qr-fa[dir=ltr] i{margin:0 4px 0 0}
-.qr-tf{display:inline-block;margin-right:6px;padding:0 8px;border:1px solid var(--line);color:var(--accent);font-size:.8em;line-height:1.9;text-decoration:none;white-space:nowrap}
+.qr-tf{display:inline-flex;align-items:center;min-height:40px;vertical-align:middle;margin-right:6px;padding:0 8px;border:1px solid var(--line);color:var(--accent);font-size:.8em;line-height:1.9;text-decoration:none;white-space:nowrap}
 .qr-tf:hover{background:var(--line)}
 .qr.notf .qr-tf,.qr.notf .qr-tfsrc{display:none}
 .qr-tfs{position:fixed;inset:0;z-index:3;display:none;align-items:flex-end;justify-content:center;background:#0006}
@@ -165,7 +168,7 @@ body.qr-lock{overflow:hidden}
 .qr-ayah.playing{background:rgba(199,154,69,.16);box-shadow:inset -3px 0 0 var(--gold)}
 .qr.flow .qr-ayah.playing .qr-ar{background:rgba(199,154,69,.22)}
 .qr-num{cursor:pointer}
-.qr-player{position:sticky;bottom:0;z-index:2;display:none;align-items:center;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);box-shadow:0 -4px 16px #0002}
+.qr-player{position:sticky;bottom:0;z-index:2;display:none;align-items:center;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));padding-inline:max(10px,calc((100% - 760px) / 2));background:var(--card);border-top:1px solid var(--line);box-shadow:0 -4px 16px #0002}
 .qr.x .qr-player{display:flex}
 .qr-player button{flex:none;width:44px;height:44px;padding:0;border:0;background:transparent;color:var(--accent);font-size:20px}
 .qr-player .qr-play{width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;font-size:22px}
@@ -217,13 +220,15 @@ body.qr-lock{overflow:hidden}
 <button type="button" class="qr-apply" data-a="apply">اعمال تنظیمات</button>
 </div>
 <div class="qr-body" id="qrBody"></div>
-<div class="qr-tfs" id="qrTfs" data-a="tfclose"><div class="qr-tfs-box" role="dialog" aria-modal="true" aria-labelledby="qrTfsTitle"><div class="qr-tfs-head"><b id="qrTfsTitle"></b><button type="button" data-a="tfclose" aria-label="بستن تفسیر">✕</button></div><div class="qr-tfs-body" id="qrTfsBody"></div></div></div>
+<div class="qr-tfs" id="qrTfs" data-a="tfclose"><div class="qr-tfs-box" role="dialog" aria-modal="true" aria-labelledby="qrTfsTitle"><div class="qr-tfs-head"><b id="qrTfsTitle"></b><button type="button" data-a="tfclose" aria-label="بستن تفسیر">✕</button></div><div class="qr-tfs-body" id="qrTfsBody" tabindex="0"></div></div></div>
 <div class="qr-player" id="qrPlayer"><button type="button" class="qr-play" data-a="play" aria-label="پخش">▶</button>
 <div class="qr-now" id="qrNow"><b>پخش صوت</b>از اولین آیه، یا روی شماره یک آیه بزنید</div>
 <button type="button" data-a="next" aria-label="آیه بعد">⏭</button><button type="button" data-a="prev" aria-label="آیه قبل">⏮</button><button type="button" data-a="dl" aria-label="دانلود صوت این آیه" hidden>⬇</button></div>`;
   document.body.appendChild(el);
   const $ = id => el.querySelector('#' + id);
   const menu = $('qrMenu'), body = $('qrBody');
+  // بلندی واقعی نوار بالا (با فاصله امن بالای گوشی و قلم، ۵۹ تا ۶۱ پیکسل) برای منو و نوارهای چسبیده زیرش.
+  { const bar = el.querySelector('.qr-bar'), set = () => el.style.setProperty('--barh', bar.getBoundingClientRect().height + 'px'); if (window.ResizeObserver) new ResizeObserver(set).observe(bar); }
 
   let current = null, pushed = false;
 
@@ -273,17 +278,22 @@ body.qr-lock{overflow:hidden}
     sel.value = activeTr();
   }
 
-  function render(data) {
+  // tr: ترجمه انتخاب‌شده که همراه متن گرفته شده ({list, lk, dir})، تا صفحه یک بار و با همان ترجمه ساخته شود، نه اول مکارم و بعد عوض شود.
+  function render(data, tr) {
     let count = 0;
     data.segments.forEach(seg => { FA_NAME[seg.s] = seg.fa; });
+    const mk = data.segments.flatMap(seg => seg.ayahs.map(a => a[1]));
+    if (tr && tr.list.length !== mk.length) tr = null;
+    const trAttr = tr ? ` dir="${tr.dir}" lang="${tr.lk}"` : '', trNum = n => tr && tr.dir !== 'rtl' ? n : toFa(n);
+    let k = 0;
     const html = data.segments.map(seg => {
       const to = seg.from + seg.ayahs.length - 1;
       count += seg.ayahs.length;
       const range = seg.from === 1 && to === seg.n ? `کامل · ${toFa(seg.n)} آیه` : `آیه ${toFa(seg.from)} تا ${toFa(to)}`;
       const bism = seg.from === 1 && seg.s !== 1 && seg.s !== 9 ? `<div class="qr-bism">${BISMILLAH}</div>` : '';
       const ayahs = seg.ayahs.map(([a, t], i) => {
-        const n = seg.from + i;
-        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<span class="qr-num" data-a="ayah">${toAr(n)}</span> </p><p class="qr-fa"><i>(${toFa(n)})</i><span>${esc(t)}</span><a class="qr-tf" data-a="tafsir" data-s="${seg.s}" data-n="${n}" href="${tafsirUrl(seg.s, n)}" target="_blank" rel="noopener" title="تفسیر این آیه">تفسیر</a></p></div>`;
+        const n = seg.from + i, ft = tr ? tr.list[k] : t; k++;
+        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<button type="button" class="qr-num" data-a="ayah" aria-label="آیه ${toFa(n)}، پخش از اینجا">${toAr(n)}</button> </p><p class="qr-fa"${trAttr}><i>(${trNum(n)})</i><span>${esc(ft)}</span><a class="qr-tf" data-a="tafsir" data-s="${seg.s}" data-n="${n}" href="${tafsirUrl(seg.s, n)}" target="_blank" rel="noopener" title="تفسیر این آیه">تفسیر</a></p></div>`;
       }).join('');
       return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small><button type="button" class="qr-intro" data-a="intro" data-s="${seg.s}">معرفی سوره</button></div>${bism}<div class="qr-seg">${ayahs}</div>`;
     }).join('');
@@ -293,15 +303,28 @@ body.qr-lock{overflow:hidden}
     const nv = current.nav, navHtml = !nv ? '' : `<div class="qr-pnav">${nv.prev ? `<button type="button" data-a="pprev">→ ${esc(nv.prev)}</button>` : '<span></span>'}${nv.menu ? `<button type="button" class="qr-pmenu" data-a="pmenu">${esc(nv.menu)}</button>` : ''}${nv.next ? `<button type="button" data-a="pnext">${esc(nv.next)} ←</button>` : '<span></span>'}</div>`;
     body.innerHTML = navHtml + html + `<div class="qr-end">${end}${navHtml}
 <p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir و تفسیر نور (Furqan Apps)<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud · ترجمه ریاعی و صدای بهروز رضوی: quranmehr.ir (موسسه پیامبر مهر و رحمت) · تحدیر معتز آقایی: archive.org</span></p></div>`;
-    items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
+    items = [...body.querySelectorAll('.qr-ayah')].map((e, i) => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e, makarem: mk[i] }; });
+    if (tr) $('qrTrSrc').textContent = trName();
     try { hooks.render?.(items); } catch (e) { console.error(e); }
     el.scrollTop = 0;
+    // اگر آیه خواسته‌شده اولین آیه صفحه است، صفحه از بالا (با سربرگ سوره و بسم‌الله) دیده می‌شود.
     const f = current.focus != null && items.find(it => gIndex(it) === current.focus);
-    if (f) { el.scrollTop += f.e.getBoundingClientRect().top - el.querySelector('.qr-bar').offsetHeight - 8; f.e.classList.add('focus'); }
+    if (f) { if (f !== items[0]) scrollToAyah(f.e); f.e.classList.add('focus'); }
     onScroll();
     reportView();
-    loadTranslation();
+    if (!tr && activeTr() !== 'makarem') loadTranslation();
     if (current.autoplay) playAt(0);
+  }
+  // ارتفاع نوار بالا و نوارهای چسبیده زیر آن (مثل نوار حالت حفظ در qr-plus.js با کلاس qr-stick)، برای جابه‌جایی‌ها.
+  const topH = () => [el.querySelector('.qr-bar'), ...el.querySelectorAll('.qr-stick')].reduce((h, b) => h + (b.hidden ? 0 : b.getBoundingClientRect().height), 0);
+  // آیه‌های بیرون از صفحه با اندازه تخمینی چیده می‌شوند (content-visibility) و پس از دیده شدن اندازه واقعی می‌گیرند؛
+  // پس جای آیه در چند فریم بعد دوباره دقیق می‌شود تا درست زیر نوار بالا بنشیند.
+  let fixT = 0;
+  function scrollToAyah(e) {
+    let n = 0;
+    cancelAnimationFrame(fixT);
+    const fix = () => { const d = e.getBoundingClientRect().top - topH() - 8; if (Math.abs(d) >= 1) el.scrollTop += d; if (++n < 8) fixT = requestAnimationFrame(fix); };
+    fix();
   }
   // اندیس سراسری آیه (۰ تا ۶۲۳۵)
   const gIndex = it => SURAH_START[it.s - 1] + it.n - 1;
@@ -312,30 +335,27 @@ body.qr-lock{overflow:hidden}
     clearTimeout(viewTimer);
     const run = () => {
       let it = playing && items[pos];
-      if (!it) { const top = el.querySelector('.qr-bar').offsetHeight; it = items.find(x => x.e.getBoundingClientRect().bottom > top + 30) || items[items.length - 1]; }
+      if (!it) { const top = topH(); it = items.find(x => x.e.getBoundingClientRect().bottom > top + 30) || items[items.length - 1]; }
       try { current.onView(gIndex(it)); } catch {}
     };
     if (now) run(); else viewTimer = setTimeout(() => { if (el.classList.contains('show')) run(); }, 500);
   }
 
+  // متن ترجمه t (جز مکارم که داخل خود فایل سهم است) برای سهم یا بازه task؛ برای بازه، task.parts باید آماده باشد.
+  function fetchTr(t, task) {
+    const get = i => fetch(`quran/t/${t}/${pad3(i + 1)}.json`).then(r => { if (!r.ok) throw Error(r.status); return r.json(); });
+    return task.range ? Promise.all(task.parts.map(pt => get(pt.index).then(l => l.slice(pt.off, pt.off + pt.take)))).then(l => l.flat()) : get(task.index);
+  }
+  // ترجمه انتخاب‌شده، هم‌زمان با متن گرفته می‌شود؛ اگر نیامد، صفحه با مکارم ساخته می‌شود.
+  const trFor = task => { const t = activeTr(), [lk, , dir] = lang(); return t === 'makarem' ? null : fetchTr(t, task).then(list => ({ list, lk, dir })).catch(() => null); };
+
   async function loadTranslation() {
     const t = activeTr(), want = current;
     const fas = items.map(it => it.e.querySelector('.qr-fa > span'));
     let list;
-    if (t === 'makarem') list = items.map(it => it.makarem ?? (it.makarem = it.e.querySelector('.qr-fa > span').textContent));
+    if (t === 'makarem') list = items.map(it => it.makarem);
     else {
-      try {
-        if (current.range) list = (await Promise.all(current.parts.map(async pt => {
-          const r = await fetch(`quran/t/${t}/${pad3(pt.index + 1)}.json`); if (!r.ok) throw Error(r.status);
-          return (await r.json()).slice(pt.off, pt.off + pt.take);
-        }))).flat();
-        else {
-        const r = await fetch(`quran/t/${t}/${pad3(current.index + 1)}.json`);
-        if (!r.ok) throw Error(r.status);
-        list = await r.json();
-        }
-        items.forEach(it => { if (it.makarem == null) it.makarem = it.e.querySelector('.qr-fa > span').textContent; });
-      } catch { return; }
+      try { list = await fetchTr(t, current); } catch { return; }
     }
     if (want !== current || list.length !== items.length) return;
     const [lk, , dir] = lang();
@@ -358,6 +378,8 @@ body.qr-lock{overflow:hidden}
       const a = P[i], b = i + 1 < P.length ? P[i + 1] : ix.total;
       if (a < to && b > from) parts.push({ index: i, off: Math.max(0, from - a), take: Math.min(b, to) - Math.max(a, from) });
     }
+    current.parts = parts;
+    const want = current, trP = trFor(current);
     const files = await Promise.all(parts.map(pt => fetch(`quran/p/${pad3(pt.index + 1)}.json`).then(r => { if (!r.ok) throw Error(r.status); return r.json(); })));
     const segs = [];
     files.forEach((d, k) => {
@@ -368,8 +390,8 @@ body.qr-lock{overflow:hidden}
         last.ayahs.push(x.ay);
       });
     });
-    current.parts = parts;
-    render({ segments: segs });
+    const tr = await trP;
+    if (want === current) render({ segments: segs }, tr);
   }
 
   async function load() {
@@ -379,15 +401,21 @@ body.qr-lock{overflow:hidden}
       return;
     }
     try {
+      const want = current, trP = trFor(current);
       const r = await fetch(`quran/p/${String(current.index + 1).padStart(3, '0')}.json`);
       if (!r.ok) throw Error(r.status);
-      render(await r.json());
+      const d = await r.json(), tr = await trP;
+      if (want === current) render(d, tr);
     } catch {
       body.innerHTML = '<div class="qr-state">بارگذاری متن انجام نشد.<br><button type="button" data-a="retry">تلاش دوباره</button></div>';
     }
   }
 
+  let opener = null;
   function open(task) {
+    // قلم عربی (font-display:block) از همین حالا گرفته می‌شود، هم‌زمان با متن، نه پس از ساختن صفحه.
+    try { document.fonts?.load('1em QuranHafs').catch(() => {}); } catch {}
+    if (!el.classList.contains('show')) opener = document.activeElement;
     current = task;
     $('qrTitle').textContent = toFa(task.title);
     $('qrSub').textContent = '';
@@ -409,6 +437,9 @@ body.qr-lock{overflow:hidden}
     closeTafsir();
     el.classList.remove('show');
     document.body.classList.remove('qr-lock');
+    // فوکوس به دکمه‌ای برمی‌گردد که قرآن‌خوان را باز کرده بود.
+    const o = opener; opener = null;
+    if (o && o.isConnected && o.focus) try { o.focus({ preventScroll: true }); } catch {}
     if (pushed && !fromHistory) { pushed = false; afterClose = then || null; history.back(); return; }
     pushed = false;
     if (then) then();
@@ -422,11 +453,24 @@ body.qr-lock{overflow:hidden}
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || !el.classList.contains('show')) return;
     e.preventDefault();
-    if ($('qrTfs').classList.contains('show')) closeTafsir(); else close();
+    // اول برگه تفسیر، بعد منوی تنظیمات، و فقط بعد از آن خود قرآن‌خوان بسته می‌شود.
+    if ($('qrTfs').classList.contains('show')) closeTafsir();
+    else if (menu.classList.contains('show')) { menu.classList.remove('show'); const b = el.querySelector('[data-a="menu"]'); b.setAttribute('aria-expanded', false); b.focus(); }
+    else close();
+  });
+  // تا برگه تفسیر باز است، Tab بیرون از آن نمی‌رود.
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'Tab' || !$('qrTfs').classList.contains('show')) return;
+    const f = [...$('qrTfs').querySelectorAll('button,a[href],[tabindex="0"]')].filter(x => x.offsetParent), first = f[0], last = f[f.length - 1];
+    if (!f.length) return;
+    if (!$('qrTfs').contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
   // ---------- تفسیر ----------
-  // quran/tafsir/<سوره>.json: {segments: [{from, to, title?, text}]}؛ سوره‌های بزرگ چند بخش‌اند: {parts: [{from, to, file}]}.
+  // quran/tafsir/<سوره>.json: {segments: [{from, to, title?, text}]}؛ سوره‌های بزرگ چند بخش‌اند: {parts: [{from, to, file}]}
+  // و هر بخش حداکثر حدود ۵۰ کیلوبایت است (tools/tafsir/split.py) تا روی اینترنت کند فقط همان چند آیه گرفته شود.
   // متن هر بخش: پاراگراف‌ها با یک خط خالی جدا شده‌اند و خطی که با «## » شروع شود عنوان است.
   const tafsirCache = {};
   const getJson = u => tafsirCache[u] || (tafsirCache[u] = fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(err => { delete tafsirCache[u]; throw err; }));
@@ -443,44 +487,56 @@ body.qr-lock{overflow:hidden}
   const tafsirHtml = text => String(text).split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
     .map(p => p.startsWith('## ') ? `<h4>${esc(p.slice(3))}</h4>` : `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
   let tafsirReq = 0;
+  // برگه تفسیر و معرفی: فوکوس هنگام بستن به دکمه‌ای برمی‌گردد که آن را باز کرد (یا شماره همان آیه).
+  let tfOpener = null;
+  function showSheet(back) {
+    if (!$('qrTfs').classList.contains('show')) { const a = document.activeElement; tfOpener = a && a !== document.body && el.contains(a) && a.offsetParent ? a : back; }
+    $('qrTfs').classList.add('show');
+    $('qrTfs').querySelector('button').focus();
+  }
   async function openTafsir(s, n) {
     const req = ++tafsirReq, box = $('qrTfsBody'), t = tafsirSrc(), link = t.url ? t.url(s, n) : '';
     const more = link ? `<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a>` : '';
     $('qrTfsTitle').innerHTML = `${t.name}<small>سوره ${esc(FA_NAME[s] || toFa(s))} · آیه ${toFa(n)}</small>`;
     box.innerHTML = '<div class="qr-state">در حال بارگذاری تفسیر…</div>';
-    $('qrTfs').classList.add('show');
-    $('qrTfs').querySelector('button').focus();
+    showSheet(el.querySelector(`#qa-${s}-${n} .qr-num`));
     let seg = null;
     try { seg = await tafsirFor(s, n); } catch {}
     if (req !== tafsirReq) return;
     if (!seg || !String(seg.text || '').trim()) { box.innerHTML = `<div class="qr-state">متن تفسیر این آیه اینجا بارگذاری نشد.${more}</div>`; return; }
     const range = seg.from === seg.to ? `آیه ${toFa(seg.from)}` : `آیه‌های ${toFa(seg.from)} تا ${toFa(seg.to)}`;
-    $('qrTfsTitle').innerHTML = `${esc(t.url && seg.title || t.name)}<small>سوره ${esc(FA_NAME[s] || toFa(s))} · ${range}</small>`;
-    // عنوان بخش در سربرگ آمده؛ اگر متن با همان عنوان شروع شود، تکرارش نمی‌کنیم.
-    const text = seg.title && seg.text.startsWith(`## ${seg.title}\n`) ? seg.text.slice(seg.title.length + 4) : seg.text;
+    // عنوان بخش فقط وقتی در سربرگ می‌آید که متن با همان عنوان شروع شود (و آنجا تکرار نمی‌شود)؛
+    // عنوانی از میانه متن (مثل «ترجمه:» یا «نکته‌ها:») عنوان کل بخش نیست، پس نام تفسیر نشان داده می‌شود.
+    const lead = seg.title && seg.text.startsWith(`## ${seg.title}\n`);
+    $('qrTfsTitle').innerHTML = `${esc(t.url && lead ? seg.title : t.name)}<small>سوره ${esc(FA_NAME[s] || toFa(s))} · ${range}</small>`;
+    const text = lead ? seg.text.slice(seg.title.length + 4) : seg.text;
     box.innerHTML = tafsirHtml(text) + `<p class="qr-tfs-src">منبع: ${esc(t.src)}${more}</p>`;
     box.scrollTop = 0;
   }
   // ---------- معرفی سوره ----------
-  // quran/intro.json: {src, surahs: [{place, ayat, order?, about, virtue?}]} به ترتیب سوره‌ها؛ فقط وقتی دکمه زده شود بارگذاری می‌شود.
+  // quran/intro/<سوره>.json: {src, place, ayat, order?, about, virtue?}، یک فایل چند کیلوبایتی برای هر سوره؛ فقط وقتی دکمه زده شود بارگذاری می‌شود.
   function introAllowed() { return window.siteSettings?.quran?.intro !== false; }
   document.addEventListener('settings:changed', applyPrefs);
   async function openIntro(s) {
     const req = ++tafsirReq, box = $('qrTfsBody');
     $('qrTfsTitle').innerHTML = `معرفی سوره ${esc(FA_NAME[s] || toFa(s))}`;
     box.innerHTML = '<div class="qr-state">در حال بارگذاری…</div>';
-    $('qrTfs').classList.add('show');
-    $('qrTfs').querySelector('button').focus();
-    let d = null;
-    try { d = await getJson('quran/intro.json'); } catch {}
+    showSheet(null);
+    let it = null;
+    try { it = await getJson(`quran/intro/${s}.json`); } catch {}
     if (req !== tafsirReq) return;
-    const it = d?.surahs?.[s - 1];
     if (!it) { box.innerHTML = '<div class="qr-state">معرفی این سوره بارگذاری نشد. اینترنت را بررسی کنید.</div>'; return; }
     $('qrTfsTitle').innerHTML = `معرفی سوره ${esc(FA_NAME[s] || toFa(s))}<small>${esc(it.place)} · ${toFa(it.ayat)} آیه${it.order ? ` · ترتیب نزول: ${toFa(it.order)}` : ''}</small>`;
-    box.innerHTML = `<h4>محتوای سوره</h4>${tafsirHtml(it.about)}${it.virtue ? `<h4>فضیلت سوره</h4>${tafsirHtml(it.virtue)}` : ''}<p class="qr-tfs-src">منبع: ${esc(d.src)}</p>`;
+    box.innerHTML = `<h4>محتوای سوره</h4>${tafsirHtml(it.about)}${it.virtue ? `<h4>فضیلت سوره</h4>${tafsirHtml(it.virtue)}` : ''}<p class="qr-tfs-src">منبع: ${esc(it.src)}</p>`;
     box.scrollTop = 0;
   }
-  function closeTafsir() { tafsirReq++; $('qrTfs').classList.remove('show'); }
+  function closeTafsir() {
+    tafsirReq++;
+    if (!$('qrTfs').classList.contains('show')) return;
+    $('qrTfs').classList.remove('show');
+    const o = tfOpener; tfOpener = null;
+    if (o && o.isConnected && el.classList.contains('show')) try { o.focus({ preventScroll: true }); } catch {}
+  }
 
   function onScroll() {
     const max = el.scrollHeight - el.clientHeight;
@@ -490,10 +546,10 @@ body.qr-lock{overflow:hidden}
 
   function keepPlace(fn) {
     // پس از تغییر اندازه یا حالت نمایش، همان آیه‌ای که بالای صفحه بود دوباره بالا بماند.
-    const top = el.querySelector('.qr-bar').offsetHeight;
-    const anchor = [...el.querySelectorAll('.qr-ayah')].find(a => a.getBoundingClientRect().bottom > top + 4);
+    const top = topH();
+    const anchor = items.find(it => it.e.getBoundingClientRect().bottom > top + 4)?.e;
     fn();
-    if (anchor) el.scrollTop += anchor.getBoundingClientRect().top - top - 8;
+    if (anchor) scrollToAyah(anchor);
   }
 
   el.addEventListener('click', e => {
@@ -614,8 +670,9 @@ body.qr-lock{overflow:hidden}
   function highlight() {
     items.forEach((it, i) => it.e.classList.toggle('playing', i === pos));
     const it = items[pos]; if (!it) return;
-    const r = it.e.getBoundingClientRect(), top = el.querySelector('.qr-bar').offsetHeight, bottom = el.clientHeight - $('qrPlayer').offsetHeight;
-    if (r.top < top || r.bottom > bottom) it.e.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const r = it.e.getBoundingClientRect(), top = topH(), bottom = el.clientHeight - $('qrPlayer').offsetHeight;
+    // آیه بلندتر از فضای میان نوارها از ابتدایش (زیر نوار بالا) دیده می‌شود، نه از وسط.
+    if (r.top < top || r.bottom > bottom) r.height > bottom - top - 16 ? el.scrollTo({ top: el.scrollTop + r.top - top - 8, behavior: 'smooth' }) : it.e.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
   function label(sub) {
     const it = items[pos];
@@ -706,7 +763,7 @@ body.qr-lock{overflow:hidden}
     if (pos >= 0 && audio.getAttribute('src') && !audio.ended && audio.currentTime > 0) { playing = true; setPlayBtn(); audio.play().catch(() => {}); }
     else {
       // از آیه‌ای که الان روی صفحه است شروع کن.
-      const top = el.querySelector('.qr-bar').offsetHeight;
+      const top = topH();
       const i = items.findIndex(it => it.e.getBoundingClientRect().bottom > top + 40);
       playAt(pos >= 0 ? pos : Math.max(0, i));
     }

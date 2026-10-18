@@ -45,6 +45,9 @@ body.sm-lock{overflow:hidden}
   const nav = document.createElement('nav'); nav.className = 'sm'; nav.setAttribute('aria-label', 'منو'); nav.setAttribute('aria-hidden', 'true');
   nav.innerHTML = `<div class="sm-head"><img src="icon-192.png" alt=""><b>نوران</b><button type="button" data-sm-search aria-label="جستجو" hidden><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button><button type="button" data-sm-close aria-label="بستن">✕</button></div><div class="sm-body"></div>`;
   document.body.append(btn, shade, nav);
+  // منوی بسته با Tab در دسترس نیست و وقتی باز است، Tab فقط داخل منو می‌چرخد.
+  nav.inert = true;
+  const behind = on => document.querySelectorAll('main, .site-foot').forEach(el => { el.inert = on; });
   const body = nav.querySelector('.sm-body');
 
   // میان‌برهای ثابت به بخش‌های صفحه؛ فقط بخش‌هایی که الان دیده می‌شوند.
@@ -108,14 +111,14 @@ body.sm-lock{overflow:hidden}
     render();
     lastFocus = document.activeElement;
     nav.classList.add('show'); shade.classList.add('show'); document.body.classList.add('sm-lock');
-    nav.setAttribute('aria-hidden', 'false'); btn.setAttribute('aria-expanded', 'true');
+    nav.setAttribute('aria-hidden', 'false'); btn.setAttribute('aria-expanded', 'true'); nav.inert = false; behind(true);
     try { if (!history.state?.sm) history.pushState({ sm: 1 }, ''); } catch {}
     setTimeout(() => nav.querySelector('[data-sm-close]').focus(), 50);
   }
   function close(fromHistory) {
     if (!nav.classList.contains('show')) return;
     nav.classList.remove('show'); shade.classList.remove('show'); document.body.classList.remove('sm-lock');
-    nav.setAttribute('aria-hidden', 'true'); btn.setAttribute('aria-expanded', 'false');
+    nav.setAttribute('aria-hidden', 'true'); btn.setAttribute('aria-expanded', 'false'); nav.inert = true; behind(false);
     if (!fromHistory) { try { if (history.state?.sm) history.back(); } catch {} }
     if (lastFocus && lastFocus.focus) try { lastFocus.focus({ preventScroll: true }); } catch {}
   }
