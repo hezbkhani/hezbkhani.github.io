@@ -207,6 +207,7 @@ body.v2 .hint,body.v2 .lead{color:#f4ead8}
     };
   }
 
-  if (enabled()) document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', start) : start();
+  // با defer، readyState هنگام اجرا interactive است؛ start بعد از اجرای همه اسکریپت‌ها (DOMContentLoaded) اجرا می‌شود.
+  if (enabled()) document.readyState !== 'complete' ? document.addEventListener('DOMContentLoaded', start) : start();
   window.addEventListener('hashchange', start);
 })();
