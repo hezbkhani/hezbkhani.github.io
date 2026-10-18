@@ -64,7 +64,8 @@
     if (textCache[key]) return textCache[key];
     const d = (await loadDbTexts()).find(t => t.key === key);
     let t = d && Array.isArray(d.sections) && d.sections.length ? d : null;
-    if (!t && /^[a-z0-9_-]+$/.test(key)) t = await fetch(`chelleh/${key}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+    // کلید ساده یعنی پوشه chelleh؛ «books/mafatih/042» یعنی متن مفاتیح‌الجنان (mafatih.js).
+    if (!t && /^(books\/[a-z0-9_-]+\/)?[a-z0-9_-]+$/.test(key)) t = await fetch(key.includes('/') ? `${key}.json` : `chelleh/${key}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
     if (!t) throw Error('متن این چله پیدا نشد. اینترنت را بررسی کنید و دوباره امتحان کنید.');
     return (textCache[key] = t);
   }
