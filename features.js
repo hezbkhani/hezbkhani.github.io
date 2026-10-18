@@ -27,7 +27,10 @@
   const HIDE = 'featHide';
   const admin = () => location.hash === '#admin';
   const conf = () => window.siteSettings?.features || {};
-  const hidden = () => { try { return JSON.parse(localStorage.getItem(HIDE)) || []; } catch { return []; } };
+  // این امکان‌ها نمایش/پنهانِ خودشان را در منوی ⚙ قرآن‌خوان دارند (qr-plus.js)، نه در برگه «نمایش امکانات».
+  // حالت حفظ پنهان نمی‌شود: ردیف روشن/خاموش خودش در همان منو کافی است.
+  const READER = ['saved', 'share', 'audioplus', 'hifz'];
+  const hidden = () => { try { return (JSON.parse(localStorage.getItem(HIDE)) || []).filter(x => x !== 'hifz'); } catch { return []; } };
   // ستون پنجم فهرست: true یعنی تا مدیر خاموش نکرده روشن است (مثل مفاتیح که پیش از این امکانات هم در سایت بود).
   const def = id => LIST.some(f => f[0] === id && f[4] === true);
   const on = id => admin() || (conf()[id] ?? def(id)) === true;
@@ -64,7 +67,7 @@
   // ---------- برگه «نمایش امکانات» برای هر بازدیدکننده ----------
   let shade = null;
   function openSettings() {
-    const list = LIST.filter(f => on(f[0]));
+    const list = LIST.filter(f => on(f[0]) && !READER.includes(f[0]));
     if (!shade) {
       shade = document.createElement('div'); shade.className = 'ft-shade';
       shade.innerHTML = '<div class="ft-box" role="dialog" aria-modal="true" aria-label="نمایش امکانات"></div>';
@@ -72,7 +75,7 @@
       shade.addEventListener('change', e => { const t = e.target.closest('[data-ft-user]'); if (t) setHidden(t.dataset.ftUser, !t.checked); });
     }
     const h = hidden();
-    shade.querySelector('.ft-box').innerHTML = `<button type="button" class="ft-x" aria-label="بستن">✕</button><h2>نمایش امکانات</h2><p>هر چیزی را که لازم ندارید خاموش کنید تا صفحه خلوت‌تر شود. فقط روی همین گوشی است و هر وقت بخواهید برمی‌گردد.</p>${list.length ? list.map(f => row(f, !h.includes(f[0]), 'data-ft-user')).join('') : '<p class="ft-empty">فعلاً امکان تازه‌ای روشن نیست.</p>'}`;
+    shade.querySelector('.ft-box').innerHTML = `<button type="button" class="ft-x" aria-label="بستن">✕</button><h2>نمایش امکانات</h2><p>هر چیزی را که لازم ندارید خاموش کنید تا صفحه خلوت‌تر شود. فقط روی همین گوشی است و هر وقت بخواهید برمی‌گردد. امکانات قرآن‌خوان در منوی ⚙ خود قرآن‌خوان است.</p>${list.length ? list.map(f => row(f, !h.includes(f[0]), 'data-ft-user')).join('') : '<p class="ft-empty">فعلاً امکان تازه‌ای روشن نیست.</p>'}`;
     document.body.appendChild(shade); document.body.classList.add('ib-lock');
     try { if (!history.state?.ft) history.pushState({ ft: 1 }, ''); } catch {}
     setTimeout(() => shade.querySelector('.ft-x')?.focus(), 50);
@@ -110,11 +113,12 @@
   document.addEventListener('settings:changed', () => { if (document.getElementById('setFeatures')) adminCard(); fire(); });
 
   window.features = {
-    list: LIST, on, shown, openSettings,
+    list: LIST, on, shown, openSettings, setHidden,
     // دکمه منو برای بخش «تنظیمات» (reminders.js)
     menuItem() {
-      if (!LIST.some(f => on(f[0]))) return '';
-      const n = LIST.filter(f => shown(f[0])).length, all = LIST.filter(f => on(f[0])).length;
+      const mine = LIST.filter(f => on(f[0]) && !READER.includes(f[0]));
+      if (!mine.length) return '';
+      const n = mine.filter(f => shown(f[0])).length, all = mine.length;
       return `<button type="button" class="sm-item" data-ft-menu><span class="sm-ic">🧩</span><span>نمایش امکانات<small>${n === all ? 'همه نمایش داده می‌شوند' : `${n.toLocaleString('fa-IR')} از ${all.toLocaleString('fa-IR')} نمایش داده می‌شوند`}</small></span><span class="sm-go">‹</span></button>`;
     }
   };
