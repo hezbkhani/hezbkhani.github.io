@@ -7,8 +7,7 @@
 // پیوند مستقیم: ‎?book=nahj‎ یا ‎?book=nahj&n=khutbah-1‎ (کتاب، بخش و شماره).
 (function () {
   const BOOKS = [
-    // نهج‌البلاغه وقتی داده‌هایش در books/nahj آمد اینجا اضافه می‌شود:
-    // { key: 'nahj', title: 'نهج‌البلاغه', icon: '📕', sub: 'خطبه‌ها، نامه‌ها و حکمت‌های امام علی (ع)' },
+    { key: 'nahj', title: 'نهج‌البلاغه', icon: '📕', sub: 'خطبه‌ها، نامه‌ها و حکمت‌های امام علی (ع)' },
     { key: 'sahifa', title: 'صحیفه سجادیه', icon: '📗', sub: 'دعاهای امام سجاد (ع)' },
     // کتاب‌های دسته «بیشتر» ته منو (more.js)، نه بخش «کتاب‌ها»؛ ساخت با tools/books/build_more.py.
     { key: 'muntaha', title: 'منتهی‌الآمال', icon: '📜', sub: 'زندگانی چهارده معصوم (ع)، نوشته محدث قمی', more: true },
@@ -154,7 +153,7 @@ ${ix.parts.length > 4 ? `<select class="bk-psel" aria-label="بخش">${ix.parts.
   function buildReader() {
     if (reader) return reader;
     reader = document.createElement('div'); reader.className = 'cr bk-r'; reader.setAttribute('role', 'dialog'); reader.setAttribute('aria-modal', 'true');
-    reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات">⚙</button><span class="cr-prog"></span></div>
+    reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات" title="تنظیمات">⚙</button><span class="cr-prog"></span></div>
 <div class="cr-menu"><div class="cr-row"><span>اندازه متن</span><div><button type="button" data-x="smaller">−</button><button type="button" data-x="bigger">+</button></div></div>
 <div class="cr-row"><span>ترجمه</span><div><button type="button" data-x="tr-on">نمایش</button><button type="button" data-x="tr-off">فقط عربی</button></div></div>
 <div class="cr-row"><span>حالت شب</span><div><button type="button" data-x="day">روز</button><button type="button" data-x="night">شب</button></div></div>

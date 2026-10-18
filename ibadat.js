@@ -76,7 +76,7 @@ body.ib-lock{overflow:hidden}`;
     if (!sp || !sp.enabled() || window.siteSettings?.notify?.types?.[type]?.on === false) return '';
     if (!sp.supported) return `<p class="ib-note">🔔 ${when} با اعلان یادآوری می‌شود. ${/iPad|iPhone|iPod/.test(navigator.userAgent) ? 'روی آیفون، اول سایت را به صفحه اصلی اضافه کنید و از آنجا باز کنید.' : ''}</p>`;
     const st = await sp.status().catch(() => null);
-    if (st) return `<p class="ib-note">🔔 ${when} با اعلان روی این گوشی یادآوری می‌شود${offByMe(type) ? '، ولی این یادآوری را در «تنظیم اعلان‌ها» خاموش کرده‌اید' : ''}. <button type="button" class="rm-link" data-ib="prefs">تنظیم اعلان‌ها</button></p>`;
+    if (st) return `<p class="ib-note">🔔 ${when} با اعلان روی این گوشی یادآوری می‌شود${offByMe(type) ? '، ولی این یادآوری را در «تنظیم اعلان‌ها» خاموش کرده‌اید' : ''}. <button type="button" class="rm-link" data-ib="prefs">⚙ تنظیم اعلان‌ها</button></p>`;
     return `<div class="ib-tools"><button type="button" data-ib="notify">🔔 یادآوری با اعلان روی این گوشی</button></div><p class="ib-note">${when}.</p><div class="ib-msg" aria-live="polite"></div>`;
   }
   async function enableNotify(box) {
