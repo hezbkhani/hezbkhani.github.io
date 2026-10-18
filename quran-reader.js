@@ -146,7 +146,6 @@ body.qr-lock{overflow:hidden}
 .qr-src{margin:18px 0 0;font-size:12.5px;line-height:1.8;color:var(--muted);text-align:center}
 .qr-state{padding:60px 16px;text-align:center;color:var(--muted)}
 .qr.night .qr-end button,.qr.night .qr-row .ctl .qr-chip.on{color:#10201a}
-.qr-bar .qr-set{font:600 15px Vazirmatn,sans-serif;padding:0 12px;border:1px solid #ffffff66}
 .qr-apply{height:46px;margin-top:4px;background:var(--accent);color:#fff;border:0;font:600 16px Vazirmatn,sans-serif}
 .qr.night .qr-apply{color:#10201a}
 .qr-x{display:none}
@@ -190,7 +189,7 @@ body.qr-lock{overflow:hidden}
   el.innerHTML = `
 <div class="qr-bar"><button type="button" data-a="close" aria-label="بستن">✕</button>
 <div class="qr-title"><b id="qrTitle"></b><small id="qrSub"></small></div>
-<button type="button" class="qr-set" data-a="menu" aria-expanded="false">تنظیمات</button>
+<button type="button" data-a="menu" aria-label="تنظیمات" title="تنظیمات" aria-expanded="false">⚙</button>
 <div class="qr-progress" id="qrProgress"></div></div>
 <div class="qr-menu" id="qrMenu">
 <div class="qr-row"><span>اندازه متن</span><span class="ctl"><button type="button" data-a="smaller" aria-label="کوچک‌تر">−</button><button type="button" data-a="bigger" aria-label="بزرگ‌تر">+</button></span></div>
