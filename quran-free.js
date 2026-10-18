@@ -80,6 +80,8 @@ body.qf-lock{overflow:hidden}`;
   let shade = null, tab = 'surah', thenAfter = null;
   async function openSheet() {
     if (shade && shade.isConnected) return;
+    // قلم عربی قرآن‌خوان از همین حالا گرفته می‌شود تا با باز شدن صفحه، متن عربی منتظر قلم نماند.
+    try { document.fonts?.load('1em QuranHafs').catch(() => {}); } catch {}
     try { await getIx(); } catch { return toast('بارگذاری فهرست قرآن انجام نشد. اینترنت را بررسی کنید.'); }
     shade = document.createElement('div'); shade.className = 'qf-shade';
     shade.innerHTML = `<div class="qf-box" role="dialog" aria-modal="true" aria-label="قرآن آزاد"></div>`;
@@ -182,21 +184,21 @@ ${last ? `<div class="qf-card qf-resume"><h3>دفعه قبل تا اینجا خ�
     res.innerHTML = out.join('') || '<p class="qf-note">چیزی پیدا نشد. نام سوره، شماره صفحه یا جزء، یا «سوره:آیه» مثل ۲:۲۵۵ را بنویسید.</p>';
   }
 
-  // متن عربی و ترجمه مکارم همه آیه‌ها (۱۲۰ فایل quran/p، حدود ۳ مگابایت) فقط بار اول جستجوی متن گرفته می‌شود.
+  // متن عربی (از پیش با norm یکسان‌شده) و ترجمه مکارم همه آیه‌ها در یک فایل quran/search.json (ساخت با tools/search/build.js)،
+  // به‌جای ۱۲۰ فایل quran/p؛ فقط بار اول جستجوی متن گرفته می‌شود.
   let all = null;
-  async function allAyahs(onProgress) {
+  async function allAyahs() {
     if (all) return all;
-    let done = 0;
-    const files = await Promise.all(ix.portion.map((_, i) => fetch(`quran/p/${String(i + 1).padStart(3, '0')}.json`).then(r => { if (!r.ok) throw Error(r.status); return r.json(); }).then(d => { onProgress(++done); return d; })));
-    const list = [];
-    files.forEach(d => d.segments.forEach(seg => seg.ayahs.forEach(([ar, tr], j) => list.push({ g: ix.surah[seg.s - 1] + seg.from + j - 1, s: seg.s, n: seg.from + j, ar: norm(ar), tr, trn: norm(tr) }))));
-    return (all = list);
+    const d = await fetch('quran/search.json').then(r => { if (!r.ok) throw Error(r.status); return r.json(); });
+    if (d.ayahs.length !== ix.total) throw Error('search.json');
+    let s = 0;
+    return (all = d.ayahs.map(([ar, tr], g) => { while (s + 1 < ix.surah.length && ix.surah[s + 1] <= g) s++; return { g, s: s + 1, n: g - ix.surah[s] + 1, ar, tr, trn: norm(tr) }; }));
   }
   async function textSearch(v) {
     const res = shade.querySelector('#qfRes'), q = norm(v);
     res.innerHTML = '<p class="qf-note">در حال دریافت متن قرآن برای جستجو…</p>';
     let list;
-    try { list = await allAyahs(n => { if (res.isConnected) res.innerHTML = `<p class="qf-note">در حال دریافت متن قرآن برای جستجو… ${toFa(Math.round(n / ix.portion.length * 100))}٪</p>`; }); }
+    try { list = await allAyahs(); }
     catch { if (res.isConnected) res.innerHTML = '<p class="qf-note">دریافت متن انجام نشد. اینترنت را بررسی کنید.</p>'; return; }
     if (!res.isConnected) return;
     const found = list.filter(a => a.trn.includes(q) || a.ar.includes(q));
@@ -230,7 +232,17 @@ ${last ? `<div class="qf-card qf-resume"><h3>دفعه قبل تا اینجا خ�
     id: 'quranFree', order: 2,
     render(box) { if (!document.querySelector('.sm [data-qf-open]')) box.innerHTML = `<h3>قرآن</h3>${menuItem()}`; }
   });
-  document.addEventListener('click', e => { if (e.target.closest('.sm [data-qf-open]')) { window.siteMenu.close(); setTimeout(openSheet, 280); } });
+  // فهرست قرآن همان لحظه زدن گرفته می‌شود؛ برگه پس از برگشت تاریخچه منو باز می‌شود (وگرنه history.back منو، برگه را هم می‌بست).
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.sm [data-qf-open]')) return;
+    getIx().catch(() => {});
+    let done = false, t = 0;
+    const go = () => { if (done) return; done = true; clearTimeout(t); removeEventListener('popstate', go); setTimeout(openSheet); };
+    const wait = !!history.state?.sm;
+    if (wait) addEventListener('popstate', go);
+    window.siteMenu.close();
+    t = setTimeout(go, wait ? 400 : 0);
+  });
   if (load()) getIx().catch(() => {});
   // openAt(اندیس سراسری آیه): برای جستجوی سایت (search.js)
   window.quranFree = { open: openSheet, menuItem, names: NAMES, alias: ALIAS, openAt: async g => { await getIx(); openAt(g); } };
