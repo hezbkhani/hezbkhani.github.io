@@ -105,5 +105,6 @@
     sec.querySelector('.ins-x').hidden = m === 'always';
     sec.querySelector('#insFiles').hidden = !filesShown();
   }
-  show(); addEventListener('hashchange', show); document.addEventListener('settings:changed', show);
+  // features:changed: ردیف «راهنمای نصب برنامه» در برگه «نمایش امکانات» و «بازگشت به حالت پیش‌فرض» (hide-x.js، features.js)
+  show(); addEventListener('hashchange', show); document.addEventListener('settings:changed', show); document.addEventListener('features:changed', show);
 })();
