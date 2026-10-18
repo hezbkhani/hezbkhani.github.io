@@ -47,7 +47,8 @@
 <nav class="ins-grid">${links.map(l => item(...l)).join('')}<a href="#" id="insIOSLink">آیفون و آیپد<small>افزودن به صفحه اصلی</small></a></nav>
 <div class="ins-box" id="insWarn"><p>این فایل‌ها امضای تجاری ندارند، پس بار اول هشدار می‌بینید:</p><ol><li><strong>اندروید:</strong> اجازه «نصب برنامه‌های ناشناس» را برای مرورگر بدهید.</li><li><strong>ویندوز:</strong> روی «More info» و سپس «Run anyway» بزنید.</li><li><strong>مک:</strong> فایل را باز کنید و برنامه را به Applications بکشید؛ اگر باز نشد، از System Settings ‹ Privacy &amp; Security گزینه «Open Anyway» را بزنید.</li></ol></div>`;
   const anchor = document.getElementById('adminSection');
-  anchor ? anchor.before(sec) : document.querySelector('main').appendChild(sec);
+  // در نمای مدیر، admin.js کادر مدیریت را بالای صفحه برده؛ نصب برنامه نباید بالای آن بنشیند
+  anchor && location.hash !== '#admin' ? anchor.before(sec) : document.querySelector('main').appendChild(sec);
 
   const btn = sec.querySelector('#insBtn'), ios = sec.querySelector('#insIOS');
   if (isIOS) ios.hidden = false;
