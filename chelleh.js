@@ -739,9 +739,10 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     reader.innerHTML = `<div class="cr-bar"><button type="button" data-x="close" aria-label="بستن">✕</button><div class="cr-title"><b></b><small></small></div><button type="button" data-x="menu" aria-label="تنظیمات">⚙</button><span class="cr-prog"></span></div>
 <div class="cr-menu"><div class="cr-row"><span>اندازه متن</span><div><button type="button" data-x="smaller">−</button><button type="button" data-x="bigger">+</button></div></div>
 <div class="cr-row"><span>ترجمه فارسی</span><div><button type="button" data-x="tr-on">نمایش</button><button type="button" data-x="tr-off">پنهان</button></div></div>
-<div class="cr-row"><span>حالت شب</span><div><button type="button" data-x="day">روز</button><button type="button" data-x="night">شب</button></div></div></div>
+<div class="cr-row"><span>حالت شب</span><div><button type="button" data-x="day">روز</button><button type="button" data-x="night">شب</button></div></div>
+<div class="cr-row"><span>دکمه دانلود صوت</span><div><button type="button" data-x="dl-on">نمایش</button><button type="button" data-x="dl-off">پنهان</button></div></div></div>
 <div class="cr-body"></div>
-<div class="cr-aud" hidden><div><span>صوت</span><select aria-label="انتخاب صوت"></select></div><audio controls preload="none"></audio></div>`;
+<div class="cr-aud" hidden><div><span>صوت</span><select aria-label="انتخاب صوت"></select></div><audio controls preload="none"></audio>${window.audioOpt.bar()}</div>`;
     document.body.appendChild(reader);
     reader.addEventListener('click', onReaderClick);
     reader.querySelector('.cr-aud select').addEventListener('change', e => {
@@ -757,7 +758,8 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
   function applyPrefs() {
     reader.style.setProperty('--qs', prefs.size + 'px');
     reader.classList.toggle('night', prefs.night); reader.classList.toggle('no-tr', !prefs.trans);
-    const on = { 'tr-on': prefs.trans, 'tr-off': !prefs.trans, day: !prefs.night, night: prefs.night };
+    const dl = window.audioOpt.get().dl;
+    const on = { 'tr-on': prefs.trans, 'tr-off': !prefs.trans, day: !prefs.night, night: prefs.night, 'dl-on': dl, 'dl-off': !dl };
     reader.querySelectorAll('.cr-row [data-x]').forEach(b => b.classList.toggle('on', !!on[b.dataset.x]));
     write(RKEY, prefs);
   }
@@ -819,6 +821,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     if (x === 'bigger') prefs.size = Math.min(44, prefs.size + 2);
     if (x === 'tr-on' || x === 'tr-off') prefs.trans = x === 'tr-on';
     if (x === 'day' || x === 'night') prefs.night = x === 'night';
+    if (x === 'dl-on' || x === 'dl-off') window.audioOpt.set({ dl: x === 'dl-on' });
     if (x) return applyPrefs();
     if (!current) return;
     if (b.dataset.count || b.dataset.reset) {
