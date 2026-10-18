@@ -59,7 +59,8 @@
 <nav class="ins-grid">${links.map(l => item(...l)).join('')}</nav>
 <div class="ins-box"><p>این فایل‌ها امضای تجاری ندارند، پس بار اول هشدار می‌بینید:</p><ol><li><strong>اندروید:</strong> اجازه «نصب برنامه‌های ناشناس» را برای مرورگر بدهید.</li><li><strong>ویندوز:</strong> روی «More info» و سپس «Run anyway» بزنید.</li><li><strong>مک:</strong> فایل را باز کنید و برنامه را به Applications بکشید؛ اگر باز نشد، از System Settings ‹ Privacy &amp; Security گزینه «Open Anyway» را بزنید.</li></ol></div></div>`;
   const anchor = document.getElementById('adminSection');
-  anchor ? anchor.before(sec) : document.querySelector('main').appendChild(sec);
+  // در نمای مدیر، admin.js کادر مدیریت را بالای صفحه برده؛ نصب برنامه نباید بالای آن بنشیند
+  anchor && location.hash !== '#admin' ? anchor.before(sec) : document.querySelector('main').appendChild(sec);
 
   const btn = sec.querySelector('#insBtn'), guide = sec.querySelector('#insGuide');
   const pick = k => { guide.innerHTML = `<p><strong>${GUIDES[k][0]}:</strong></p>` + GUIDES[k][1]; sec.querySelectorAll('[data-g]').forEach(b => b.classList.toggle('on', b.dataset.g === k)); };
