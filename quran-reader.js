@@ -14,6 +14,23 @@
     ['gharaati', 'قرائتی'], ['khorramshahi', 'خرمشاهی'], ['ayati', 'آیتی'], ['bahrampour', 'بهرام‌پور'],
     ['mojtabavi', 'مجتبوی'], ['safavi', 'صفوی'], ['sadeqi', 'صادقی تهرانی'], ['khorramdel', 'خرمدل'], ['moezzi', 'معزی'], ['riaei', 'ریاعی']
   ];
+  // زبان ترجمه: فارسی پیش‌فرض است؛ بقیه از Tanzil.net در quran/t/<شناسه Tanzil>/NNN.json (ساخت با tools/translations/make.py).
+  // [کد زبان، نام، جهت متن، [[شناسه، مترجم], ...]]؛ اولین مترجم هر زبان پیش‌فرض آن است.
+  const LANGS = [
+    ['fa', 'فارسی', 'rtl', TRANSLATIONS],
+    ['en', 'انگلیسی · English', 'ltr', [['en.sahih', 'Sahih International'], ['en.qarai', 'Ali Quli Qarai'], ['en.pickthall', 'Pickthall'], ['en.yusufali', 'Yusuf Ali'], ['en.shakir', 'Shakir']]],
+    ['de', 'آلمانی · Deutsch', 'ltr', [['de.bubenheim', 'Bubenheim & Elyas'], ['de.aburida', 'Abu Rida'], ['de.khoury', 'Adel Theodor Khoury']]],
+    ['fr', 'فرانسوی · Français', 'ltr', [['fr.hamidullah', 'Muhammad Hamidullah']]],
+    ['es', 'اسپانیایی · Español', 'ltr', [['es.cortes', 'Julio Cortés'], ['es.bornez', 'Raúl González Bórnez'], ['es.garcia', 'Muhammad Isa García']]],
+    ['it', 'ایتالیایی · Italiano', 'ltr', [['it.piccardo', 'Hamza Roberto Piccardo']]],
+    ['ru', 'روسی · Русский', 'ltr', [['ru.kuliev', 'Эльмир Кулиев'], ['ru.osmanov', 'Магомед-Нури Османов'], ['ru.krachkovsky', 'Игнатий Крачковский']]],
+    ['tr', 'ترکی استانبولی · Türkçe', 'ltr', [['tr.diyanet', 'Diyanet İşleri'], ['tr.golpinarli', 'Abdulbaki Gölpınarlı'], ['tr.yazir', 'Elmalılı Hamdi Yazır']]],
+    ['ur', 'اردو', 'rtl', [['ur.jalandhry', 'جالندہری'], ['ur.najafi', 'محمد حسین نجفی'], ['ur.jawadi', 'ذیشان حیدر جوادی']]],
+    ['id', 'اندونزیایی · Indonesia', 'ltr', [['id.indonesian', 'Kementerian Agama RI']]],
+    ['zh', 'چینی · 中文', 'ltr', [['zh.jian', '马坚 (Ma Jian)']]],
+    ['hi', 'هندی · हिन्दी', 'ltr', [['hi.hindi', 'फ़ारूक़ ख़ान और नदवी']]],
+    ['bn', 'بنگالی · বাংলা', 'ltr', [['bn.bengali', 'মুহিউদ্দীন খান']]]
+  ];
   // تفسیر هر آیه: متن تفسیر نمونه (آیت‌الله مکارم شیرازی) با ذکر منبع در quran/tafsir/<سوره>.json است و داخل همین قرآن‌خوان باز می‌شود.
   // اگر فایل سوره‌ای نبود یا بارگذاری نشد، همان آیه در سایت رسمی quran.makarem.ir باز می‌شود.
   const TAFSIR_SRC = 'تفسیر نمونه، آیت‌الله ناصر مکارم شیرازی و جمعی از نویسندگان، از سایت quran.makarem.ir';
@@ -60,12 +77,13 @@
   const toFa = x => String(x).replace(/\d/g, d => fa[d]);
   const toAr = x => String(x).replace(/\d/g, d => arD[d]);
   const BISMILLAH = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';
+  const AO = window.audioOpt;
   const KEY = 'quranReader';
   const store = {
     get() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } },
     set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} }
   };
-  const prefs = Object.assign({ size: 27, trans: true, night: false, tr: 'makarem', tafsir: true, reciter: 'abdulbasit', voice: 'hedayatfar', mode: 'ar' }, store.get());
+  const prefs = Object.assign({ size: 27, trans: true, night: false, tr: 'makarem', lang: 'fa', trx: {}, tafsir: true, reciter: 'abdulbasit', voice: 'hedayatfar', mode: 'ar' }, store.get());
   const save = () => store.set(prefs);
 
   const css = `
@@ -102,6 +120,7 @@ body.qr-lock{overflow:hidden}
 .qr-num{color:var(--accent);white-space:nowrap}
 .qr-fa{margin:8px 0 0;font-size:max(15px,calc(var(--qs)*.6));line-height:2;color:var(--tr);text-align:justify}
 .qr-fa i{font-style:normal;color:var(--muted);font-size:.85em;margin-left:4px}
+.qr-fa[dir=ltr] i{margin:0 4px 0 0}
 .qr-tf{display:inline-block;margin-right:6px;padding:0 8px;border:1px solid var(--line);color:var(--accent);font-size:.8em;line-height:1.9;text-decoration:none;white-space:nowrap}
 .qr-tf:hover{background:var(--line)}
 .qr.notf .qr-tf{display:none}
@@ -175,21 +194,24 @@ body.qr-lock{overflow:hidden}
 <div class="qr-progress" id="qrProgress"></div></div>
 <div class="qr-menu" id="qrMenu">
 <div class="qr-row"><span>اندازه متن</span><span class="ctl"><button type="button" data-a="smaller" aria-label="کوچک‌تر">−</button><button type="button" data-a="bigger" aria-label="بزرگ‌تر">+</button></span></div>
-<div class="qr-row"><span>ترجمه فارسی</span><span class="ctl"><button type="button" class="qr-chip" data-a="trans-on">نمایش</button><button type="button" class="qr-chip" data-a="trans-off">فقط عربی</button></span></div>
+<div class="qr-row"><span>ترجمه</span><span class="ctl"><button type="button" class="qr-chip" data-a="trans-on">نمایش</button><button type="button" class="qr-chip" data-a="trans-off">فقط عربی</button></span></div>
 <div class="qr-row"><span>دکمه تفسیر</span><span class="ctl"><button type="button" class="qr-chip" data-a="tf-on">نمایش</button><button type="button" class="qr-chip" data-a="tf-off">پنهان</button></span></div>
 <div class="qr-row"><span>رنگ صفحه</span><span class="ctl"><button type="button" class="qr-chip" data-a="day">روز</button><button type="button" class="qr-chip" data-a="night">شب</button></span></div>
-<div class="qr-row qr-x"><span>مترجم</span><select id="qrTr" aria-label="ترجمه">${TRANSLATIONS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
+<div class="qr-row qr-x"><span>زبان ترجمه</span><select id="qrLang" aria-label="زبان ترجمه">${LANGS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
+<div class="qr-row qr-x"><span>مترجم</span><select id="qrTr" aria-label="مترجم"></select></div>
 <div class="qr-row qr-x qr-sec">صوت</div>
 <div class="qr-row qr-x"><span>پخش</span><span class="ctl"><button type="button" class="qr-chip" data-a="mode-ar">تلاوت</button><button type="button" class="qr-chip" data-a="mode-both">تلاوت + ترجمه</button><button type="button" class="qr-chip" data-a="mode-fa">ترجمه</button></span></div>
 <div class="qr-row qr-x"><span>قاری</span><select id="qrReciter" aria-label="قاری">${RECITERS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
 <div class="qr-row qr-x"><span>ترجمه گویا</span><select id="qrVoice" aria-label="ترجمه گویا">${VOICES.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
+<div class="qr-row qr-x"><span>سرعت پخش</span><select id="qrRate" data-au-rate aria-label="سرعت پخش">${AO.RATES.map(r => `<option value="${r}">${AO.num(r)}</option>`).join('')}</select></div>
+<div class="qr-row qr-x"><span>دکمه دانلود صوت</span><span class="ctl"><button type="button" class="qr-chip" data-a="dl-on">نمایش</button><button type="button" class="qr-chip" data-a="dl-off">پنهان</button></span></div>
 <button type="button" class="qr-apply" data-a="apply">اعمال تنظیمات</button>
 </div>
 <div class="qr-body" id="qrBody"></div>
 <div class="qr-tfs" id="qrTfs" data-a="tfclose"><div class="qr-tfs-box" role="dialog" aria-modal="true" aria-labelledby="qrTfsTitle"><div class="qr-tfs-head"><b id="qrTfsTitle"></b><button type="button" data-a="tfclose" aria-label="بستن تفسیر">✕</button></div><div class="qr-tfs-body" id="qrTfsBody"></div></div></div>
 <div class="qr-player" id="qrPlayer"><button type="button" class="qr-play" data-a="play" aria-label="پخش">▶</button>
 <div class="qr-now" id="qrNow"><b>پخش صوت</b>از اولین آیه، یا روی شماره یک آیه بزنید</div>
-<button type="button" data-a="next" aria-label="آیه بعد">⏭</button><button type="button" data-a="prev" aria-label="آیه قبل">⏮</button></div>`;
+<button type="button" data-a="next" aria-label="آیه بعد">⏭</button><button type="button" data-a="prev" aria-label="آیه قبل">⏮</button><button type="button" data-a="dl" aria-label="دانلود صوت این آیه" hidden>⬇</button></div>`;
   document.body.appendChild(el);
   const $ = id => el.querySelector('#' + id);
   const menu = $('qrMenu'), body = $('qrBody');
@@ -208,14 +230,33 @@ body.qr-lock{overflow:hidden}
     el.querySelector('[data-a="day"]').classList.toggle('on', !prefs.night);
     el.querySelector('[data-a="night"]').classList.toggle('on', prefs.night);
     for (const m of ['ar', 'both', 'fa']) el.querySelector(`[data-a="mode-${m}"]`).classList.toggle('on', prefs.mode === m);
-    $('qrTr').value = prefs.tr; $('qrReciter').value = prefs.reciter; $('qrVoice').value = prefs.voice;
+    fillTr(); $('qrLang').value = lang()[0]; $('qrReciter').value = prefs.reciter; $('qrVoice').value = prefs.voice;
+    applyAudioOpt();
   }
+  // سرعت پخش و دکمه دانلود تنظیم مشترک همه صوت‌های سایت است (audioOpt در app.js).
+  function applyAudioOpt() {
+    const o = AO.get();
+    $('qrRate').value = o.rate;
+    el.querySelector('[data-a="dl-on"]').classList.toggle('on', o.dl);
+    el.querySelector('[data-a="dl-off"]').classList.toggle('on', !o.dl);
+    el.querySelector('[data-a="dl"]').hidden = !o.dl;
+  }
+  document.addEventListener('audioopt', applyAudioOpt);
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
 
   let items = [];
-  const trName = () => (TRANSLATIONS.find(t => t[0] === activeTr()) || TRANSLATIONS[0])[1];
-  const activeTr = () => extras() && TRANSLATIONS.some(t => t[0] === prefs.tr) ? prefs.tr : 'makarem';
+  const lang = () => (extras() && LANGS.find(l => l[0] === prefs.lang)) || LANGS[0];
+  const activeTr = () => {
+    const [k, , , list] = lang(), want = k === 'fa' ? prefs.tr : (prefs.trx || {})[k];
+    return extras() && list.some(t => t[0] === want) ? want : list[0][0];
+  };
+  const trName = () => (lang()[3].find(t => t[0] === activeTr()) || lang()[3][0])[1];
+  function fillTr() {
+    const sel = $('qrTr');
+    sel.innerHTML = lang()[3].map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join('');
+    sel.value = activeTr();
+  }
 
   function render(data) {
     let count = 0;
@@ -281,7 +322,13 @@ body.qr-lock{overflow:hidden}
       } catch { return; }
     }
     if (want !== current || list.length !== items.length) return;
-    fas.forEach((p, i) => { p.textContent = list[i]; });
+    const [lk, , dir] = lang();
+    fas.forEach((p, i) => {
+      p.textContent = list[i];
+      const box = p.parentNode;
+      box.dir = dir; box.lang = lk;
+      box.querySelector('i').textContent = `(${dir === 'rtl' ? toFa(items[i].n) : items[i].n})`;
+    });
     const src = $('qrTrSrc'); if (src) src.textContent = trName();
   }
 
@@ -432,6 +479,13 @@ body.qr-lock{overflow:hidden}
       if (playing) playAt(pos);
       return;
     }
+    if (a === 'dl-on' || a === 'dl-off') return AO.set({ dl: a === 'dl-on' });
+    if (a === 'dl') {
+      // صوتی که الان پخش می‌شود؛ وگرنه تلاوت (یا ترجمه گویای) آیه انتخاب‌شده یا اولین آیه
+      const cur = audio.getAttribute('src');
+      const t = !cur && items[Math.max(pos, 0)] && tracksFor(items[Math.max(pos, 0)]).pop();
+      return AO.download(cur ? cur.split('#')[0] : t && t[0]);
+    }
     if (a === 'play') return playing ? pauseAudio() : resumeOrStart();
     if (a === 'next') return playAt(Math.min(items.length - 1, pos + 1));
     if (a === 'prev') return playAt(Math.max(0, pos - 1));
@@ -463,6 +517,7 @@ body.qr-lock{overflow:hidden}
   // ---------- پخش صوت ----------
   const audio = new Audio(), nextAudio = new Audio();
   audio.preload = 'auto'; nextAudio.preload = 'auto';
+  AO.track(audio);
   let pos = -1, step = 0, playing = false, queue = [], qi = 0, srcIdx = 0, wait = 0;
   // سرورهایی که در این بازدید جواب ندادند به آخر صف می‌روند تا آیه‌های بعدی معطل‌شان نشوند.
   const failed = {};
@@ -470,10 +525,15 @@ body.qr-lock{overflow:hidden}
   const byHealth = u => u.map((x, i) => [x, i]).sort((a, b) => ((failed[host(a[0])] || 0) - (failed[host(b[0])] || 0)) || a[1] - b[1]).map(x => x[0]);
   const LOAD_TIMEOUT = 12000;
 
-  ['qrTr', 'qrReciter', 'qrVoice'].forEach(id => $(id).addEventListener('change', e => {
-    const key = { qrTr: 'tr', qrReciter: 'reciter', qrVoice: 'voice' }[id];
-    prefs[key] = e.target.value; save();
-    if (key === 'tr') loadTranslation(); else if (playing) playAt(pos);
+  $('qrLang').addEventListener('change', e => { prefs.lang = e.target.value; save(); fillTr(); loadTranslation(); });
+  $('qrTr').addEventListener('change', e => {
+    const k = lang()[0];
+    if (k === 'fa') prefs.tr = e.target.value; else prefs.trx = Object.assign({}, prefs.trx, { [k]: e.target.value });
+    save(); loadTranslation();
+  });
+  ['qrReciter', 'qrVoice'].forEach(id => $(id).addEventListener('change', e => {
+    prefs[{ qrReciter: 'reciter', qrVoice: 'voice' }[id]] = e.target.value; save();
+    if (playing) playAt(pos);
   }));
 
   function arUrls(s, n) {
