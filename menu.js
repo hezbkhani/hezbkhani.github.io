@@ -43,7 +43,7 @@ body.sm-lock{overflow:hidden}
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
   const shade = document.createElement('div'); shade.className = 'sm-shade';
   const nav = document.createElement('nav'); nav.className = 'sm'; nav.setAttribute('aria-label', 'منو'); nav.setAttribute('aria-hidden', 'true');
-  nav.innerHTML = `<div class="sm-head"><img src="icon-192.png" alt=""><b>نوران</b><button type="button" data-sm-close aria-label="بستن">✕</button></div><div class="sm-body"></div>`;
+  nav.innerHTML = `<div class="sm-head"><img src="icon-192.png" alt=""><b>نوران</b><button type="button" data-sm-search aria-label="جستجو" hidden><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button><button type="button" data-sm-close aria-label="بستن">✕</button></div><div class="sm-body"></div>`;
   document.body.append(btn, shade, nav);
   const body = nav.querySelector('.sm-body');
 
@@ -150,6 +150,8 @@ body.sm-lock{overflow:hidden}
     section(s) { const i = sections.findIndex(x => x.id === s.id); if (i >= 0) sections[i] = s; else sections.push(s); if (nav.classList.contains('show')) render(); },
     open, close,
     refresh() { if (nav.classList.contains('show')) render(); },
+    // برای جستجو (search.js): همه گزینه‌های منو، ساخته‌شده در همان جای خودشان (بی‌آنکه منو باز شود)، تا با زدن دقیقاً همان کار را بکنند.
+    items() { if (!nav.classList.contains('show')) render(); return body; },
     // نقطه طلایی روی دکمه منو؛ هر بخش با کلید خودش (مثلاً 'fb' برای پاسخ تازه به پیشنهاد) روشن یا خاموشش می‌کند.
     dot(on, key = 'chl') { dots[key] = !!on; on = Object.values(dots).some(Boolean); let d = btn.querySelector('.sm-dot'); if (on && !d) { d = document.createElement('i'); d.className = 'sm-dot'; btn.appendChild(d); } else if (!on && d) d.remove(); }
   };
