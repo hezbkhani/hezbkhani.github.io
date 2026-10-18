@@ -33,8 +33,13 @@
   ];
   // تفسیر هر آیه: متن تفسیر نمونه (آیت‌الله مکارم شیرازی) با ذکر منبع در quran/tafsir/<سوره>.json است و داخل همین قرآن‌خوان باز می‌شود.
   // اگر فایل سوره‌ای نبود یا بارگذاری نشد، همان آیه در سایت رسمی quran.makarem.ir باز می‌شود.
-  const TAFSIR_SRC = 'تفسیر نمونه، آیت‌الله ناصر مکارم شیرازی و جمعی از نویسندگان، از سایت quran.makarem.ir';
-  const tafsirUrl = (s, n) => `https://quran.makarem.ir/fa/interpretation?sura=${s}&verse=${n}`;
+  // تفسیر دوم: تفسیر نور (حجت‌الاسلام محسن قرائتی) در quran/tafsir-noor/ به همان قالب؛ ساخت با tools/tafsir/build_noor.py. هر کس در تنظیمات انتخاب می‌کند.
+  const TAFSIRS = {
+    nemooneh: { name: 'تفسیر نمونه', short: 'نمونه', dir: 'quran/tafsir', src: 'تفسیر نمونه، آیت‌الله ناصر مکارم شیرازی و جمعی از نویسندگان، از سایت quran.makarem.ir', url: (s, n) => `https://quran.makarem.ir/fa/interpretation?sura=${s}&verse=${n}` },
+    noor: { name: 'تفسیر نور', short: 'نور (قرائتی)', dir: 'quran/tafsir-noor', src: 'تفسیر نور، حجت‌الاسلام محسن قرائتی (مرکز فرهنگی درس‌هایی از قرآن)، از داده‌های Furqan Apps ‏(github.com/app-furqan/quran-app-data، مجوز CC BY-ND 4.0)', url: null }
+  };
+  const tafsirSrc = () => TAFSIRS[prefs.tafsirSrc] || TAFSIRS.nemooneh;
+  const tafsirUrl = (s, n) => TAFSIRS.nemooneh.url(s, n);
   // فایل صوتی هر آیه از چند سرور: everyayah.com، verses.quran.com، cdn.islamic.network (alquran.cloud)
   // و آینه quranicaudio. اگر یکی جواب نداد یا کند بود سراغ بعدی می‌رود.
   // نسخه‌های ۶۴ کیلوبیتی تا جای ممکن، تا با اینترنت کند هم زود شروع شود.
@@ -83,7 +88,7 @@
     get() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } },
     set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} }
   };
-  const prefs = Object.assign({ size: 27, trans: true, night: false, tr: 'makarem', lang: 'fa', trx: {}, tafsir: true, reciter: 'abdulbasit', voice: 'hedayatfar', mode: 'ar' }, store.get());
+  const prefs = Object.assign({ size: 27, trans: true, night: false, tr: 'makarem', lang: 'fa', trx: {}, tafsir: true, tafsirSrc: 'nemooneh', intro: true, reciter: 'abdulbasit', voice: 'hedayatfar', mode: 'ar' }, store.get());
   const save = () => store.set(prefs);
 
   const css = `
@@ -113,6 +118,9 @@ body.qr-lock{overflow:hidden}
 .qr-sura{margin:22px 0 6px;padding:12px 10px 8px;text-align:center;border:1px solid var(--gold);outline:3px double var(--gold);outline-offset:3px;background:var(--card)}
 .qr-sura h3{margin:0;font:normal 30px/1.6 QuranHafs,serif;color:var(--accent)}
 .qr-sura small{display:block;font-size:13px;color:var(--muted)}
+.qr-intro{margin-top:6px;height:34px;padding:0 14px;background:transparent;color:var(--accent);border:1px solid var(--line);font:600 14px Vazirmatn,sans-serif}
+.qr-intro:hover{background:var(--line)}
+.qr.noin .qr-intro,.qr.noin .qr-in-row{display:none}
 .qr-bism{margin:16px 0 4px;text-align:center;font:normal calc(var(--qs)*1.05)/2 QuranHafs,serif}
 .qr-ayah{padding:14px 2px;border-bottom:1px solid var(--line)}
 .qr-ayah:last-child{border-bottom:0}
@@ -123,7 +131,7 @@ body.qr-lock{overflow:hidden}
 .qr-fa[dir=ltr] i{margin:0 4px 0 0}
 .qr-tf{display:inline-block;margin-right:6px;padding:0 8px;border:1px solid var(--line);color:var(--accent);font-size:.8em;line-height:1.9;text-decoration:none;white-space:nowrap}
 .qr-tf:hover{background:var(--line)}
-.qr.notf .qr-tf{display:none}
+.qr.notf .qr-tf,.qr.notf .qr-tfsrc{display:none}
 .qr-tfs{position:fixed;inset:0;z-index:3;display:none;align-items:flex-end;justify-content:center;background:#0006}
 .qr-tfs.show{display:flex}
 .qr-tfs-box{display:flex;flex-direction:column;width:100%;max-width:760px;max-height:86vh;background:var(--card);color:var(--text);border-top:3px solid var(--gold);box-shadow:0 -8px 30px #0004}
@@ -196,6 +204,8 @@ body.qr-lock{overflow:hidden}
 <div class="qr-row"><span>اندازه متن</span><span class="ctl"><button type="button" data-a="smaller" aria-label="کوچک‌تر">−</button><button type="button" data-a="bigger" aria-label="بزرگ‌تر">+</button></span></div>
 <div class="qr-row"><span>ترجمه</span><span class="ctl"><button type="button" class="qr-chip" data-a="trans-on">نمایش</button><button type="button" class="qr-chip" data-a="trans-off">فقط عربی</button></span></div>
 <div class="qr-row"><span>دکمه تفسیر</span><span class="ctl"><button type="button" class="qr-chip" data-a="tf-on">نمایش</button><button type="button" class="qr-chip" data-a="tf-off">پنهان</button></span></div>
+<div class="qr-row qr-tfsrc"><span>کدام تفسیر</span><span class="ctl">${Object.entries(TAFSIRS).map(([k, t]) => `<button type="button" class="qr-chip" data-a="tfs-${k}">${t.short}</button>`).join('')}</span></div>
+<div class="qr-row qr-in-row"><span>معرفی سوره</span><span class="ctl"><button type="button" class="qr-chip" data-a="in-on">نمایش</button><button type="button" class="qr-chip" data-a="in-off">پنهان</button></span></div>
 <div class="qr-row"><span>رنگ صفحه</span><span class="ctl"><button type="button" class="qr-chip" data-a="day">روز</button><button type="button" class="qr-chip" data-a="night">شب</button></span></div>
 <div class="qr-row qr-x"><span>زبان ترجمه</span><select id="qrLang" aria-label="زبان ترجمه">${LANGS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>
 <div class="qr-row qr-x"><span>مترجم</span><select id="qrTr" aria-label="مترجم"></select></div>
@@ -223,8 +233,14 @@ body.qr-lock{overflow:hidden}
     el.classList.toggle('flow', !prefs.trans);
     el.classList.toggle('night', prefs.night);
     el.classList.toggle('notf', !prefs.tafsir);
+    // معرفی سوره: اگر مدیر خاموشش کرده باشد (site_settings › quran.intro) نه دکمه دیده می‌شود نه تنظیمش؛ وگرنه هر کس می‌تواند پنهانش کند.
+    el.classList.toggle('noin', !introAllowed() || !prefs.intro);
+    el.querySelector('.qr-in-row').hidden = !introAllowed();
+    el.querySelector('[data-a="in-on"]').classList.toggle('on', prefs.intro);
+    el.querySelector('[data-a="in-off"]').classList.toggle('on', !prefs.intro);
     el.querySelector('[data-a="tf-on"]').classList.toggle('on', prefs.tafsir);
     el.querySelector('[data-a="tf-off"]').classList.toggle('on', !prefs.tafsir);
+    for (const k in TAFSIRS) el.querySelector(`[data-a="tfs-${k}"]`).classList.toggle('on', tafsirSrc() === TAFSIRS[k]);
     el.querySelector('[data-a="trans-on"]').classList.toggle('on', prefs.trans);
     el.querySelector('[data-a="trans-off"]').classList.toggle('on', !prefs.trans);
     el.querySelector('[data-a="day"]').classList.toggle('on', !prefs.night);
@@ -268,16 +284,16 @@ body.qr-lock{overflow:hidden}
       const bism = seg.from === 1 && seg.s !== 1 && seg.s !== 9 ? `<div class="qr-bism">${BISMILLAH}</div>` : '';
       const ayahs = seg.ayahs.map(([a, t], i) => {
         const n = seg.from + i;
-        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<span class="qr-num" data-a="ayah">${toAr(n)}</span> </p><p class="qr-fa"><i>(${toFa(n)})</i><span>${esc(t)}</span><a class="qr-tf" data-a="tafsir" data-s="${seg.s}" data-n="${n}" href="${tafsirUrl(seg.s, n)}" target="_blank" rel="noopener" title="تفسیر نمونه این آیه">تفسیر</a></p></div>`;
+        return `<div class="qr-ayah" id="qa-${seg.s}-${n}"><p class="qr-ar">${esc(a)}&nbsp;<span class="qr-num" data-a="ayah">${toAr(n)}</span> </p><p class="qr-fa"><i>(${toFa(n)})</i><span>${esc(t)}</span><a class="qr-tf" data-a="tafsir" data-s="${seg.s}" data-n="${n}" href="${tafsirUrl(seg.s, n)}" target="_blank" rel="noopener" title="تفسیر این آیه">تفسیر</a></p></div>`;
       }).join('');
-      return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small></div>${bism}<div class="qr-seg">${ayahs}</div>`;
+      return `<div class="qr-sura"><h3>سُورَةُ ${esc(seg.ar.replace(/^ال/, 'ٱل'))}</h3><small>سوره ${esc(seg.fa)} · ${range}</small><button type="button" class="qr-intro" data-a="intro" data-s="${seg.s}">معرفی سوره</button></div>${bism}<div class="qr-seg">${ayahs}</div>`;
     }).join('');
     $('qrSub').textContent = current.range ? `${current.sub ? current.sub + ' · ' : ''}${toFa(count)} آیه` : `${typeof hizbLabel === 'function' && hizbLabel(current.index) ? `حزب ${toFa(current.index + 1)} · ` : ''}${toFa(count)} آیه`;
     const end = current.range ? `<p>${esc(current.endText || 'پایان. قبول باشد.')}</p>${current.onEnd ? `<button type="button" data-a="rangeEnd">${esc(current.endButton || 'خواندم')}</button>` : ''}${current.note ? `<p class="qr-note">${esc(current.note)}</p>` : ''}`
       : '<p>پایان سهم امروز. قبول باشد.</p><button type="button" data-a="report">قرائت کردم؛ ثبت گزارش</button>';
     const nv = current.nav, navHtml = !nv ? '' : `<div class="qr-pnav">${nv.prev ? `<button type="button" data-a="pprev">→ ${esc(nv.prev)}</button>` : '<span></span>'}${nv.menu ? `<button type="button" class="qr-pmenu" data-a="pmenu">${esc(nv.menu)}</button>` : ''}${nv.next ? `<button type="button" data-a="pnext">${esc(nv.next)} ←</button>` : '<span></span>'}</div>`;
     body.innerHTML = navHtml + html + `<div class="qr-end">${end}${navHtml}
-<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud · ترجمه ریاعی و صدای بهروز رضوی: quranmehr.ir (موسسه پیامبر مهر و رحمت) · تحدیر معتز آقایی: archive.org</span></p></div>`;
+<p class="qr-src">متن عربی: مصحف مجمع ملک فهد (روایت حفص) · ترجمه: <span id="qrTrSrc">آیت‌الله مکارم شیرازی</span> (Tanzil.net) · تفسیر: quran.makarem.ir و تفسیر نور (Furqan Apps)<span class="qr-xi"> · صوت: everyayah.com، quran.com و alquran.cloud · ترجمه ریاعی و صدای بهروز رضوی: quranmehr.ir (موسسه پیامبر مهر و رحمت) · تحدیر معتز آقایی: archive.org</span></p></div>`;
     items = [...body.querySelectorAll('.qr-ayah')].map(e => { const [, s, n] = e.id.split('-').map(Number); return { s, n, e }; });
     el.scrollTop = 0;
     const f = current.focus != null && items.find(it => gIndex(it) === current.focus);
@@ -415,11 +431,12 @@ body.qr-lock{overflow:hidden}
   const tafsirCache = {};
   const getJson = u => tafsirCache[u] || (tafsirCache[u] = fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(err => { delete tafsirCache[u]; throw err; }));
   async function tafsirFor(s, n) {
-    let d = await getJson(`quran/tafsir/${s}.json`);
+    const dir = tafsirSrc().dir;
+    let d = await getJson(`${dir}/${s}.json`);
     if (d.parts) {
       const part = d.parts.find(p => n >= p.from && n <= p.to);
       if (!part) return null;
-      d = await getJson(`quran/tafsir/${part.file}`);
+      d = await getJson(`${dir}/${part.file}`);
     }
     return (d.segments || []).find(g => n >= g.from && n <= g.to) || null;
   }
@@ -427,20 +444,40 @@ body.qr-lock{overflow:hidden}
     .map(p => p.startsWith('## ') ? `<h4>${esc(p.slice(3))}</h4>` : `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
   let tafsirReq = 0;
   async function openTafsir(s, n) {
-    const req = ++tafsirReq, box = $('qrTfsBody'), link = tafsirUrl(s, n);
-    $('qrTfsTitle').innerHTML = `تفسیر نمونه<small>سوره ${esc(FA_NAME[s] || toFa(s))} · آیه ${toFa(n)}</small>`;
+    const req = ++tafsirReq, box = $('qrTfsBody'), t = tafsirSrc(), link = t.url ? t.url(s, n) : '';
+    const more = link ? `<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a>` : '';
+    $('qrTfsTitle').innerHTML = `${t.name}<small>سوره ${esc(FA_NAME[s] || toFa(s))} · آیه ${toFa(n)}</small>`;
     box.innerHTML = '<div class="qr-state">در حال بارگذاری تفسیر…</div>';
     $('qrTfs').classList.add('show');
     $('qrTfs').querySelector('button').focus();
     let seg = null;
     try { seg = await tafsirFor(s, n); } catch {}
     if (req !== tafsirReq) return;
-    if (!seg || !String(seg.text || '').trim()) { box.innerHTML = `<div class="qr-state">متن تفسیر این آیه اینجا بارگذاری نشد.<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a></div>`; return; }
+    if (!seg || !String(seg.text || '').trim()) { box.innerHTML = `<div class="qr-state">متن تفسیر این آیه اینجا بارگذاری نشد.${more}</div>`; return; }
     const range = seg.from === seg.to ? `آیه ${toFa(seg.from)}` : `آیه‌های ${toFa(seg.from)} تا ${toFa(seg.to)}`;
-    $('qrTfsTitle').innerHTML = `${esc(seg.title || 'تفسیر نمونه')}<small>سوره ${esc(FA_NAME[s] || toFa(s))} · ${range}</small>`;
+    $('qrTfsTitle').innerHTML = `${esc(t.url && seg.title || t.name)}<small>سوره ${esc(FA_NAME[s] || toFa(s))} · ${range}</small>`;
     // عنوان بخش در سربرگ آمده؛ اگر متن با همان عنوان شروع شود، تکرارش نمی‌کنیم.
     const text = seg.title && seg.text.startsWith(`## ${seg.title}\n`) ? seg.text.slice(seg.title.length + 4) : seg.text;
-    box.innerHTML = tafsirHtml(text) + `<p class="qr-tfs-src">منبع: ${esc(TAFSIR_SRC)}<br><a href="${link}" target="_blank" rel="noopener">مشاهده در سایت تفسیر ↖</a></p>`;
+    box.innerHTML = tafsirHtml(text) + `<p class="qr-tfs-src">منبع: ${esc(t.src)}${more}</p>`;
+    box.scrollTop = 0;
+  }
+  // ---------- معرفی سوره ----------
+  // quran/intro.json: {src, surahs: [{place, ayat, order?, about, virtue?}]} به ترتیب سوره‌ها؛ فقط وقتی دکمه زده شود بارگذاری می‌شود.
+  function introAllowed() { return window.siteSettings?.quran?.intro !== false; }
+  document.addEventListener('settings:changed', applyPrefs);
+  async function openIntro(s) {
+    const req = ++tafsirReq, box = $('qrTfsBody');
+    $('qrTfsTitle').innerHTML = `معرفی سوره ${esc(FA_NAME[s] || toFa(s))}`;
+    box.innerHTML = '<div class="qr-state">در حال بارگذاری…</div>';
+    $('qrTfs').classList.add('show');
+    $('qrTfs').querySelector('button').focus();
+    let d = null;
+    try { d = await getJson('quran/intro.json'); } catch {}
+    if (req !== tafsirReq) return;
+    const it = d?.surahs?.[s - 1];
+    if (!it) { box.innerHTML = '<div class="qr-state">معرفی این سوره بارگذاری نشد. اینترنت را بررسی کنید.</div>'; return; }
+    $('qrTfsTitle').innerHTML = `معرفی سوره ${esc(FA_NAME[s] || toFa(s))}<small>${esc(it.place)} · ${toFa(it.ayat)} آیه${it.order ? ` · ${toFa(it.order)}مین سوره در ترتیب نزول` : ''}</small>`;
+    box.innerHTML = `<h4>محتوای سوره</h4>${tafsirHtml(it.about)}${it.virtue ? `<h4>فضیلت سوره</h4>${tafsirHtml(it.virtue)}` : ''}<p class="qr-tfs-src">منبع: ${esc(d.src)}</p>`;
     box.scrollTop = 0;
   }
   function closeTafsir() { tafsirReq++; $('qrTfs').classList.remove('show'); }
@@ -464,6 +501,7 @@ body.qr-lock{overflow:hidden}
     if (!b) return;
     const a = b.dataset.a;
     if (a === 'tafsir') { e.preventDefault(); return openTafsir(+b.dataset.s, +b.dataset.n); }
+    if (a === 'intro') return openIntro(+b.dataset.s);
     if (a === 'tfclose') { if (b.id !== 'qrTfs' || e.target === b) closeTafsir(); return; }
     if (a === 'close') return close();
     if (a === 'menu') { const s = menu.classList.toggle('show'); b.setAttribute('aria-expanded', s); return; }
@@ -508,6 +546,9 @@ body.qr-lock{overflow:hidden}
       if (a === 'night') prefs.night = true;
       if (a === 'tf-on') prefs.tafsir = true;
       if (a === 'tf-off') prefs.tafsir = false;
+      if (a.startsWith('tfs-')) prefs.tafsirSrc = a.slice(4);
+      if (a === 'in-on') prefs.intro = true;
+      if (a === 'in-off') prefs.intro = false;
       if (a.startsWith('mode-')) prefs.mode = a.slice(5);
       applyPrefs();
     });
