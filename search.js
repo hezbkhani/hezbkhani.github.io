@@ -275,7 +275,7 @@ body.srch-lock{overflow:hidden}`;
       if (m.group === 'duas' && duaTitles.some(t => tight(m.title).includes(t))) return; // همان دعا از فهرست بالا
       pool[m.group].push([score(m.title, m.keys, qw), item(act(() => runMenu(m.loc)), esc(m.ic), mark(m.title, q), esc(m.sub))]);
     });
-    extra.forEach(x => { if (pool[x.group]) pool[x.group].push([score(x.title, [x.title, x.sub, x.keys].join(' '), qw), item(act(x.run), esc(x.ic || '•'), mark(x.title, q), esc(x.sub || ''))]); });
+    extra.forEach(x => { if (pool[x.group] && (!x.on || x.on())) pool[x.group].push([score(x.title, [x.title, x.sub, x.keys].join(' '), qw), item(act(x.run), esc(x.ic || '•'), mark(x.title, q), esc(x.sub || ''))]); });
     html.push(group('duas', rank(pool.duas)), group('courses', rank(pool.courses)), group('sections', rank(pool.sections)));
     if (!direct.length) html.push(ayahHtml);
     const body = html.join('');
@@ -313,7 +313,7 @@ body.srch-lock{overflow:hidden}`;
 
   window.siteSearch = {
     open,
-    // بخش‌های دیگر: siteSearch.add({ group: 'duas'|'courses'|'sections', title, sub, ic, keys, run })
+    // بخش‌های دیگر: siteSearch.add({ group: 'duas'|'courses'|'sections', title, sub, ic, keys, run, on }) ؛ on() اختیاری: فقط وقتی true است دیده می‌شود
     add(x) { if (x && x.title && typeof x.run === 'function') extra.push(x); }
   };
 })();

@@ -150,4 +150,7 @@
       return `<button type="button" class="sm-item" data-mf-menu><span class="sm-ic">📚</span><span>مفاتیح: همه ادعیه و زیارات<small>${ALL.length.toLocaleString('fa-IR')} دعا و زیارت، با ترجمه فارسی</small></span><span class="sm-go">‹</span></button>`;
     }
   };
+  // متن‌های مفاتیح در جستجوی سایت (search.js) هم پیدا می‌شوند، فقط وقتی همین امکان روشن است؛ متن‌های چله‌ها را خود search.js دارد.
+  const inSearch = () => { if (!window.siteSearch) return setTimeout(inSearch, 300); ALL.forEach(([k, t, sub]) => { if (!['kumayl', 'samat', 'tavassul', 'ahd', 'mashlool', 'kisa', 'ashura', 'alyasin'].includes(k)) window.siteSearch.add({ group: 'duas', title: t, sub, ic: '📿', keys: 'مفاتیح دعا زیارت', run: () => window.chlRead?.(k), on: () => window.features?.shown(ID) }); }); };
+  inSearch();
 })();
