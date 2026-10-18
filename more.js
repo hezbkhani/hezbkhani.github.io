@@ -1,4 +1,4 @@
-// دسته «بیشتر» در ته منوی سه‌خط: جای بخش‌های جانبی سایت (فعلاً اذان و اقامه).
+// دسته «بیشتر» در ته منوی سه‌خط: جای بخش‌های جانبی سایت (اذان و اقامه، منتهی‌الآمال، گزیده غررالحکم و رساله حقوق).
 // بخش تازه: window.siteMore.add({ id, icon, title, sub, open }) ؛ گزینه‌ها به همان ترتیب اضافه شدن می‌آیند.
 // اذان در همان خواننده متن چله‌ها باز می‌شود (window.chlRead در chelleh.js، متن chelleh/azan.json): عربی، ترجمه فارسی و زبان‌های دیگر، و صوت مؤذن‌های مختلف.
 // پیوند ?azan=1 هم اذان را باز می‌کند.
@@ -19,6 +19,8 @@
 
   const openAzan = () => window.chlRead?.('azan');
   add({ id: 'azan', icon: '🕌', title: 'اذان و اقامه', sub: 'صوت مؤذن‌های مختلف، متن عربی و ترجمه', open: openAzan });
+  // کتاب‌های این دسته در books.js (more: true) تعریف شده‌اند و همان برگه کتاب را باز می‌کنند.
+  (window.books?.more || []).forEach(b => add({ id: 'book-' + b.key, icon: b.icon, title: b.title, sub: b.sub, open: () => window.books.open(b.key) }));
 
   const q = new URLSearchParams(location.search);
   if (q.get('azan')) {
