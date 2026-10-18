@@ -53,15 +53,23 @@ body.mf-lock{overflow:hidden}`;
   let shade = null, thenAfter = null;
   async function openSheet() {
     if (shade && shade.isConnected) return;
-    try { await loadBook(); } catch { return alert('بارگذاری فهرست مفاتیح‌الجنان انجام نشد. اینترنت را بررسی کنید.'); }
+    // پنجره فوراً با «در حال بارگذاری…» باز می‌شود؛ اگر فهرست نیامد، پیام و «تلاش دوباره» همین‌جا دیده می‌شود.
     shade = document.createElement('div'); shade.className = 'mf-shade';
-    shade.innerHTML = '<div class="mf-box" role="dialog" aria-modal="true" aria-label="مفاتیح‌الجنان"></div>';
+    shade.innerHTML = '<div class="mf-box" role="dialog" aria-modal="true" aria-label="مفاتیح‌الجنان"><button type="button" class="mf-x" data-mf="close" aria-label="بستن">✕</button><h2>مفاتیح‌الجنان</h2><p class="mf-note">در حال بارگذاری…</p></div>';
     shade.addEventListener('click', onClick);
     shade.addEventListener('input', e => { if (e.target.id === 'mfQ') search(e.target.value); });
     shade.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'mfQ') { e.preventDefault(); shade.querySelector('.mf-res .mf-it')?.click(); } });
     document.body.appendChild(shade); document.body.classList.add('mf-lock');
-    render();
     try { if (!history.state?.mf) history.pushState({ mf: 1 }, ''); } catch {}
+    await fill();
+  }
+  async function fill() {
+    const me = shade;
+    try { await loadBook(); } catch {
+      if (me.isConnected) me.querySelector('.mf-note').innerHTML = 'بارگذاری فهرست مفاتیح‌الجنان انجام نشد. اینترنت را بررسی کنید. <button type="button" data-mf="retry">تلاش دوباره</button>';
+      return;
+    }
+    if (me === shade && me.isConnected) render();
   }
   function closeSheet(fromHistory, then) {
     if (!shade || !shade.isConnected) { if (then) then(); return; }
@@ -103,12 +111,14 @@ ${c.parts.map(p => `<div class="mf-part">${p.title ? `<h4>${esc(p.title)}</h4>` 
       return qr.openRange({ title: it.title, sub: 'مفاتیح‌الجنان', from: ix.surah[n - 1], to: n < 114 ? ix.surah[n] : ix.total, endText: `پایان ${it.title}. قبول باشد.` });
     }
     if (!window.chlRead) return;
-    window.chlRead(it.ref || 'books/mafatih/' + it.key);
+    // با بستن متن، فهرست مفاتیح دوباره باز می‌شود تا متن بعدی را بشود انتخاب کرد.
+    window.chlRead(it.ref || 'books/mafatih/' + it.key, () => openSheet());
   }
   function onClick(e) {
     if (e.target === shade) return closeSheet();
     const b = e.target.closest('[data-mf], .mf-it'); if (!b) return;
     if (b.dataset.mf === 'close') return closeSheet();
+    if (b.dataset.mf === 'retry') { b.closest('.mf-note').textContent = 'در حال بارگذاری…'; return fill(); }
     if (b.classList.contains('mf-it')) {
       const it = { title: b.dataset.mfTitle };
       if (b.dataset.mfKey) it.key = b.dataset.mfKey;
@@ -134,7 +144,8 @@ ${c.parts.map(p => `<div class="mf-part">${p.title ? `<h4>${esc(p.title)}</h4>` 
   document.addEventListener('click', e => { if (e.target.closest('.sm [data-mf-open]')) { window.siteMenu.close(); setTimeout(openSheet, 280); } });
   // openKey('336'): باز کردن یک مورد با شماره‌اش (برای کارت «امروز» در daily.js)
   const openKey = q => loadBook().then(() => { const x = allItems().find(x => x.it.key === q); x ? openItem(x.it, x.where) : openSheet(); }).catch(() => {});
-  window.mafatih = { open: openSheet, menuItem, openKey };
+  // items(): همه موردها برای جستجوی سایت (search.js)؛ openItem: باز کردن یکی از آن‌ها
+  window.mafatih = { open: openSheet, menuItem, openKey, openItem, items: () => loadBook().then(allItems) };
 
   // پیوند ?mafatih=1 یا ?mafatih=<شماره مورد>
   const q = new URLSearchParams(location.search).get('mafatih');

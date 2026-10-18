@@ -5,7 +5,7 @@
 import json, os, re, sqlite3, sys
 
 OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'quran', 'tafsir-noor')
-MAX = 350_000  # بیشینه اندازه هر فایل (بایت)، تا تفسیر روی اینترنت کند هم زود باز شود
+MAX = 50_000  # بیشینه اندازه هر فایل (بایت)، تا تفسیر روی اینترنت کند هم زود باز شود؛ همان اندازه tools/tafsir/split.py
 os.makedirs(OUT, exist_ok=True)
 c = sqlite3.connect(sys.argv[1])
 rows = c.execute('select m.surah_number, m.ayah_number, m.content_id, ct.content_fa from ayah_mapping m join content ct using(content_id) order by m.surah_number, m.ayah_number').fetchall()

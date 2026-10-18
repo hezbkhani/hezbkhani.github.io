@@ -22,7 +22,7 @@
 /* فهرست تنظیمات بلندتر از صفحه گوشی می‌شود؛ خودش جدا اسکرول می‌خورد و زیر نوار پخش نمی‌رود. */
 .qr-menu.show{max-height:calc(100vh - 70px);max-height:calc(100dvh - 70px);overflow-y:auto;overscroll-behavior:contain}
 .qr.x .qr-menu.show{max-height:calc(100vh - 150px - env(safe-area-inset-bottom));max-height:calc(100dvh - 150px - env(safe-area-inset-bottom))}
-.qp-more{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;min-width:40px;height:30px;margin:-4px 6px 0 0;padding:0 8px;border:1px solid var(--line);background:transparent;color:var(--accent);font:700 18px/1 Vazirmatn,sans-serif;letter-spacing:1px}
+.qp-more{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;min-width:40px;height:40px;margin:-4px 6px 0 0;padding:0 8px;border:1px solid var(--line);background:transparent;color:var(--accent);font:700 18px/1 Vazirmatn,sans-serif;letter-spacing:1px}
 .qp-more:hover{background:var(--line)}
 ${COLORS.map((c, i) => `.qr-ayah.qp-c${i + 1}:not(.playing){background:${c[0]}2e}.qr.flow .qr-ayah.qp-c${i + 1}:not(.playing){background:none}.qr.flow .qr-ayah.qp-c${i + 1} .qr-ar{background:${c[0]}40}`).join('')}
 .qr-ayah.qp-b .qr-num::after{content:"";display:inline-block;width:9px;height:15px;margin:0 3px;vertical-align:middle;background:var(--gold);clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%)}
@@ -50,7 +50,8 @@ ${COLORS.map((c, i) => `.qr-ayah.qp-c${i + 1}:not(.playing){background:${c[0]}2e
 .qp-ed button.qp-ok{background:var(--accent);border-color:var(--accent);color:#fff}
 .qr.night .qp-ed button.qp-ok{color:#10201a}
 .qp-link{display:block;width:calc(100% - 32px);margin:4px 16px 0;height:44px;border:0;background:transparent;color:var(--accent);font:600 15px Vazirmatn,sans-serif;text-align:right}
-.qp-hzbar{position:sticky;top:58px;z-index:1;display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--card);border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}
+/* زیر نوار بالای قرآن‌خوان می‌چسبد؛ --barh بلندی اندازه‌گیری‌شده آن نوار است (quran-reader.js). */
+.qp-hzbar{position:sticky;top:var(--barh,58px);z-index:1;display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--card);border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}
 .qp-hzbar[hidden]{display:none}
 .qp-hzbar b{flex:1;color:var(--accent);font-weight:600}
 .qp-hzbar button{height:40px;padding:0 12px;border:1px solid var(--line);background:transparent;color:var(--text);font:600 14px Vazirmatn,sans-serif}
@@ -58,7 +59,7 @@ ${COLORS.map((c, i) => `.qr-ayah.qp-c${i + 1}:not(.playing){background:${c[0]}2e
 .qr.qp-hz .qr-ar{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .qr.qp-hz .qp-w:not(.on){color:transparent;background:var(--line);border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .qr.qp-hz.qp-hzfa .qr-ayah:not(.qp-fa) .qr-fa>span{filter:blur(6px);cursor:pointer;-webkit-user-select:none;user-select:none}
-.qr-player .qp-ind{flex:none;display:none;align-items:center;gap:6px;width:auto;height:32px;padding:0 9px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--accent);font:600 12.5px Vazirmatn,sans-serif;white-space:nowrap}
+.qr-player .qp-ind{flex:none;display:none;align-items:center;gap:6px;width:auto;height:40px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--accent);font:600 12.5px Vazirmatn,sans-serif;white-space:nowrap}
 .qr-player .qp-ind.show{display:inline-flex}
 .qp-rng{flex-wrap:wrap}
 .qp-rng label{display:flex;align-items:center;gap:6px}
@@ -92,7 +93,7 @@ ${COLORS.map((c, i) => `.qr-ayah.qp-c${i + 1}:not(.playing){background:${c[0]}2e
 .qp-opts select{flex:1;height:44px}
 .qp-go{display:flex;gap:8px;margin-top:10px}
 .qp-go button{flex:1;height:50px;font-size:16px}
-.qp-crs{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin:0 8px 0 0;padding:0;vertical-align:middle;border:1px solid var(--line);border-radius:50%;background:transparent;color:var(--accent);opacity:.75}
+.qp-crs{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;margin:0 8px 0 0;padding:0;vertical-align:middle;border:1px solid var(--line);border-radius:50%;background:transparent;color:var(--accent);opacity:.75}
 .qp-crs:hover{opacity:1;background:var(--line)}
 .qp-crs svg{width:17px;height:17px}
 body.qp-lock{overflow:hidden}`;
@@ -237,7 +238,8 @@ ${S ? `<button type="button" class="qp-link" data-qp="list">نشانه‌ها و
 
     // ================= حالت حفظ =================
     const bar = document.createElement('div');
-    bar.className = 'qp-hzbar'; bar.hidden = true;
+    // qr-stick: قرآن‌خوان بلندی این نوار را هم در جابه‌جایی به آیه‌ها حساب می‌کند.
+    bar.className = 'qp-hzbar qr-stick'; bar.hidden = true;
     bar.innerHTML = '<b>حالت حفظ</b><button type="button" data-hz="all">نمایش همه</button><button type="button" data-hz="none">پنهان همه</button><button type="button" class="qp-x" data-hz="off" aria-label="خروج از حالت حفظ">✕</button>';
     $('.qr-bar').after(bar);
     const hzOn = () => on('hifz') && P.hz;

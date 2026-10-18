@@ -1,4 +1,4 @@
-# ساخت quran/intro.json: معرفی کوتاه، فضیلت، مکی/مدنی، تعداد آیات و ترتیب نزول ۱۱۴ سوره.
+# ساخت quran/intro/<سوره>.json (یک فایل برای هر سوره، تا با زدن «معرفی سوره» فقط همان چند کیلوبایت گرفته شود): معرفی کوتاه، فضیلت، مکی/مدنی، تعداد آیات و ترتیب نزول ۱۱۴ سوره.
 # اجرا: python3 -I tools/intro/build_intro.py <پوشه_کش> [quran-data.js]
 # منابع: محتوا و فضیلت از دانشنامه ویکی‌شیعه (fa.wikishia.net، از راه نسخه بایگانی web.archive.org)؛
 # اگر صفحه ویکی‌شیعه در دسترس نبود، ویکی‌پدیای فارسی (fa.wikipedia.org، API). تعداد آیات و ترتیب نزول از
@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 CACHE = sys.argv[1]
 os.makedirs(CACHE, exist_ok=True)
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'quran', 'intro.json')
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'quran', 'intro')
 UA = 'hezbkhani-intro-builder/1.0 (static Quran site; contact via github.com/hezbkhani)'
 
 # نام صفحه در ویکی‌شیعه (و نام‌های جایگزین)؛ به ترتیب سوره‌ها.
@@ -228,6 +228,8 @@ credit = 'محتوا و فضیلت: دانشنامه ویکی‌شیعه (fa.wik
 if used['wp']:
     credit = ('محتوا و فضیلت: دانشنامه ویکی‌شیعه (fa.wikishia.net) و برای برخی سوره‌ها ویکی‌پدیای فارسی'
               '؛ ترتیب نزول و تعداد آیات: Tanzil.net')
-with open(OUT, 'w', encoding='utf-8') as f:
-    json.dump({'src': credit, 'surahs': surahs}, f, ensure_ascii=False, separators=(',', ':'))
+os.makedirs(OUT, exist_ok=True)
+for i, e in enumerate(surahs, 1):
+    with open(os.path.join(OUT, f'{i}.json'), 'w', encoding='utf-8') as f:
+        json.dump(dict(src=credit, **e), f, ensure_ascii=False, separators=(',', ':'))
 print('wikishia=%(ws)d fallback=%(wp)d' % used, *log, sep='\n', file=sys.stderr)

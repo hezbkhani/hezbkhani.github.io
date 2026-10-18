@@ -67,6 +67,21 @@ body.bk-lock{overflow:hidden}
     const f = `books/${key}/${part}/${pad3(n)}.json`;
     return files[f] || (files[f] = fetch(f).then(r => { if (!r.ok) throw Error(r.status); return r.json(); }).catch(e => { delete files[f]; throw e; }));
   };
+  // ترجمه‌های دیگر (جز مترجم اول) در کتاب‌هایی که trFiles دارند جدا هستند: books/<کتاب>/tr/<مترجم>/<بخش>/<شماره>.json
+  // (tools/books/split_translations.py)؛ فقط ترجمه برگزیده دانلود و به بندها افزوده می‌شود.
+  const getTr = (key, id, part, n) => {
+    const f = `books/${key}/tr/${id}/${part}/${pad3(n)}.json`;
+    return files[f] || (files[f] = fetch(f).then(r => { if (!r.ok) throw Error(r.status); return r.json(); }).catch(e => { delete files[f]; throw e; }));
+  };
+  async function withTr(ix, part, n, item) {
+    const id = trChoice(ix).tr?.id;
+    if (!ix.trFiles || !id || id === ix.translations[0].id || item.sections?.some(s => s.tr?.[id])) return item;
+    try {
+      const d = await getTr(ix.key, id, part, n);
+      if (d.n === item.sections.length) item.sections.forEach((s, i) => { if (d.t[i] != null) (s.tr ||= {})[id] = d.t[i]; });
+    } catch {}
+    return item;
+  }
   const partOf = (ix, id) => ix.parts.find(p => p.id === id) || ix.parts[0];
   // نام کوتاه هر متن (خطبه ۳، دعای ۲۰)؛ بخش‌هایی که شماره‌شان معنا ندارد (روزهای هفته) با همان عنوان.
   const short = (p, n) => p.plain ? (p.items.find(i => i[0] === n) || [])[1] || '' : `${p.one} ${fa(n)}`;
@@ -164,7 +179,16 @@ ${ix.parts.length > 4 ? `<select class="bk-psel" aria-label="بخش">${ix.parts.
     document.body.appendChild(reader);
     reader.addEventListener('click', onReaderClick);
     reader.addEventListener('change', onReaderChange);
-    reader.addEventListener('scroll', () => { const h = reader.scrollHeight - reader.clientHeight; reader.querySelector('.cr-prog').style.width = (h > 0 ? reader.scrollTop / h * 100 : 0) + '%'; }, { passive: true });
+    let saveT = 0;
+    reader.addEventListener('scroll', () => {
+      const h = reader.scrollHeight - reader.clientHeight; reader.querySelector('.cr-prog').style.width = (h > 0 ? reader.scrollTop / h * 100 : 0) + '%';
+      // جای خواندن (نسبت به بلندی متن) کمی پس از ایستادن اسکرول ذخیره می‌شود.
+      clearTimeout(saveT); saveT = setTimeout(() => {
+        if (!cur?.item || !reader.classList.contains('show')) return;
+        const all = read(LAST, {}), l = all[cur.key];
+        if (l && l.part === cur.part.id && l.n === cur.n) { l.y = Math.round(reader.scrollTop / reader.scrollHeight * 1e4) / 1e4; write(LAST, all); }
+      }, 400);
+    }, { passive: true });
     return reader;
   }
   function applyPrefs() {
@@ -173,6 +197,8 @@ ${ix.parts.length > 4 ? `<select class="bk-psel" aria-label="بخش">${ix.parts.
     const on = { 'tr-on': prefs.trans, 'tr-off': !prefs.trans, day: !prefs.night, night: prefs.night };
     reader.querySelectorAll('.cr-row [data-x]').forEach(b => b.classList.toggle('on', !!on[b.dataset.x]));
     if (cur?.ix) {
+      // کتاب بی‌ترجمه (مثل منتهی‌الآمال) گزینه «ترجمه» ندارد.
+      reader.querySelector('[data-x="tr-on"]').closest('.cr-row').hidden = !cur.ix.translations?.length;
       const c = trChoice(cur.ix);
       const ls = reader.querySelector('[data-x-sel="lang"]'), ts = reader.querySelector('[data-x-sel="tr"]');
       ls.innerHTML = c.langs.map(l => `<option value="${l}">${esc(LANG_NAMES[l] || l)}</option>`).join(''); ls.value = c.lang;
@@ -191,7 +217,13 @@ ${ix.parts.length > 4 ? `<select class="bk-psel" aria-label="بخش">${ix.parts.
     reader.classList.add('show'); document.body.classList.add('bk-lock');
     if (first) { try { history.pushState({ bkr: 1 }, ''); } catch {} }
     let ix, item;
-    try { ix = await getIndex(key); item = await getItem(key, part, n); }
+    try {
+      ix = await getIndex(key);
+      // ترجمه برگزیده هم‌زمان با خود متن گرفته می‌شود، نه پس از آن.
+      const tid = trChoice(ix).tr?.id;
+      if (ix.trFiles && tid && tid !== ix.translations[0].id) getTr(key, tid, part, n).catch(() => {});
+      item = await getItem(key, part, n).then(it => withTr(ix, part, n, it));
+    }
     catch {
       reader.querySelector('.cr-title b').textContent = 'متن باز نشد';
       reader.querySelector('.cr-body').innerHTML = '<p class="cr-sec only" style="margin-top:30px">متن دریافت نشد. اینترنت را بررسی کنید و دوباره امتحان کنید.</p>';
@@ -199,14 +231,17 @@ ${ix.parts.length > 4 ? `<select class="bk-psel" aria-label="بخش">${ix.parts.
     }
     const p = partOf(ix, part);
     cur = { key, ix, part: p, n, item };
-    const all = read(LAST, {}); all[key] = { part: p.id, n }; write(LAST, all);
-    reader.querySelector('.cr-title b').textContent = `${ix.title}، ${short(p, n)}`;
+    // اگر همین متن آخرین متنِ خوانده‌شده بود، از همان جایی که مانده بود ادامه می‌یابد.
+    const all = read(LAST, {}), was = all[key], y = was && was.part === p.id && was.n === n ? was.y || 0 : 0;
+    all[key] = { part: p.id, n }; write(LAST, all);
+    // کتاب‌هایی با بخش‌های زیاد (مثل باب‌های منتهی‌الآمال) نام بخش را در عنوان دارند، نه فقط «بخش ۱۰».
+    reader.querySelector('.cr-title b').textContent = `${ix.parts.length > 4 ? p.title : ix.title}، ${short(p, n)}`;
     reader.querySelector('.cr-title small').textContent = p.plain ? '' : item.title || '';
     applyPrefs();
     renderReader();
-    reader.scrollTop = 0;
+    reader.scrollTop = y ? y * reader.scrollHeight : 0;
     // دو متن بعدی از پیش گرفته می‌شوند تا «بعدی» زود باز شود.
-    const nx = step(1); if (nx) getItem(key, nx[0].id, nx[1]).catch(() => {});
+    const nx = step(1); if (nx) getItem(key, nx[0].id, nx[1]).then(it => withTr(ix, nx[0].id, nx[1], it)).catch(() => {});
   }
   // متن قبلی یا بعدی (در همان بخش، و از آخر یک بخش به اول بخش بعد).
   function step(d) {
@@ -265,7 +300,8 @@ ${ix.parts.length > 4 ? `<select class="bk-psel" aria-label="بخش">${ix.parts.
       return;
     }
     applyPrefs();
-    const top = reader.scrollTop; renderReader(); reader.scrollTop = top;
+    const top = reader.scrollTop, c = cur;
+    withTr(c.ix, c.part.id, c.n, c.item).then(() => { if (cur !== c) return; renderReader(); reader.scrollTop = top; });
   }
   function onReaderClick(e) {
     const b = e.target.closest('button'); if (!b) return;

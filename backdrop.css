@@ -21,6 +21,8 @@ html[data-bg] .shell .panel .tagline{color:var(--t-head)}
 /* پنجره وسط (backdrop.js جای آن را روی تصویر حساب می‌کند): خود صفحه عادی اسکرول می‌شود،
    ولی کادرها فقط داخل قاب وسط تصویر دیده می‌شوند و بالا و پایینش محو است (--m0 و --m1 با اسکرول جابه‌جا می‌شوند) */
 html[data-bg].bgx-win body{padding:0}
+/* سربرگ خالی در پنجره وسط فقط کمی فاصله می‌دهد تا کادر اول کامل داخل پنجره دیده شود */
+html[data-bg].bgx-win main>header{padding-top:4px;margin:0}
 html[data-bg].bgx-win main.shell{position:relative;max-width:none;width:var(--win-w);margin:0 auto 0 var(--win-l);
   padding:calc(var(--win-t) + 18px) 14px calc(var(--win-gap) + 40px);
   -webkit-mask-image:linear-gradient(transparent var(--m0),#000 calc(var(--m0) + 34px),#000 calc(var(--m1) - 44px),transparent var(--m1));
