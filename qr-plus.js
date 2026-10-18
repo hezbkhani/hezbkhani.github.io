@@ -313,17 +313,34 @@ ${S ? `<button type="button" class="qp-link" data-qp="list">نشانه‌ها و
       hzRows.querySelectorAll('[data-qpk]').forEach(b => b.classList.toggle('on', +P[b.dataset.qpk] === +b.dataset.v));
     }
 
+    // نمایش یا پنهان کردن امکانات قرآن‌خوان برای همین گوشی، کنار بقیه تنظیمات قرآن (به جای برگه «نمایش امکانات»).
+    // فقط امکانی که مدیر روشن کرده ردیف دارد.
+    const FT = window.features, ftOn = id => !!FT?.on(id);
+    const vis = (id, t) => `<div class="qr-row" data-qpvr="${id}"><span>${t}</span><span class="ctl"><button type="button" class="qr-chip" data-qpv="${id}" data-v="1">نمایش</button><button type="button" class="qr-chip" data-qpv="${id}" data-v="0">پنهان</button></span></div>`;
+    const visRows = document.createElement('div');
+    visRows.style.display = 'contents';
+    visRows.innerHTML = vis('saved', 'نشانه و یادداشت') + vis('share', 'ساختن تصویر از آیه');
+    // پس از ردیف‌های تفسیر و معرفی سوره، پیش از «رنگ صفحه»
+    const inRow = menu.querySelector('.qr-in-row');
+    if (inRow) inRow.after(visRows); else hzRows.before(visRows);
+    function syncVis() {
+      menu.querySelectorAll('[data-qpvr]').forEach(r => { r.style.display = ftOn(r.dataset.qpvr) ? '' : 'none'; });
+      menu.querySelectorAll('[data-qpv]').forEach(b => b.classList.toggle('on', on(b.dataset.qpv) === !!+b.dataset.v));
+    }
+
     // ================= تکرار، مکث و زمان‌سنج خواب =================
     const opt = (v, t, cur) => `<option value="${v}"${String(v) === String(cur) ? ' selected' : ''}>${t}</option>`;
     const auRows = document.createElement('div');
     auRows.style.display = 'contents';
-    auRows.innerHTML = `<div class="qr-row qr-x qr-sec" id="qpAuSec">تکرار و زمان‌سنج</div>
-<div class="qr-row qr-x"><span>تکرار هر آیه</span><select id="qpRep" aria-label="تکرار هر آیه">${[1, 2, 3, 5, 10].map(n => opt(n, n === 1 ? 'یک بار (بدون تکرار)' : `${toFa(n)} بار`, P.rep)).join('')}</select></div>
+    auRows.innerHTML = `<div class="qr-row qr-x"><span>تکرار هر آیه</span><select id="qpRep" aria-label="تکرار هر آیه">${[1, 2, 3, 5, 10].map(n => opt(n, n === 1 ? 'یک بار (بدون تکرار)' : `${toFa(n)} بار`, P.rep)).join('')}</select></div>
 <div class="qr-row qr-x"><span>تکرار چند آیه</span><select id="qpRng" aria-label="تکرار چند آیه">${[[0, 'خاموش'], [2, '۲ بار'], [3, '۳ بار'], [5, '۵ بار'], [10, '۱۰ بار'], [-1, 'پشت سر هم، بی‌پایان']].map(([v, t]) => opt(v, t, 0)).join('')}</select></div>
 <div class="qr-row qr-x qp-rng" id="qpRngBox"><label>از <select id="qpFrom" aria-label="از آیه"></select></label><label>تا <select id="qpTo" aria-label="تا آیه"></select></label><button type="button" data-qpa="rplay">▶ پخش</button></div>
 <div class="qr-row qr-x"><span>مکث میان آیه‌ها</span><select id="qpGap" aria-label="مکث میان آیه‌ها">${[[0, 'بدون مکث'], [2, '۲ ثانیه'], [5, '۵ ثانیه'], [-1, 'هم‌اندازه آیه (تکرار پس از قاری)']].map(([v, t]) => opt(v, t, P.gap)).join('')}</select></div>
 <div class="qr-row qr-x"><span>زمان‌سنج خواب</span><select id="qpSleep" aria-label="زمان‌سنج خواب">${[[0, 'خاموش'], [15, '۱۵ دقیقه'], [30, '۳۰ دقیقه'], [60, '۶۰ دقیقه'], ['end', 'پایان همین سوره یا صفحه']].map(([v, t]) => opt(v, t, 0)).join('')}</select></div>`;
     menu.querySelector('.qr-apply').before(auRows);
+    // ردیف نمایش/پنهان این بخش بیرون از خودش، تا پس از پنهان کردن هم بشود برش گرداند.
+    auRows.insertAdjacentHTML('beforebegin', `<div class="qr-row qr-x qr-sec" id="qpAuSec" data-qpvr="audioplus">تکرار و زمان‌سنج</div>${vis('audioplus', 'نمایش این بخش').replace('class="qr-row"', 'class="qr-row qr-x"')}`);
+    syncVis();
     const range = { n: 0, from: '', to: '', done: 0 };
     const idx = k => items().findIndex(it => keyOf(it) === k);
     function rangeSync() {
@@ -357,6 +374,8 @@ ${S ? `<button type="button" class="qp-link" data-qp="list">نشانه‌ها و
     menu.addEventListener('click', e => {
       const c = e.target.closest('[data-qpk]');
       if (c) { P[c.dataset.qpk] = !!+c.dataset.v; saveP(); hifzApply(); return; }
+      const v = e.target.closest('[data-qpv]');
+      if (v) { FT?.setHidden(v.dataset.qpv, !+v.dataset.v); return; }
       if (e.target.closest('[data-qpa="rplay"]')) {
         range.done = 0; repKey = null; startT = 0;
         menu.classList.remove('show'); $('[data-a="menu"]').setAttribute('aria-expanded', false);
@@ -473,6 +492,7 @@ ${S ? `<button type="button" class="qp-link" data-qp="list">نشانه‌ها و
     function refresh() {
       decorate(); hifzApply();
       auRows.style.display = on('audioplus') ? 'contents' : 'none';
+      syncVis();
       if (!on('audioplus')) { clearSleep(); clearTimeout(gapT); }
       if (!on('saved') && !on('share')) closeSheet();
       indicator();
