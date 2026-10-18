@@ -818,6 +818,8 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
   const countKey = () => `chlCount:${current.key}:${today || isoIran()}`;
   const counts = () => read(countKey(), {});
 
+  // «ی» و «ک» فارسی در قلم عربی (ChlArabic) نیست و دایره نقطه‌چین دیده می‌شود؛ مثل مصحف مدینه: «ی» میان کلمه «ي»، آخر کلمه «ى»، «ک» → «ك».
+  const arFix = t => String(t).replace(/ک/g, 'ك').replace(/ی(?=[\u064B-\u0652\u0670]*(?:[^\u0600-\u06FF]|$))/g, 'ى').replace(/ی/g, 'ي');
   async function openReader(key, member) {
     if (member && (member.kind === 'juz' || member.kind === 'page')) { readerOnClose = null; return openQuran(todaySpec(member), member); }
     const bt = (await loadBuiltins()).find(x => x.key === key);
@@ -858,7 +860,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
       if (!s.ar) return `<div class="cr-sec only"><p class="cr-note">${esc(s.note)}</p></div>`;
       const n = c[i] || 0, rep = s.repeat ? `<div class="cr-count"><button type="button" data-count="${i}" class="${n >= s.repeat ? 'full' : ''}">${fa(n)} / ${fa(s.repeat)}</button><small>${n >= s.repeat ? 'کامل شد' : 'با هر بار خواندن بزنید'}</small>${n ? `<button type="button" class="cr-reset" data-reset="${i}">از نو</button>` : ''}</div>` : '';
       const f = tr ? tr.t[i] : s.fa;
-      return `<div class="cr-sec">${s.note ? `<p class="cr-note">${esc(s.note)}</p>` : ''}<p class="cr-ar" lang="ar" dir="rtl">${esc(s.ar)}</p>${f ? `<p class="cr-fa" lang="${lang}" dir="${dir}">${esc(f)}</p>` : ''}${rep}</div>`;
+      return `<div class="cr-sec">${s.note ? `<p class="cr-note">${esc(s.note)}</p>` : ''}<p class="cr-ar" lang="ar" dir="rtl">${esc(arFix(s.ar))}</p>${f ? `<p class="cr-fa" lang="${lang}" dir="${dir}">${esc(f)}</p>` : ''}${rep}</div>`;
     }).join('');
     if (m && state(m) === 'run') {
       const done = (m.marked || []).includes(today);
