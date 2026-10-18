@@ -15,7 +15,11 @@
   const filesShown = () => !FILES_ADMIN_ONLY || location.hash === '#admin';
 
   // سرویس‌ورکر برای نسخه آفلاین و قابلیت نصب؛ همان فایلی که یادآوری روزانه هم استفاده می‌کند.
-  if ('serviceWorker' in navigator && (enabled() || inApp)) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // پس از باز شدن کامل صفحه ثبت می‌شود تا ذخیره فایل‌ها برای حالت آفلاین با بار اول صفحه هم‌زمان نشود.
+  if ('serviceWorker' in navigator && (enabled() || inApp)) {
+    const reg = () => navigator.serviceWorker.register('sw.js').catch(() => {});
+    if (document.readyState === 'complete') reg(); else addEventListener('load', reg, { once: true });
+  }
   if (inApp) return;
 
   document.head.insertAdjacentHTML('beforeend', `<style>

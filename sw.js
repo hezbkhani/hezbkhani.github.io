@@ -1,5 +1,6 @@
 // سرویس‌ورکر: اعلان‌های سایت (سهم امروز، برنامه چله، یادآوری‌ها و خبرها)، و نسخه آفلاین برای حالت «برنامه» (نصب‌شده).
-// همیشه اول از اینترنت می‌خواند تا تغییرات سایت فوراً دیده شود؛ فقط اگر اینترنت نبود از نسخه ذخیره‌شده استفاده می‌کند.
+// صفحه و داده‌ها را همیشه اول از اینترنت می‌خواند تا تغییرات سایت فوراً دیده شود؛ فقط اگر اینترنت نبود از نسخه ذخیره‌شده استفاده می‌کند.
+// قلم‌ها، تصویرها و فایل‌های نسخه‌دار (?v=) از نسخه ذخیره‌شده باز می‌شوند و در پس‌زمینه تازه می‌شوند.
 self.window = self; importScripts('config.js');
 const cfg = self.APP_CONFIG || {};
 
@@ -23,21 +24,36 @@ self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('hezb-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())
 ));
 
+// قلم‌ها، تصویرها و فایل‌هایی که شماره نسخه در آدرسشان دارند (مثل app.js?v=7) زیر همان آدرس عوض نمی‌شوند؛
+// پس اگر نسخه ذخیره‌شده‌شان هست فوراً از همان باز می‌شوند (حتی با اینترنت ضعیف) و چند ثانیه بعد، وقتی صفحه باز شد،
+// بی‌صدا از اینترنت تازه می‌شوند تا اگر فایلی بدون عوض شدن شماره‌اش تغییر کرد، از بار بعد درست دیده شود.
+const STATIC = /\.(woff2|ttf|webp|jpe?g|png|svg|gif|ico)$/i;
+
+async function save(req, url, res) {
+  const c = await caches.open(CACHE);
+  await c.put(req, res);
+  // نسخه‌های قدیمیِ همین فایل (?v= دیگر) پاک می‌شوند تا بدون اینترنت همیشه آخرین نسخه به کار رود.
+  if (url.search) for (const k of await c.keys()) { const u = new URL(k.url); if (u.pathname === url.pathname && u.search !== url.search) c.delete(k); }
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
   // فقط فایل‌های خود سایت؛ درخواست‌های پایگاه داده و سایت‌های دیگر دست‌نخورده می‌مانند.
   if (req.method !== 'GET' || url.origin !== self.location.origin || req.headers.has('range')) return;
-  e.respondWith(fetch(req).then(res => {
-    if (res.status === 200 && res.type === 'basic') {
-      const copy = res.clone();
-      // نسخه‌های قدیمیِ همین فایل (?v= دیگر) پاک می‌شوند تا بدون اینترنت همیشه آخرین نسخه به کار رود.
-      caches.open(CACHE).then(async c => {
-        await c.put(req, copy);
-        if (url.search) for (const k of await c.keys()) { const u = new URL(k.url); if (u.pathname === url.pathname && u.search !== url.search) c.delete(k); }
-      }).catch(() => {});
-    }
+  const net = () => fetch(req).then(res => {
+    if (res.status === 200 && res.type === 'basic') e.waitUntil(save(req, url, res.clone()).catch(() => {}));
     return res;
-  }).catch(() => caches.match(req).then(r => r || caches.match(req, { ignoreSearch: true })).then(r => r || (req.mode === 'navigate' ? caches.match('./') : Response.error()))));
+  });
+  const offline = () => caches.match(req).then(r => r || caches.match(req, { ignoreSearch: true })).then(r => r || (req.mode === 'navigate' ? caches.match('./') : Response.error()));
+  if (url.searchParams.has('v') || STATIC.test(url.pathname)) {
+    e.respondWith(caches.match(req).then(hit => {
+      if (!hit) return net().catch(offline);
+      e.waitUntil(new Promise(r => setTimeout(r, 5000)).then(net).catch(() => {}));
+      return hit;
+    }));
+    return;
+  }
+  e.respondWith(net().catch(offline));
 });
 
 self.addEventListener('push', e => {
