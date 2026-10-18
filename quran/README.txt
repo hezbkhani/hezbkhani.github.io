@@ -25,3 +25,7 @@ t/<مترجم>/001.json تا 120.json: ترجمه‌های فارسی دیگر �
 تحدیر معتز آقایی: صوت audio/aghaei/joz01.mp3 تا joz30.mp3 (هر فایل یک جزء کامل)، رونوشت بی‌تغییر archive.org/details/Tahdir_Aqaee که روی خود سایت گذاشته شده چون archive.org در ایران فیلتر است.
 - aghaei.json: به همان شکل razavi.json، برای هر سوره فهرست [ثانیه شروع، ثانیه پایان] هر آیه در فایل جزء همان آیه. شروع آیه اول هر سوره بسم‌الله را هم در بر دارد و پایان هر آیه همان شروع آیه بعد است تا پخش پیوسته بماند.
 - این زمان‌ها با هم‌ترازی خودکار متن با صوت ساخته شده‌اند (مدل گفتار عربی jonatasgrosman/wav2vec2-large-xlsr-53-arabic و forced alignment در torchaudio)؛ اسکریپت‌ها و روش اجرا در tools/aghaei-timing/ است.
+
+ترجمه به زبان‌های دیگر (در تنظیمات قرآن‌خوان، «زبان ترجمه» و سپس «مترجم»؛ فارسی پیش‌فرض است): t/<شناسه Tanzil>/001.json تا 120.json، به همان شکل t/<مترجم>، از Tanzil.net (استفاده غیرتجاری با ذکر منبع).
+انگلیسی (en.sahih، en.qarai، en.pickthall، en.yusufali، en.shakir)، آلمانی (de.bubenheim، de.aburida، de.khoury)، فرانسوی (fr.hamidullah)، اسپانیایی (es.cortes، es.bornez، es.garcia)، ایتالیایی (it.piccardo)، روسی (ru.kuliev، ru.osmanov، ru.krachkovsky)، ترکی (tr.diyanet، tr.golpinarli، tr.yazir)، اردو (ur.jalandhry، ur.najafi، ur.jawadi)، اندونزیایی (id.indonesian)، چینی (zh.jian)، هندی (hi.hindi)، بنگالی (bn.bengali).
+ساخت دوباره: python3 tools/translations/make.py (از ریشه مخزن). برای افزودن ترجمه، شناسه Tanzil را به این اسکریپت و به LANGS در quran-reader.js اضافه کنید.
