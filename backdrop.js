@@ -26,7 +26,7 @@
     const e = window.bgxCur || { id: root.dataset.bg }, box = e.url ? e.win : WIN[e.id], size = e.url ? e.size : SIZE[e.id];
     const on = location.hash !== '#admin' && !!box && !!size;
     root.classList.toggle('bgx-win', on);
-    if (!on) { win = null; return; }
+    if (!on) { win = null; root.style.scrollPaddingTop = root.style.scrollPaddingBottom = ''; return; }
     const vw = root.clientWidth, vh = innerHeight, [iw, ih] = size, [l, t, r, b] = box;
     // همان اندازه‌ای که backdrop.css به تصویر می‌دهد: صفحه باریک «cover»، صفحه پهن تصویر کامل به ارتفاع صفحه
     let w, h;
@@ -38,6 +38,8 @@
     const st = main.style;
     st.setProperty('--win-l', `${Math.round(L)}px`); st.setProperty('--win-w', `${Math.round(R - L)}px`);
     st.setProperty('--win-t', `${T}px`); st.setProperty('--win-gap', `${vh - B}px`);
+    // پرش به یک کادر (از منو و دکمه‌ها) آن را زیر محوشدن بالا و پایین پنجره نبرد
+    root.style.scrollPaddingTop = `${T + 40}px`; root.style.scrollPaddingBottom = `${vh - B + 50}px`;
     fade();
   }
   // محوشدن بالا و پایین پنجره، به مختصات داخل main
