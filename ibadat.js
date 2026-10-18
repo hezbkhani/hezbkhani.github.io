@@ -216,7 +216,7 @@ ${await notifyHtml(type, when)}`;
   window.siteMenu?.section({
     id: 'doa', order: 6,
     render(box) {
-      box.innerHTML = `<h3>ادعیه</h3>${Object.entries(DOAS).map(([k, d]) => `<button type="button" class="sm-item" data-ib-open="${k}"><span class="sm-ic">📿</span><span>${d.title}<small>${d.sub}</small></span><span class="sm-go">‹</span></button>`).join('')}`;
+      box.innerHTML = `<h3>ادعیه</h3>${Object.entries(DOAS).map(([k, d]) => `<button type="button" class="sm-item" data-ib-open="${k}"><span class="sm-ic">📿</span><span>${d.title}<small>${d.sub}</small></span><span class="sm-go">‹</span></button>`).join('')}${window.mafatih?.menuItem() || ''}`;
       box.querySelectorAll('[data-ib-open]').forEach(x => x.onclick = () => { window.siteMenu.close(); setTimeout(() => open(x.dataset.ibOpen), 280); });
     }
   });
