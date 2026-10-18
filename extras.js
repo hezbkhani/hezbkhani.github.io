@@ -16,20 +16,21 @@ body.v2 .hint,body.v2 .lead{color:#f4ead8}
 .x-load{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:6px 2px}
 .x-spin{width:20px;height:20px;border:3px solid rgba(255,255,255,.35);border-top-color:var(--gold);border-radius:50%;animation:xs 0.9s linear infinite}
 @keyframes xs{to{transform:rotate(360deg)}}
-.x-net{grid-column:1/-1;background:#fff5d9;color:#5a1b1b;text-shadow:none;border:1px solid var(--gold);padding:10px 14px}
+.x-net{grid-column:1/-1;background:var(--cream);color:#5a1b1b;text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:10px 14px}
 .x-net button{margin-top:8px;height:42px}
-.x-offline{position:fixed;inset:auto 10px 10px 10px;z-index:40;max-width:660px;margin:0 auto;background:#5a1b1b;color:#fff;text-shadow:none;padding:8px 14px;text-align:center;border:1px solid var(--gold)}
+.x-offline{position:fixed;inset:auto 10px 10px 10px;z-index:40;max-width:660px;margin:0 auto;background:#5a1b1b;color:#fff;text-shadow:none;padding:8px 14px;text-align:center;border:1px solid var(--gold);border-radius:var(--r-card)}
 .x-me{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 6px;font-size:15px}
 .x-link{background:none;border:0;height:auto;padding:0;color:#ffe2a8;text-decoration:underline;font-weight:500;font-size:15px;cursor:pointer;text-shadow:inherit}
 .x-link:hover{background:none}
 .x-prog{margin:12px 0 0;color:#fff}
-.x-bar{height:8px;background:rgba(255,255,255,.25);margin:4px 0 2px;overflow:hidden}
+.x-bar{height:8px;background:rgba(255,255,255,.25);margin:4px 0 2px;overflow:hidden;border-radius:var(--pill)}
 .x-bar i{display:block;height:100%;background:var(--gold)}
 .x-prog small{font-size:14px}
 .x-deadline{margin:10px 0 0;font-size:15px}
 .x-report{margin-top:12px}
 .x-report button{width:100%;height:52px}
-.x-report .x-done{display:block;background:#e7f5f0;color:#00543f;text-shadow:none;border:1px solid var(--gold);padding:10px 14px;font-weight:700;text-align:center}
+.x-report .x-done{display:block;background:var(--mint);color:var(--deep);text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);padding:10px 14px;font-weight:700;text-align:center}
+.x-report .x-link{width:auto;height:auto;display:inline-block;margin-top:8px}
 .x-report .x-msg{min-height:22px;margin-top:6px;font-weight:700}
 .x-hidden{display:none!important}
 .x-tools{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 10px}
@@ -144,13 +145,18 @@ body.v2 .hint,body.v2 .lead{color:#f4ead8}
 
     const box = document.createElement('div'); box.className = 'x-report';
     const renderBox = () => {
-      if (doneDays(gNum, id).includes(today)) { box.innerHTML = '<span class="x-done">✓ گزارش امروز شما ثبت شده است</span>'; return; }
-      box.innerHTML = '<button type="button">قرائت کردم، ثبت گزارش امروز</button><div class="x-msg" aria-live="polite"></div>';
+      // روزهای گذشته (تا LATE_DAYS روز) در بخش «گزارش» ثبت می‌شوند؛ این پیوند همان‌جا را با شناسه پرشده باز می‌کند.
+      const late = t.days > 0 ? '<button type="button" class="x-link" data-late>ثبت گزارش روزهای گذشته</button>' : '';
+      const wireLate = () => { const l = box.querySelector('[data-late]'); if (l) l.onclick = () => { reportId.value = toFa(id); verifyReportIdentity(); reportId.closest('.panel').scrollIntoView({ behavior: 'smooth', block: 'start' }); }; };
+      if (doneDays(gNum, id).includes(today)) { box.innerHTML = `<span class="x-done">✓ گزارش امروز شما ثبت شده است</span> ${late}`; wireLate(); return; }
+      box.innerHTML = `<button type="button">قرائت کردم، ثبت گزارش امروز</button> ${late}<div class="x-msg" aria-live="polite"></div>`;
+      wireLate();
       const b = box.querySelector('button'), msg = box.querySelector('.x-msg');
       b.onclick = () => {
         if (!selected || selected.number !== gNum) { msg.textContent = 'گروه تغییر کرده است؛ دوباره «نمایش سهم امروز» را بزنید.'; return; }
         reportId.value = toFa(id); verifyReportIdentity();
         if (!verifiedReport) { msg.textContent = reportMessage.textContent; return; }
+        if (submitReport.disabled) { msg.textContent = reportMessage.textContent; if (/قبلاً ثبت شده/.test(msg.textContent)) { markDone(gNum, id, today); renderProg(); setTimeout(renderBox, 1200); } return; }
         readCheck.checked = true; b.disabled = true;
         const obs = new MutationObserver(() => {
           const txt = reportMessage.textContent;
@@ -169,7 +175,7 @@ body.v2 .hint,body.v2 .lead{color:#f4ead8}
   // ثبت از بخش اصلی گزارش هم در پیشرفت شخصی شمرده شود.
   new MutationObserver(() => {
     if (!enabled() || !/با موفقیت ثبت شد|قبلاً ثبت شده/.test(reportMessage.textContent)) return;
-    const id = +norm(reportId.value); if (selected && id >= 1 && id <= 120) markDone(selected.number, id, isoIran());
+    const id = +norm(reportId.value); if (selected && id >= 1 && id <= 120) markDone(selected.number, id, verifiedReport?.reportDate || isoIran());
   }).observe(reportMessage, { childList: true, characterData: true, subtree: true });
 
   // ---------- ۶. مدیریت: کپی فهرست ثبت‌نشده‌ها و فایل CSV ----------
@@ -192,7 +198,7 @@ body.v2 .hint,body.v2 .lead{color:#f4ead8}
         catch { prompt('متن را کپی کنید:', text); }
       } else {
         const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const lines = [['شناسه', 'نام', 'سهم', 'حزب', 'وضعیت', 'زمان ثبت'].map(q).join(',')].concat(rows.map(x => [x.id, x.name, x.portion, x.hizb, x.rep ? 'ثبت‌شده' : 'ثبت‌نشده',
+        const lines = [['شناسه', 'نام', 'سهم', 'حزب', 'وضعیت', 'زمان ثبت'].map(q).join(',')].concat(rows.map(x => [x.id, x.name, x.portion, x.hizb, x.rep ? (reportLate(x.rep, r.date) ? 'ثبت‌شده با تأخیر' : 'ثبت‌شده') : 'ثبت‌نشده',
           x.rep?.created_at ? new Intl.DateTimeFormat('fa-IR', { timeZone: TZ, dateStyle: 'short', timeStyle: 'short' }).format(new Date(x.rep.created_at)) : ''].map(q).join(',')));
         const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `report-group${r.g.number}-${r.date}.csv`;

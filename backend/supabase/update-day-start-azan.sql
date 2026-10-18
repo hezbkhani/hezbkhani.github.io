@@ -35,6 +35,21 @@ language sql stable as $$
               else (ts at time zone 'Asia/Tehran')::date end
 $$;
 
+-- گزارش امروز، یا روزی که فراموش شده بود تا ۷ روز گذشته (همان LATE_DAYS در app.js).
 drop policy if exists "public may report completion" on public.daily_reports;
 create policy "public may report completion" on public.daily_reports for insert to anon
-  with check (completed = true and report_date = public.reading_day(now()));
+  with check (completed = true
+              and report_date between public.reading_day(now()) - 7 and public.reading_day(now())
+              and length(participant_name) <= 80 and length(portion) <= 120);
+
+-- روزهایی از ۷ روز گذشته تا امروز که این شناسه گزارش داده است؛ فقط تاریخ‌ها برگردانده می‌شود، نه جزئیات گزارش‌ها.
+-- صفحه با آن روزهای جامانده را نشان می‌دهد.
+create or replace function public.hezb_reported_days(p_group integer, p_participant integer) returns date[]
+language sql stable security definer set search_path = public as $$
+  select coalesce(array_agg(report_date order by report_date), '{}')
+    from daily_reports
+   where group_number = p_group and participant_id = p_participant
+     and report_date between public.reading_day() - 7 and public.reading_day()
+$$;
+revoke all on function public.hezb_reported_days(integer, integer) from public;
+grant execute on function public.hezb_reported_days(integer, integer) to anon, authenticated;
