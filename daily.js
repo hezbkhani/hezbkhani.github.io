@@ -206,6 +206,18 @@
     return out.slice(0, 4);
   }
 
+  // ---------- دعا و زیارت هر روز هفته (امکان weekday) ----------
+  // از مفاتیح: «دعاهای ایام هفته» (۰۱۰ شنبه … ۰۱۶ جمعه) و «زیارات معصومین (ع) در ایام هفته» (۰۳۱ تا ۰۳۹). پیش از اذان صبح، هنوز روز قبل است.
+  const WEEK = { 6: ['شنبه', '010', [['031', 'زیارت پیامبر (ص)']]], 0: ['یکشنبه', '011', [['032', 'زیارت امیرالمؤمنین (ع)'], ['033', 'زیارت حضرت زهرا (س)']]],
+    1: ['دوشنبه', '012', [['034', 'زیارت امام حسن (ع)'], ['035', 'زیارت امام حسین (ع)']]], 2: ['سه‌شنبه', '013', [['036', 'زیارت امام سجاد، باقر و صادق (ع)']]],
+    3: ['چهارشنبه', '014', [['037', 'زیارت امام کاظم، رضا، جواد و هادی (ع)']]], 4: ['پنجشنبه', '015', [['038', 'زیارت امام حسن عسکری (ع)']]], 5: ['جمعه', '016', [['039', 'زیارت امام زمان (عج)']]] };
+  function weekRows(iso, T, now) {
+    if (!shown('weekday') || !mf()) return [];
+    const [name, dua, zs] = WEEK[wd(now < T.fajr ? addDays(iso, -1) : iso)];
+    return [{ go: 'mf:' + dua, ic: '🤲', t: `دعای روز ${name}`, s: 'از دعاهای ایام هفته، مفاتیح‌الجنان' },
+      ...zs.map(([k, t]) => ({ go: 'mf:' + k, ic: '🕌', t, s: `زیارت روز ${name}، مفاتیح‌الجنان` }))];
+  }
+
   // ---------- ظاهر ----------
   const css = `
 #dlCard{--dl-h:var(--deep);--dl-m:var(--muted);--dl-soft:var(--mint);--dl-line:var(--line);display:block;margin:6px 0 16px;padding:8px 12px;background:var(--cream);color:var(--ink);text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);line-height:1.7;font-size:16px;text-align:right}
@@ -272,11 +284,11 @@ html[data-bg=dark] #dlCard .dl-city .dl-gps,html[data-bg=dark] #dlCard .dl-city 
 
   function render() {
     const P = shown('prayer'), D = shown('today'), foot = document.querySelector('.site-foot');
-    if (!P && !D) { clearInterval(timer); timer = 0; if (card) card.remove(); foot?.classList.remove('dl-hide'); return; }
+    if (!P && !D && !shown('weekday')) { clearInterval(timer); timer = 0; if (card) card.remove(); foot?.classList.remove('dl-hide'); return; }
     const L = loc(), now = clock(L.tz), iso = ymd(now, L.tz);
     let T = times(iso, L);
     const occ = D ? occasions(iso) : [], nights = D ? nightOf(now < T.fajr ? iso : addDays(iso, 1)) : [];
-    const list = D ? acts(iso, T, now) : [];
+    const list = (D ? acts(iso, T, now) : []).concat(weekRows(iso, T, now));
     // بلوک‌های دیگر (مثلاً حالت رمضان در ramadan.js) زیر تاریخ و مناسبت‌ها
     const ctx = { L, iso, T, now };
     const extra = hooks.block.map(f => { try { return f(ctx) || ''; } catch (e) { console.error(e); return ''; } }).join('');
