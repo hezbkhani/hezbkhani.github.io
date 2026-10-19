@@ -111,7 +111,7 @@
     const h = hezb();
     if (h) {
       const done = hezbDays && hezbDays.includes(t);
-      s += `<button type="button" class="nm-row" data-go="hezb"><span class="nm-ic">📖</span><span><b>حزب‌خوانی · ${esc(h.name)}</b><small>${h.started ? h.label ? `سهم امروز: ${esc(h.label)}` : `شناسه ${toFa(h.me.id)}` : 'دوره هنوز شروع نشده است'}</small></span>${!h.started || !hezbDays ? '' : done ? '<em class="nm-st ok">✓ گزارش شد</em>' : '<em class="nm-st todo">امروز مانده</em>'}</button>`;
+      s += `<button type="button" class="nm-row" data-go="hezb"><span class="nm-ic">📖</span><span><b>حزب‌خوانی · ${esc(h.name)}</b><small>${h.started ? h.label ? `سهم امروز: ${esc(h.label)}` : `شناسه ${esc(toFa(h.me.id))}` : 'دوره هنوز شروع نشده است'}</small></span>${!h.started || !hezbDays ? '' : done ? '<em class="nm-st ok">✓ گزارش شد</em>' : '<em class="nm-st todo">امروز مانده</em>'}</button>`;
       loadHezb(h);
     }
     s += (window.chlMine?.() || []).map(m => chlRow(m, (m.today && m.today > t ? m.today : t))).join('');

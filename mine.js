@@ -25,7 +25,13 @@
 
   // ---------- برنامه ختم ----------
   const plan = {
-    get() { const p = read('readPlan', null); return p && p.n > 0 && p.s && p.e && Array.isArray(p.b) && p.log ? p : null; },
+    get() {
+      const p = read('readPlan', null), day = /^\d{4}-\d{2}-\d{2}$/, int = Number.isInteger;
+      if (!(p && int(p.n) && p.n > 0 && day.test(p.s) && day.test(p.e) && Array.isArray(p.b) && day.test(p.b[0]) && int(p.b[1]) && p.log && typeof p.log === 'object')) return null;
+      // فقط عدد و تاریخ؛ این مقدارها در HTML کارت‌ها می‌آیند
+      if (!int(p.last ??= 0) || !Object.entries(p.log).every(([d, L]) => day.test(d) && Array.isArray(L) && L.length === 2 && L.every(int))) return null;
+      return p;
+    },
     save(p) { write('readPlan', p); changed(); return p; },
     create(n) { const s = today(); return plan.save({ n, s, e: isoAdd(s, n - 1), b: [s, 0], last: 0, log: {}, t: Date.now() }); },
     // تا پایان روز iso باید تا کدام صفحه خوانده شده باشد
