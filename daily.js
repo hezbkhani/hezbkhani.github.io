@@ -203,7 +203,10 @@
     }
     if (ed === 3 && (d === 2 || beforeFajr)) add('ib:doa_tavassul', '📿', 'دعای توسل', `${tonight}، شب چهارشنبه`);
     if (d === 5 && day) add('ib:doa_samat', '📿', 'دعای سمات', 'عصر جمعه، پیش از غروب');
-    return out.slice(0, 4);
+    // ردیف‌هایی که فایل‌های دیگر می‌افزایند (daily.acts در content-plus.js): پس از چهار ردیف بالا، حداکثر سه ردیف دیگر.
+    out.splice(4); const n0 = out.length;
+    hooks.acts.forEach(f => { try { (f({ iso, T, now, h, he, d, ed, day, beforeFajr, afterMag, tonight, eve }) || []).forEach(a => add(a.go, a.ic, a.t, a.s)); } catch (e) { console.error(e); } });
+    return out.slice(0, n0 + 3);
   }
 
   // ---------- دعا و زیارت هر روز هفته (امکان weekday) ----------
@@ -351,6 +354,7 @@ ${hooks.more.map(f => { try { return f({ L, iso, T, now }) || ''; } catch (e) { 
     if (kind === 'ib') window.ibadat?.open?.(key);
     else if (kind === 'rd') window.chlRead?.(key);
     else if (kind === 'mf') window.mafatih?.openKey(key);
+    else hooks.go[kind]?.(key);
   }
   // برای تقویم ماه (calendar-page.js): مناسبت‌ها و اعمال هر روز از همین داده‌ها، بی‌تکرار.
   // اعمال روز با «صبح همان روز» حساب می‌شود؛ پس اعمال شبِ پیش رو (کمیل، توسل، شب قدر) هم می‌آید.
@@ -368,10 +372,12 @@ ${hooks.more.map(f => { try { return f({ L, iso, T, now }) || ''; } catch (e) { 
 
   // برای فایل‌های دیگر: شهر انتخابی، اوقات، تاریخ قمری (با جابه‌جایی مدیر) و جای افزودن بلوک به کارت.
   // block(ctx): زیر تاریخ؛ more(ctx): در بخش باز‌شونده اوقات شرعی، زیر انتخاب شهر. هر کدام HTML برمی‌گرداند (یا '').
-  const hooks = { block: [], more: [] };
+  const hooks = { block: [], more: [], acts: [], go: {} };
   window.daily = {
     loc, times, hijri, addDays, hm, dur, round, clock, ymd, toFa, esc,
-    block: f => { hooks.block.push(f); refresh(); }, more: f => { hooks.more.push(f); refresh(); }, refresh: () => refresh()
+    block: f => { hooks.block.push(f); refresh(); }, more: f => { hooks.more.push(f); refresh(); }, refresh: () => refresh(),
+    // acts(ctx) فهرست ردیف‌های {go, ic, t, s} برای «اعمال امروز» و تقویم برمی‌گرداند؛ go(kind, f) باز کردن go های «kind:کلید» را می‌سازد.
+    acts: f => { hooks.acts.push(f); refresh(); }, go: (kind, f) => { hooks.go[kind] = f; }
   };
   function refresh() { lastKey = ''; render(); }
   ['features:changed', 'settings:changed'].forEach(ev => document.addEventListener(ev, () => { lastKey = ''; render(); }));

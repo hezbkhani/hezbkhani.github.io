@@ -23,6 +23,10 @@
 .bk-card{background:#fff;border:1px solid var(--gold);border-radius:var(--r-card);padding:10px 14px;margin:10px 0}
 .bk-resume{display:block;width:100%;height:auto;text-align:right;background:var(--mint);color:var(--deep);border:1px solid var(--gold);border-right:5px solid var(--deep);border-radius:var(--r-card);padding:8px 14px;margin:10px 0;font-weight:700;font-size:17px;white-space:normal;line-height:1.7}
 .bk-resume small{display:block;color:var(--muted);font-size:14px;font-weight:500}
+.bk-picks{margin:8px 0 10px;border:1px solid var(--line);border-radius:var(--r-card);background:#fff}
+.bk-picks>summary{min-height:44px;padding:8px 12px;cursor:pointer;font-weight:700;color:var(--deep)}
+.bk-picks div{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 10px}
+.bk-picks button{height:auto;min-height:40px;padding:4px 12px;background:var(--mint);color:var(--deep);border:1px solid var(--line);border-radius:999px;font-weight:500;font-size:14.5px;white-space:normal;line-height:1.5}
 .bk-tabs{display:flex;gap:6px;margin:0 0 8px}
 .bk-tabs button{flex:1;height:40px;padding:0 8px;background:#fff;color:var(--deep);border:1px solid var(--line);font-size:15px}
 .bk-tabs button.on{background:var(--deep);color:#fff;border-color:var(--deep)}
@@ -123,11 +127,17 @@ body.bk-lock{overflow:hidden}
     if (!tab || !ix.parts.some(p => p.id === tab)) tab = last?.part && ix.parts.some(p => p.id === last.part) ? last.part : ix.parts[0].id;
     const lp = last && ix.parts.find(p => p.id === last.part), lt = lp && lp.items.find(i => i[0] === last.n);
     shade.querySelector('.bk-in').innerHTML = `${lt ? `<button type="button" class="bk-resume" data-bk-open="${lp.id}-${last.n}">ادامه خواندن<small>${esc(itemLabel(lp, last.n, lt[1]))}</small></button>` : ''}
-${ix.about ? `<p class="bk-note" style="margin-bottom:8px">${esc(ix.about)}</p>` : ''}
+${picksHtml(ix)}${ix.about ? `<p class="bk-note" style="margin-bottom:8px">${esc(ix.about)}</p>` : ''}
 ${ix.parts.length > 4 ? `<select class="bk-psel" aria-label="بخش">${ix.parts.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}</select>` : ix.parts.length > 1 ? `<div class="bk-tabs" role="tablist">${ix.parts.map(p => `<button type="button" role="tab" data-bk-tab="${p.id}">${esc(p.title)}</button>`).join('')}</div>` : ''}
 <input type="search" class="bk-find" placeholder="جستجوی شماره یا عنوان" aria-label="جستجو" value="${esc(query)}">
 <div class="bk-list"></div>${ix.src ? `<p class="bk-src">${esc(ix.src)}</p>` : ''}`;
     renderList(ix);
+  }
+  // گزیده‌های مشهور (امکان bookpicks، فهرست در content-plus.js): [بخش، شماره، نام کوتاه]
+  function picksHtml(ix) {
+    const list = (window.contentPlus?.picks(ix.key) || []).filter(([p, n]) => ix.parts.some(x => x.id === p && x.items.some(i => i[0] === n)));
+    if (!list.length) return '';
+    return `<details class="bk-picks" open><summary>⭐ گزیده‌های مشهور</summary><div>${list.map(([p, n, t]) => `<button type="button" data-bk-open="${p}-${n}">${esc(t)}</button>`).join('')}</div></details>`;
   }
   async function renderList(ix) {
     ix = ix || await getIndex(sheetBook).catch(() => null);

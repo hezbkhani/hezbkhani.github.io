@@ -55,7 +55,7 @@
   // ---------- بارگذاری برگه ختم (khatm-app.js) فقط هنگام نیاز ----------
   let app = null;
   const load = () => app || (app = new Promise((res, rej) => {
-    const s = document.createElement('script'); s.src = 'khatm-app.js?v=1';
+    const s = document.createElement('script'); s.src = 'khatm-app.js?v=2';
     s.onload = () => (window.khatmApp ? res(window.khatmApp) : rej(Error('load')));
     s.onerror = () => { app = null; rej(Error('load')); };
     document.body.appendChild(s);
