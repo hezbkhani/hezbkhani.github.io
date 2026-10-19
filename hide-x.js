@@ -1,5 +1,5 @@
 // دکمه کوچک ✕ روی هر بخش صفحه اول تا بازدیدکننده همان بخش را برای خودش پنهان کند (فقط روی همین گوشی).
-// - کارت امروز (اوقات شرعی و مناسبت‌ها) به امکان‌های prayer و today بسته است: ✕ همان‌ها را با features.setHidden پنهان می‌کند.
+// - کارت امروز (اوقات شرعی، مناسبت‌ها، دعای روز هفته) به امکان‌های prayer، today و weekday بسته است و کارت آیه و سخن روز به ayahday و hadithday: ✕ همان‌ها را با features.setHidden پنهان می‌کند.
 // - کادرهای معرفی، اطلاعیه و نصب برنامه امکان نیستند: با features.addSection ثبت می‌شوند (کلید secHide؛ نصب کلید خودش installClosed)
 //   و در «منوی ☰ › تنظیمات › نمایش امکانات» ردیف روشن/خاموش دارند.
 // پس از پنهان کردن، به‌جای بخش یک خط کوچک با دکمه «بازگرداندن» می‌آید؛ فقط برای همین بازدید (بار بعد آن بخش اصلاً نیست).
@@ -39,7 +39,8 @@ li.hx-note{list-style:none}
 
   // feats: پنهان کردن با امکان‌ها؛ وگرنه بخش ثبت‌شده در features
   const T = [
-    { id: 'today', feats: ['prayer', 'today'], host: () => document.getElementById('dlCard') },
+    { id: 'today', feats: ['prayer', 'today', 'weekday'], host: () => document.getElementById('dlCard') },
+    { id: 'words', feats: ['ayahday', 'hadithday'], host: () => document.getElementById('dwCard') },
     { id: 'intro-hezb', ic: '📖', t: 'معرفی حزب‌خوانی', d: 'کادر حزب‌خوانی در صفحه اول', el: () => intro('hezb') },
     { id: 'intro-courses', ic: '📘', t: 'معرفی دوره‌های قرآن', d: 'کادر دوره‌های قرآن در صفحه اول', el: () => intro('courses') },
     { id: 'intro-chelleh', ic: '🕯️', t: 'معرفی چله‌ها', d: 'کادر چله‌ها در صفحه اول', el: () => intro('chelleh') },
