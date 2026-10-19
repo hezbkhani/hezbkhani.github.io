@@ -1,4 +1,4 @@
-// برگه قبله‌نما؛ qibla.js این فایل را با اولین باز کردن بار می‌کند.
+// برگه قبله‌نما؛ qibla.js این فایل را با اولین باز کردن بار می‌کند. با امکان shrines جهت کربلا، نجف، مشهد و دیگر حرم‌ها هم هست.
 // جهت قبله: سمت اولیه دایره عظیمه (great-circle) از جای کاربر تا کعبه (۲۱٫۴۲۲۵ شمالی، ۳۹٫۸۲۶۲ شرقی)، به درجه ساعتگرد از شمال جغرافیایی.
 // جای کاربر همان شهر کارت اوقات شرعی است (daily.js، کلید prayerLoc) یا «موقعیت من» که همان‌جا هم ذخیره می‌شود.
 // گوشی‌هایی که حسگر جهت دارند قطب‌نمای زنده می‌بینند: آیفون با webkitCompassHeading (پس از اجازه با requestPermission)،
@@ -7,11 +7,20 @@
 (function () {
   const R = Math.PI / 180, KA = [21.4225, 39.8262], fa = '۰۱۲۳۴۵۶۷۸۹', toFa = x => String(x).replace(/\d/g, d => fa[d]);
   const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  function bearing(lat, lng) {
-    const p1 = lat * R, p2 = KA[0] * R, d = (KA[1] - lng) * R;
+  // امکان shrines: همین صفحه جهت حرم‌ها را هم برای زیارت از راه دور نشان می‌دهد (کلید qbTarget روی همین گوشی).
+  // [شناسه، نام، نشان، [عرض، طول] حرم، زیارت (go در content-plus.js)]
+  const TARGETS = [['kaaba', 'کعبه', '🕋', KA], ['karbala', 'کربلا', '🏴', [32.6165, 44.0324], 'rd:ashura', 'زیارت عاشورا'], ['najaf', 'نجف', '🕌', [31.9961, 44.3148], 'mf:238', 'زیارت امین‌الله'],
+    ['mashhad', 'مشهد', '🕌', [36.2880, 59.6158], 'mf:317', 'زیارت امام رضا (ع)'], ['madina', 'مدینه', '🕌', [24.4672, 39.6112], 'mf:217', 'زیارت پیامبر (ص) از راه دور'],
+    ['kazimain', 'کاظمین', '🕌', [33.3800, 44.3378], 'mf:304', 'زیارت امام موسی کاظم (ع)'], ['samarra', 'سامرا', '🕌', [34.1989, 43.8737], 'mf:327', 'زیارت امام علی النقی (ع)'],
+    ['qom', 'قم', '🕌', [34.6418, 50.8790], 'mf:352', 'زیارت حضرت معصومه (س)']];
+  const multi = () => !!window.features?.shown('shrines');
+  let tgt = (() => { try { return localStorage.getItem('qbTarget') || 'kaaba'; } catch { return 'kaaba'; } })();
+  const T = () => (multi() && TARGETS.find(t => t[0] === tgt)) || TARGETS[0];
+  function bearing(lat, lng, to = KA) {
+    const p1 = lat * R, p2 = to[0] * R, d = (to[1] - lng) * R;
     return (Math.atan2(Math.sin(d) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(d)) / R + 360) % 360;
   }
-  const km = (lat, lng) => { const a = Math.sin((KA[0] - lat) * R / 2) ** 2 + Math.cos(lat * R) * Math.cos(KA[0] * R) * Math.sin((KA[1] - lng) * R / 2) ** 2; return 6371 * 2 * Math.asin(Math.sqrt(a)); };
+  const km = (lat, lng, to = KA) => { const a = Math.sin((to[0] - lat) * R / 2) ** 2 + Math.cos(lat * R) * Math.cos(to[0] * R) * Math.sin((to[1] - lng) * R / 2) ** 2; return 6371 * 2 * Math.asin(Math.sqrt(a)); };
   const DIRS = ['شمال', 'شمال شرقی', 'شرق', 'جنوب شرقی', 'جنوب', 'جنوب غربی', 'غرب', 'شمال غربی'];
   const css = `
 .qb-shade{position:fixed;inset:0;z-index:60;background:#000a;display:flex;align-items:flex-end;justify-content:center}
@@ -33,6 +42,9 @@
 .qb-btns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
 .qb-btns button{flex:1 1 160px;min-height:46px;height:auto;font-size:15px}
 .qb-box .qb-sec{background:#fff;color:var(--deep);border:1px solid var(--gold)}
+.qb-tg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0 2px}
+.qb-tg button{height:38px;min-height:0;padding:0 12px;background:#fff;color:var(--deep);border:1px solid var(--line);border-radius:999px;font-size:14.5px;font-weight:600}
+.qb-tg button.on{background:var(--emerald);border-color:var(--emerald);color:#fff}
 @media(min-width:600px){.qb-shade{align-items:center}.qb-box{border-radius:var(--r-panel);border-bottom:2px solid var(--gold)}}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
 
@@ -43,7 +55,7 @@
     const lab = (a, t, c) => { const x = Math.sin(a * R) * 84, y = -Math.cos(a * R) * 84 + 5; return `<text class="qb-l${c ? ' ' + c : ''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" data-c="${x.toFixed(1)} ${(y - 5).toFixed(1)}" text-anchor="middle">${t}</text>`; };
     return `<svg viewBox="-125 -125 250 250" role="img" aria-label="صفحه قبله‌نما"><circle class="qb-face" r="114" fill="#fff" stroke="#d7aa5b" stroke-width="3"/>
 <g class="qb-rot">${ticks}${lab(0, 'شمال', 'qb-n')}${lab(90, 'شرق')}${lab(180, 'جنوب')}${lab(270, 'غرب')}
-<g transform="rotate(${b.toFixed(1)})"><line x1="0" y1="18" x2="0" y2="-66" stroke="#006b50" stroke-width="6" stroke-linecap="round"/><path d="M0 -80 L-11 -60 L11 -60 Z" fill="#006b50"/><text x="0" y="-92" text-anchor="middle" style="font-size:20px" transform="rotate(${(-b).toFixed(1)} 0 -98)">🕋</text></g></g>
+<g transform="rotate(${b.toFixed(1)})"><line x1="0" y1="18" x2="0" y2="-66" stroke="#006b50" stroke-width="6" stroke-linecap="round"/><path d="M0 -80 L-11 -60 L11 -60 Z" fill="#006b50"/><text x="0" y="-92" text-anchor="middle" style="font-size:20px" transform="rotate(${(-b).toFixed(1)} 0 -98)">${T()[2]}</text></g></g>
 <circle r="7" fill="#d7aa5b"/><path class="qb-me" d="M0 -124 L-9 -110 L9 -110 Z" fill="#b3261e" display="none"/></svg>`;
   }
 
@@ -52,19 +64,23 @@
   const chosen = () => { try { return !!localStorage.getItem('prayerLoc'); } catch { return false; } };
 
   function paint() {
-    const l = L(); b = bearing(l.lat, l.lng);
+    const l = L(), t = T(), kaaba = t[0] === 'kaaba', name = kaaba ? 'قبله' : `جهت ${t[1]}`; b = bearing(l.lat, l.lng, t[3]);
     const dir = DIRS[Math.round(b / 45) % 8], ios = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
-    const where = `${chosen() ? 'برای' : 'برای شهر پیش‌فرض'} ${esc(l.short || l.name)} · ${Math.round(km(l.lat, l.lng)).toLocaleString('fa-IR')} کیلومتر تا مکه`;
+    const dist = Math.round(km(l.lat, l.lng, t[3]));
+    const where = `${chosen() ? 'برای' : 'برای شهر پیش‌فرض'} ${esc(l.short || l.name)} · ${dist < 20 ? `در ${esc(t[1])} هستید` : `${dist.toLocaleString('fa-IR')} کیلومتر تا ${kaaba ? 'مکه' : esc(t[1])}`}`;
+    const pick = multi() ? `<div class="qb-tg" role="group" aria-label="مقصد">${TARGETS.map(x => `<button type="button" data-qb-t="${x[0]}" class="${x[0] === t[0] ? 'on' : ''}" aria-pressed="${x[0] === t[0]}">${x[2]} ${x[1]}</button>`).join('')}</div>` : '';
+    const zy = !kaaba && t[4] && window.contentPlus ? `<button type="button" class="qb-sec" data-qb="zy">📖 ${esc(t[5])}</button>` : '';
     const hint = mode === 'live'
-      ? 'گوشی را صاف و افقی در دست بگیرید و بچرخید تا علامت قرمز بالا روی کعبه بیفتد. اگر جهت درست نیست، گوشی را چند بار به شکل عدد ۸ در هوا بچرخانید و از وسایل فلزی و آهن‌ربا (مثل قاب مغناطیسی) دور شوید.'
+      ? `گوشی را صاف و افقی در دست بگیرید و بچرخید تا علامت قرمز بالا روی ${kaaba ? 'کعبه' : 'نشان حرم'} بیفتد. اگر جهت درست نیست، گوشی را چند بار به شکل عدد ۸ در هوا بچرخانید و از وسایل فلزی و آهن‌ربا (مثل قاب مغناطیسی) دور شوید.`
       : mode === 'ask' ? 'برای قطب‌نمای زنده، دکمه زیر را بزنید و اجازه دسترسی به حسگر حرکت را بدهید.'
       : mode === 'wait' ? 'در حال پیدا کردن قطب‌نمای گوشی…'
-      : `این دستگاه قطب‌نما ندارد یا اجازه داده نشد. «شمال» صفحه را رو به شمال واقعی بگیرید (با قطب‌نما یا نقشه)؛ قبله ${toFa(Math.round(b))} درجه ساعتگرد از شمال است.`;
-    shade.querySelector('.qb-box').innerHTML = `<button type="button" class="qb-x" data-qb="close" aria-label="بستن">✕</button><h2>قبله‌نما</h2>
-<p class="qb-where">${where}</p><p class="qb-deg">قبله: <b>${toFa(Math.round(b))}</b> درجه از شمال، رو به ${dir}</p>
+      : `این دستگاه قطب‌نما ندارد یا اجازه داده نشد. «شمال» صفحه را رو به شمال واقعی بگیرید (با قطب‌نما یا نقشه)؛ ${name} ${toFa(Math.round(b))} درجه ساعتگرد از شمال است.`;
+    shade.querySelector('.qb-box').innerHTML = `<button type="button" class="qb-x" data-qb="close" aria-label="بستن">✕</button><h2>${multi() ? 'قبله و حرم‌ها' : 'قبله‌نما'}</h2>${pick}
+<p class="qb-where">${where}</p><p class="qb-deg">${name}: <b>${toFa(Math.round(b))}</b> درجه از شمال، رو به ${dir}</p>
 <div class="qb-dial">${dial(b)}</div><p class="qb-msg" aria-live="polite"></p><p class="qb-hint">${hint}</p>
 ${note ? `<p class="qb-hint" role="status">${esc(note)}</p>` : ''}
-<div class="qb-btns">${mode === 'ask' || (mode === 'none' && ios) ? '<button type="button" data-qb="perm">🧭 روشن کردن قطب‌نما</button>' : ''}${navigator.geolocation ? '<button type="button" class="qb-sec" data-qb="gps">📍 موقعیت دقیق من</button>' : ''}</div>`;
+${!kaaba ? '<p class="qb-hint">برای زیارت از راه دور، رو به حرم بایستید و زیارت را بخوانید.</p>' : ''}
+<div class="qb-btns">${zy}${mode === 'ask' || (mode === 'none' && ios) ? '<button type="button" data-qb="perm">🧭 روشن کردن قطب‌نما</button>' : ''}${navigator.geolocation ? '<button type="button" class="qb-sec" data-qb="gps">📍 موقعیت دقیق من</button>' : ''}</div>`;
     rot = 0; update();
   }
 
@@ -79,7 +95,7 @@ ${note ? `<p class="qb-hint" role="status">${esc(note)}</p>` : ''}
     g.querySelectorAll('.qb-l').forEach(t => t.setAttribute('transform', `rotate(${-rot} ${t.dataset.c})`));
     const diff = ((b - head) % 360 + 540) % 360 - 180, ok = Math.abs(diff) <= 5;
     box.classList.toggle('ok', ok);
-    msg.textContent = ok ? 'رو به قبله هستید ✓' : `${toFa(Math.round(Math.abs(diff)))} درجه به ${diff > 0 ? 'راست' : 'چپ'} بچرخید`;
+    msg.textContent = ok ? (T()[0] === 'kaaba' ? 'رو به قبله هستید ✓' : `رو به ${T()[1]} هستید ✓`) : `${toFa(Math.round(Math.abs(diff)))} درجه به ${diff > 0 ? 'راست' : 'چپ'} بچرخید`;
     if (ok && !wasOk) navigator.vibrate?.(60);
     wasOk = ok;
     if (acc != null && (acc < 0 || acc > 25)) msg.textContent += ' (قطب‌نما دقیق نیست؛ گوشی را به شکل ۸ بچرخانید)';
@@ -124,9 +140,12 @@ ${note ? `<p class="qb-hint" role="status">${esc(note)}</p>` : ''}
   }
   async function onClick(e) {
     if (e.target === shade) return close();
+    const tb = e.target.closest('[data-qb-t]');
+    if (tb) { tgt = tb.dataset.qbT; try { localStorage.setItem('qbTarget', tgt); } catch {} wasOk = false; const y = shade.querySelector('.qb-box').scrollTop; paint(); shade.querySelector('.qb-box').scrollTop = y; shade.querySelector(`[data-qb-t="${tgt}"]`)?.focus(); return; }
     const t = e.target.closest('[data-qb]'); if (!t) return;
     const a = t.dataset.qb;
     if (a === 'close') return close();
+    if (a === 'zy') { const g = T()[4]; close(); return setTimeout(() => window.contentPlus?.go(g), 300); }
     if (a === 'perm') {
       try { const r = await DeviceOrientationEvent.requestPermission(); if (r !== 'granted') throw 0; mode = 'wait'; listen(); }
       catch { mode = 'none'; note = 'اجازه دسترسی به حسگر داده نشد. در تنظیمات Safari › «حرکت و جهت» را روشن کنید و دوباره بیازمایید.'; }

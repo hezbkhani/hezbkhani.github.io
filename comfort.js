@@ -12,7 +12,10 @@
   const KEY = 'comfort';
   const SIZES = [[0.9, 'کوچک'], [1, 'معمولی'], [1.12, 'بزرگ'], [1.25, 'درشت'], [1.4, 'خیلی درشت']];
   const THEMES = [['light', 'روشن'], ['dark', 'تیره'], ['auto', 'مثل گوشی']];
-  const DEF = { size: 1, lh: 0, theme: 'light', motion: false };
+  // امکان sunset: گزینه «غروب تا طلوع» (تیره از غروب آفتاب تا طلوع، به افق شهر کارت «امروز»)؛ امکان contrast: hc، نوشته پررنگ‌تر.
+  const SUN = ['sun', 'غروب تا طلوع'];
+  const themes = () => window.features?.shown('sunset') ? [...THEMES, SUN] : THEMES;
+  const DEF = { size: 1, lh: 0, theme: 'light', motion: false, hc: false };
   const get = () => { try { return Object.assign({}, DEF, JSON.parse(localStorage.getItem(KEY))); } catch { return { ...DEF }; } };
   const put = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} };
   const root = document.documentElement;
@@ -49,6 +52,14 @@ html[data-motion=reduce].bgx-anim .shell>.panel,html[data-motion=reduce].bgx-ani
 .cf-row{display:flex;align-items:center;gap:12px;padding:6px 0;margin:0;font-weight:500;cursor:pointer}
 .cf-row span{flex:1;min-width:0;line-height:1.6}
 .cf-row small{display:block;color:var(--muted);font-size:13px;font-weight:400}
+.cf-hint{margin:6px 0 0;font-size:13.5px;color:var(--muted)}
+html[data-contrast]{--muted:#463c33;--line:#b5a283;--ink:#120e0a}
+html[data-contrast][data-bg]{--t-ink2:#3a3128;--t-line:#9c8a6c}
+html[data-contrast][data-theme=dark]{--muted:#dccfbe;--line:#6b5b48;--ink:#fffaf0}
+html[data-contrast][data-theme=dark][data-bg]{--t-ink2:#e4d7c2}
+html[data-contrast] body{font-weight:500}
+html[data-contrast] :is(.cr,.qr){--tr:#241d16;--muted:#463c33}
+html[data-contrast] :is(.cr,.qr).night{--tr:#f1e8d9;--muted:#d0c4b3}
 .cf-reset{display:block;margin:14px auto 0;height:44px;background:transparent;border:0;color:var(--deep);text-decoration:underline;font-weight:600;font-size:15px}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
 
@@ -200,7 +211,8 @@ html[data-motion=reduce].bgx-anim .shell>.panel,html[data-motion=reduce].bgx-ani
   let metaLight = null;
   function apply() {
     const p = shown() ? get() : DEF;
-    dark = p.theme === 'dark' || (p.theme === 'auto' && osDark.matches);
+    dark = p.theme === 'dark' || (p.theme === 'auto' && osDark.matches) || (p.theme === 'sun' && sunDark());
+    if (p.hc && window.features?.shown('contrast')) root.setAttribute('data-contrast', ''); else root.removeAttribute('data-contrast');
     const k = SIZES[p.size] ? SIZES[p.size][0] : 1, lk = p.lh ? 1.2 : 1;
     root.style.setProperty('--fs-k', k); root.style.setProperty('--lh-k', lk);
     if (k !== 1 || lk !== 1) wantScale = true;
@@ -213,13 +225,23 @@ html[data-motion=reduce].bgx-anim .shell>.panel,html[data-motion=reduce].bgx-ani
     sweep(); readers();
   }
   osDark.addEventListener?.('change', apply);
+  // تیره بودن «غروب تا طلوع» همین حالا؛ برای اسکریپت اول index.html هم (کلید sunNext: { dark, until }) نگه داشته می‌شود تا صفحه سفید نپرد.
+  function sunDark() {
+    const D = window.daily; if (!D || !window.features?.shown('sunset')) return false;
+    const L = D.loc(), now = Date.now(), iso = D.ymd(now, L.tz), T = D.times(iso, L), Tn = D.times(D.addDays(iso, 1), L);
+    const dk = now < T.rise || now >= T.set, until = now < T.rise ? T.rise : now < T.set ? T.set : Tn.rise;
+    try { localStorage.setItem('sunNext', JSON.stringify({ dark: dk, until: Math.round(until) })); } catch {}
+    return dk;
+  }
+  setInterval(() => { if (!document.hidden && shown() && get().theme === 'sun' && sunDark() !== dark) apply(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && shown() && get().theme === 'sun' && sunDark() !== dark) apply(); });
   document.addEventListener('features:changed', () => { apply(); if (shade?.isConnected && !shown()) close(); });
 
   // ---------- برگه تنظیمات ----------
   let shade = null;
   function summary() {
     const p = get();
-    return `متن ${SIZES[p.size]?.[1] || 'معمولی'} · ${THEMES.find(t => t[0] === p.theme)?.[1] || 'روشن'}${p.lh ? ' · فاصله بیشتر' : ''}`;
+    return `متن ${SIZES[p.size]?.[1] || 'معمولی'} · ${[...THEMES, SUN].find(t => t[0] === p.theme)?.[1] || 'روشن'}${p.lh ? ' · فاصله بیشتر' : ''}`;
   }
   function render() {
     const p = get(), seg = (k, list, cur) => `<div class="cf-seg${k === 'size' ? ' cf-sizes' : ''}" role="group">${list.map(([v, t], i) => `<button type="button" data-cf="${k}" data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}" aria-pressed="${String(cur) === String(v)}"${k === 'size' ? ` aria-label="${esc(t)}" style="font-size:${Math.round(13 + i * 3)}px"` : ''}>${k === 'size' ? 'آ' : esc(t)}</button>`).join('')}</div>`;
@@ -227,7 +249,8 @@ html[data-motion=reduce].bgx-anim .shell>.panel,html[data-motion=reduce].bgx-ani
 <div class="cf-sec"><h3>اندازه متن<small>${esc(SIZES[p.size]?.[1] || '')}</small></h3>${seg('size', SIZES.map(([, t], i) => [i, t]), p.size)}
 <div class="cf-sample"><b>نمونه متن</b>سهم امروز را بخوانید و پس از قرائت، گزارش آن را ثبت کنید.</div></div>
 <div class="cf-sec"><h3>فاصله خطوط</h3>${seg('lh', [[0, 'معمولی'], [1, 'بیشتر']], p.lh ? 1 : 0)}</div>
-<div class="cf-sec"><h3>رنگ صفحه</h3>${seg('theme', THEMES, p.theme)}</div>
+<div class="cf-sec"><h3>رنگ صفحه</h3>${seg('theme', themes(), p.theme)}${p.theme === 'sun' ? '<p class="cf-hint">از غروب آفتاب تا طلوع، به افق شهری که در کارت «امروز» انتخاب کرده‌اید.</p>' : ''}</div>
+${window.features?.shown('contrast') ? `<div class="cf-sec"><label class="cf-row"><span>متن پررنگ و خوانا<small>نوشته‌های کم‌رنگ تیره‌تر و همه نوشته‌ها کمی ضخیم‌تر، برای چشم خسته یا نور زیاد</small></span><input type="checkbox" class="ft-sw" data-cf="hc"${p.hc ? ' checked' : ''} aria-label="متن پررنگ و خوانا"></label></div>` : ''}
 <div class="cf-sec"><label class="cf-row"><span>حرکت کمتر<small>بدون حرکت ورود کادرهای صفحه اول و جلوه‌های جابه‌جایی${matchMedia('(prefers-reduced-motion: reduce)').matches ? '؛ گوشی شما هم حرکت کمتر را خواسته است' : ''}</small></span><input type="checkbox" class="ft-sw" data-cf="motion"${p.motion ? ' checked' : ''} aria-label="حرکت کمتر"></label></div>
 ${JSON.stringify(p) !== JSON.stringify(DEF) ? '<button type="button" class="cf-reset" data-cf="reset">برگشت به حالت عادی</button>' : ''}`;
   }
@@ -245,7 +268,7 @@ ${JSON.stringify(p) !== JSON.stringify(DEF) ? '<button type="button" class="cf-r
         put(p); apply(); render(); window.siteMenu?.refresh();
         shade.querySelector(`[data-cf="${k}"].on`)?.focus();
       });
-      shade.addEventListener('change', e => { if (e.target.dataset.cf === 'motion') { const p = get(); p.motion = e.target.checked; put(p); apply(); render(); } });
+      shade.addEventListener('change', e => { const k = e.target.dataset.cf; if (k === 'motion' || k === 'hc') { const p = get(); p[k] = e.target.checked; put(p); apply(); render(); shade.querySelector(`[data-cf="${k}"]`)?.focus(); } });
     }
     render();
     document.body.appendChild(shade); document.body.classList.add('ib-lock');
