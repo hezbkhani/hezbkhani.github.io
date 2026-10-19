@@ -3,7 +3,7 @@
 # books/<کتاب>/<بخش>/<شماره>.json  ->  books/<کتاب>/tr/<مترجم>/<بخش>/<شماره>.json = { n: تعداد بندها، t: ترجمه هر بند یا null }
 # و در index.json کتاب "trFiles": true گذاشته می‌شود (books.js از آن می‌فهمد ترجمه را جدا بگیرد).
 # پس از هر بار ساختن کتاب (build_nahj.py، build_sahifa.py، build_more.py) دوباره اجرا شود؛ اجرای دوباره بی‌اثر است.
-# استفاده: python3 tools/books/split_translations.py nahj sahifa ghurar huquq
+# استفاده: python3 tools/books/split_translations.py nahj sahifa huquq
 import json, os, sys, glob
 
 def dump(o, f):

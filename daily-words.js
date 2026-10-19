@@ -1,7 +1,8 @@
 // کارت «آیه و سخن روز» در صفحه اول، زیر کارت «امروز» (daily.js). دو امکان جدا در features.js:
 //  ayahday: هر روز یکی از آیه‌های فهرست AYAT (آیه‌های کوتاه و پرکاربرد، از جمله آیه‌های ولایت، مودت و صلوات) با ترجمه آیت‌الله مکارم شیرازی.
 //           متن از همان فایل‌های قرآن‌خوان (quran/p/<حزب>.json) خوانده می‌شود؛ «خواندن در قرآن» صفحه همان آیه را باز می‌کند.
-//  hadithday: هر روز یکی از ۶۰۰ سخن گزیده غررالحکم (books/ghurar/h/<بخش>.json، ترجمه دارالحدیث)؛ «بیشتر» همان بخش کتاب را باز می‌کند.
+//  hadithday: هر روز یکی از حکمت‌های کوتاه نهج‌البلاغه (books/nahj/hikmat/<شماره>.json، ترجمه پیش‌فرض کتاب: محمد دشتی)؛
+//             «بیشتر» همان حکمت را در کتاب نهج‌البلاغه باز می‌کند.
 // روز به وقت شهر انتخابی کارت «امروز» حساب می‌شود؛ پس همه در یک روز همان آیه و سخن را می‌بینند. ✕ کارت در hide-x.js است.
 (function () {
   const shown = id => !!window.features?.shown(id);
@@ -11,9 +12,15 @@
     + '14:7 14:41 15:49 16:97 16:128 17:9 17:23 17:80 17:82 18:46 20:132 21:87 21:107 23:118 25:63 25:74 28:24 29:2 29:45 29:69 31:17 33:41 33:56 '
     + '35:15 39:10 39:53 40:60 42:23 47:7 49:10 49:13 50:16 51:56 55:13 55:60 57:16 59:18 64:16 65:3 67:2 76:8 89:27 93:5 93:11 94:5 97:3 2:110 '
     + '3:159 4:58 7:204 11:115 8:46 16:90 39:9').split(' ').map(r => r.split(':').map(Number));
-  // تعداد سخن‌های هر بخش غررالحکم (books/ghurar/h/001…014.json)؛ جمع ۶۰۰
-  const GH = [93, 102, 37, 25, 6, 18, 26, 26, 26, 16, 54, 104, 6, 61];
-  const GH_ALL = GH.reduce((a, b) => a + b, 0);
+  // شماره حکمت‌های کوتاه نهج‌البلاغه (یک بند، متن عربی تا ۱۶۰ و ترجمه تا ۲۲۰ نویسه) که در کارت جا می‌شوند.
+  const HK = ('1 2 3 4 5 7 8 9 10 11 12 13 14 15 16 18 19 20 21 23 24 25 26 27 28 29 30 32 33 34 35 36 39 44 46 47 48 49 50 51 52 53 54 55 56 58 59 60 61 '
+    + '63 64 65 66 67 68 69 70 71 72 74 75 76 80 83 84 85 86 87 91 92 95 97 98 101 106 107 109 110 117 118 121 124 127 129 132 133 134 137 138 139 '
+    + '140 141 142 143 144 146 148 149 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 '
+    + '178 179 180 181 182 183 184 185 186 187 188 189 192 193 196 197 198 200 201 205 206 207 208 212 213 214 215 216 217 218 219 220 221 222 223 '
+    + '225 226 227 230 231 236 238 239 241 242 243 244 245 246 247 248 249 250 251 254 255 256 258 259 263 264 265 268 272 274 277 278 279 280 281 '
+    + '282 283 284 285 286 287 288 290 293 294 296 297 298 299 301 302 303 304 305 306 308 309 310 312 313 314 324 326 327 329 330 331 332 334 335 '
+    + '336 337 338 339 340 341 342 345 346 347 348 350 351 353 355 360 362 363 364 365 366 376 378 380 385 386 391 392 393 394 395 397 398 401 403 '
+    + '407 408 409 410 411 412 413 418 419').split(' ').map(Number);
 
   const css = `
 #dwCard{display:block;margin:6px 0 16px;padding:10px 14px;background:var(--cream);color:var(--ink);text-shadow:none;border:1px solid var(--gold);border-radius:var(--r-card);line-height:1.8;font-size:16px}
@@ -50,11 +57,10 @@ html[data-bg] #dwCard{background:var(--t-paper);color:var(--t-ink);padding:12px 
     return { s, v, g, ar, tr, name: seg.fa, page: lastLE(ix.page, g) + 1, ix };
   }
   async function hadith(n) {
-    let k = (n * 7) % GH_ALL, part = 0; // گام ۷: هر روز از بخشی دیگر، و پس از ۶۰۰ روز همه دیده شده‌اند
-    while (k >= GH[part]) k -= GH[part++];
-    const d = await getJson(`books/ghurar/h/${String(part + 1).padStart(3, '0')}.json`);
-    const x = d.sections.filter(s => s.ar)[k] || d.sections[0];
-    return { part: part + 1, ar: String(x.ar).replace(/\s*[؛;]\s*$/, ''), tr: x.tr?.dh || x.fa || '', note: x.note || 'غررالحکم' };
+    const k = HK[(n * 7) % HK.length], nnn = String(k).padStart(3, '0'); // گام ۷: هر روز از جای دیگری از کتاب
+    const d = await getJson(`books/nahj/hikmat/${nnn}.json`);
+    const x = d.sections.find(s => s.ar);
+    return { n: k, ar: String(x.ar).replace(/^\s*(?:وَ\s*)?قَالَ\s*\(عليه السلام\)\s*:\s*/, ''), tr: String(x.fa || '').replace(/^\s*و?\s*درود خدا بر او فرمود:\s*/, ''), note: `نهج‌البلاغه، حکمت ${toFa(k)}` };
   }
 
   let card = null, data = {}, dayKey = '';
@@ -104,7 +110,7 @@ html[data-bg] #dwCard{background:var(--t-paper);color:var(--t-ink);padding:12px 
       const ix = a.ix, p = a.page, from = ix.page[p - 1], to = p < 604 ? ix.page[p] : ix.total;
       window.quranReader.openRange({ title: `سوره ${a.name}، آیه ${toFa(a.v)}`, sub: `آیه روز · صفحه ${toFa(p)} قرآن`, from, to, focus: a.g, endText: `پایان صفحه ${toFa(p)}` });
     }
-    if (x === 'more' && h) window.books.read('ghurar', 'h', h.part);
+    if (x === 'more' && h) window.books.read('nahj', 'hikmat', h.n);
     if (x === 'img-a' && a) window.shareCard({ ar: a.ar, fa: a.tr, title: `سوره ${a.name}، آیه ${toFa(a.v)}`, file: 'nooran-ayah' });
     if (x === 'img-h' && h) window.shareCard({ ar: h.ar, fa: h.tr, title: `امیرالمؤمنین علی (ع)، ${h.note}`, file: 'nooran-hadith' });
     if (x === 'cp-a' && a) copy(`${a.ar}\n\n${a.tr}\n\n(سوره ${a.name}، آیه ${toFa(a.v)}) · نوران`);
