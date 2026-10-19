@@ -1,10 +1,9 @@
-# ساخت سه کتاب دسته «بیشتر»: منتهی‌الآمال، گزیده غررالحکم و رساله حقوق، در books/<کتاب>/ به همان قالب صحیفه (books.js).
-# اجرا: python3 tools/books/build_more.py <muntaha_al_amal.json> <ghurar_gozide.json> <risalat_al_huquq.json>
+# ساخت دو کتاب دسته «بیشتر»: منتهی‌الآمال و رساله حقوق، در books/<کتاب>/ به همان قالب صحیفه (books.js).
+# اجرا: python3 tools/books/build_more.py <muntaha_al_amal.json> <risalat_al_huquq.json>
 # منبع‌ها:
 # - منتهی‌الآمال (شیخ عباس قمی)، تصحیح صادق حسن‌زاده، نسخه Word در archive.org/details/Montahi2؛ سرفصل‌های Word به
 #   باب (هر معصوم یک بخش)، فصل (هر فصل یک متن) و زیرعنوان برگردانده شده و پاورقی‌ها کنار گذاشته شده‌اند. متن نثر فارسی است:
 #   هر بند {p} و هر زیرعنوان {h}.
-# - گزیده غررالحکم (متن عربی و ترجمه فارسی)، از hadithlib.com (پایگاه کتابخانه احادیث شیعه، دارالحدیث)؛ هر حرف یک متن.
 # - رساله حقوق امام سجاد (ع)، روایت تحف‌العقول (۵۰ حق)، متن عربی و ترجمه فارسی از دانشنامه ویکی‌شیعه.
 import json, os, re, sys
 
@@ -86,28 +85,6 @@ def muntaha(src):
         'translations': [], 'parts': parts})
     return sum(len(p['items']) for p in parts)
 
-def ghurar(src):
-    out = os.path.join(ROOT, 'ghurar')
-    data = [c for c in json.load(open(src, encoding='utf-8')) if c['items']]
-    items = []
-    for i, c in enumerate(data, 1):
-        secs = []
-        for h in c['items']:
-            ar = re.sub(r'\s*؛\s*\d+\s*$', '', h['arabic']).strip()
-            secs.append({'ar': ar, 'tr': {'dh': fa_text(h['persian']).replace(' .', '.').replace(' ،', '،')}, 'note': f'غررالحکم، ح {fa(h["ref_no"])}' if h.get('ref_no') else None})
-        for s in secs:
-            if not s['note']: s.pop('note')
-        title = fa_text(c['chapter'])
-        write(os.path.join(out, 'h', f'{i:03d}.json'), {'title': title, 'bism': False, 'about': 'سخنان امیرالمؤمنین علی (ع)', 'sections': secs})
-        items.append([i, f'{title} ({fa(len(secs))} حدیث)'])
-    write(os.path.join(out, 'index.json'), {
-        'key': 'ghurar', 'title': 'غررالحکم (گزیده)',
-        'about': 'گزیده‌ای از ۶۰۰ سخن کوتاه امیرالمؤمنین علی (ع) از کتاب غررالحکم و دررالکلم آمدی، به ترتیب حروف، با ترجمه فارسی.',
-        'src': 'گزیده غررالحکم، متن و ترجمه از پایگاه کتابخانه احادیث شیعه (hadithlib.com، دارالحدیث). شماره هر حدیث، شماره آن در غررالحکم است.',
-        'translations': [{'id': 'dh', 'name': 'دارالحدیث', 'lang': 'fa'}],
-        'parts': [{'id': 'h', 'title': 'حروف', 'one': 'بخش', 'items': items}]})
-    return sum(len(c['items']) for c in data)
-
 def huquq(src):
     out = os.path.join(ROOT, 'huquq')
     d = json.load(open(src, encoding='utf-8'))
@@ -124,4 +101,4 @@ def huquq(src):
         'parts': [{'id': 'h', 'title': 'حقوق', 'one': '', 'plain': True, 'items': [[i, it['title']] for i, it in enumerate(items, 1)]}]})
     return len(items)
 
-print('muntaha', muntaha(sys.argv[1]), 'texts; ghurar', ghurar(sys.argv[2]), 'hadith; huquq', huquq(sys.argv[3]), 'texts')
+print('muntaha', muntaha(sys.argv[1]), 'texts; huquq', huquq(sys.argv[2]), 'texts')
