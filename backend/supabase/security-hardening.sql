@@ -14,3 +14,12 @@ alter function public.push_check(text, text, text) set search_path = public, pg_
 alter function public.reading_day(timestamptz) set search_path = public, pg_temp;
 alter function public.reg_clean_name(text) set search_path = public, pg_temp;
 alter function public.tehran_fajr(date) set search_path = public, pg_temp;
+
+-- ۳) (۱۴۰۵/۰۷/۲۷) جدول‌های داخلی: بازدیدکننده هیچ راه مستقیمی به آن‌ها ندارد (RLS بی‌سیاست همین حالا جلو را می‌گیرد)؛
+--    این لایه دوم است تا اگر روزی سیاستی اشتباهی اضافه شد هم باز نشوند. تابع‌های سایت (security definer) و تابع لبه
+--    (service_role) مثل قبل کار می‌کنند.
+revoke all on public.khatm_rate, public.push_azan, public.push_subscriptions, public.push_sent,
+  public.code_misses, public.chelleh_meta, public.account_hezb from anon, authenticated;
+
+-- ۴) تابع‌های کمکی ختم گروهی فقط از درون khatm_* صدا زده می‌شوند (طرحواره khatm_priv از API در دسترس نیست؛ این هم لایه دوم).
+revoke all on all functions in schema khatm_priv from public, anon, authenticated;

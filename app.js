@@ -21,7 +21,7 @@ window.audioOpt=(()=>{const RATES=[1,1.25,1.5,1.75,2],p=Object.assign({rate:1,dl
   const apply=()=>{for(const a of [...tracked,...document.querySelectorAll('audio')]){a.defaultPlaybackRate=a.playbackRate=p.rate;if(a.controls)a.setAttribute('controlslist',p.dl?'':'nodownload')}
     document.querySelectorAll('select[data-au-rate]').forEach(s=>s.value=p.rate);document.querySelectorAll('[data-au-dl]').forEach(b=>b.hidden=!p.dl);document.dispatchEvent(new Event('audioopt'));};
   const set=v=>{Object.assign(p,v);writeCache('audioPrefs',p);apply();};
-  async function download(url){if(!url)return;const name=decodeURIComponent(url.split('#')[0].split('?')[0].split('/').pop()||'audio.mp3'),save=h=>{const a=document.createElement('a');a.href=h;a.download=name;document.body.appendChild(a);a.click();a.remove();};
+  async function download(url){if(!url)return;try{if(!/^https?:$/.test(new URL(url,location.href).protocol))return}catch{return}const name=decodeURIComponent(url.split('#')[0].split('?')[0].split('/').pop()||'audio.mp3'),save=h=>{const a=document.createElement('a');a.href=h;a.download=name;document.body.appendChild(a);a.click();a.remove();};
     if(new URL(url,location.href).origin===location.origin)return save(url);
     try{const r=await fetch(url);if(!r.ok)throw 0;const h=URL.createObjectURL(await r.blob());save(h);setTimeout(()=>URL.revokeObjectURL(h),60000);}catch{window.open(url,'_blank','noopener');}}
   new MutationObserver(m=>{if(m.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches('audio')||n.querySelector('audio')))))apply()}).observe(document.documentElement,{childList:true,subtree:true});
