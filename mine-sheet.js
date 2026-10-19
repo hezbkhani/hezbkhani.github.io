@@ -133,7 +133,7 @@ ${p || mode === 'all' ? `<button type="button" class="nm-link" data-plan-cancel>
     if (!p) return '';
     const s = P.status(p), head = mode === 'all' ? '<h3>برنامه ختم قرآن من</h3>' : '';
     if (s.fin) return `${head}<div class="nm-card"><p class="nm-big">🎉 ختم قرآن کامل شد. قبول باشد.</p><p class="nm-mute">${toFa(PAGES)} صفحه، از ${esc(dateFa(p.s))} تا ${esc(dateFa(p.fin || s.t))}.</p>
-<div class="nm-btns">${window.shareCard ? '<button type="button" data-plan="cert">🏅 تصویر ختم</button>' : ''}<button type="button" class="reg-light${window.shareCard ? '' : ' nm-one'}" data-plan="again">برنامه تازه</button></div></div>`;
+<div class="nm-btns">${window.shareCard ? '<button type="button" data-plan="cert">🏅 تصویر ختم</button>' : ''}<button type="button" class="reg-light${window.shareCard ? '' : ' nm-one'}" data-plan="again">برنامه تازه</button></div>${window.contentPlus?.shown('khatmdua') ? '<div class="nm-btns"><button type="button" class="nm-one" data-go="khatmdua:">📖 دعای ختم قرآن (صحیفه سجادیه، دعای ۴۲)</button></div>' : ''}</div>`;
     const pct = Math.round(p.last / PAGES * 100), left = PAGES - p.last;
     const spreadDays = Math.max(1, M.isoDiff(p.e, p.log[s.t] ? M.isoAdd(s.t, 1) : s.t) + 1), spreadRate = Math.ceil(left / spreadDays);
     const behind = s.behind ? `<div class="nm-note">${toFa(s.behind)} صفحه از برنامه عقب هستید.${!s.over && !s.done && s.tT > s.to ? ` اگر امروز تا صفحه ${toFa(s.tT)} بخوانید، به برنامه می‌رسید.` : ''}
@@ -292,6 +292,7 @@ ${keys.length > 3 && window.qpSaved ? `<button type="button" class="nm-link" dat
       if (k === 'saved') return closeThen(() => window.qpSaved?.open());
       if (k === 'zekr') return closeThen(() => window.zekr?.open());
       if (k === 'menu') return closeThen(() => window.siteMenu?.open());
+      if (k === 'khatmdua') return closeThen(() => window.contentPlus?.khatmDua());
       return;
     }
     if (b.dataset.planNew) { if (p && !P.status(p).fin && !confirm('برنامه فعلی کنار گذاشته شود و برنامه تازه از امروز شروع شود؟')) return; setup = false; P.create(+b.dataset.planNew); return; }

@@ -1,5 +1,5 @@
 // دسته «بیشتر» در ته منوی سه‌خط: جای بخش‌های جانبی سایت (اذان و اقامه، منتهی‌الآمال، گزیده غررالحکم و رساله حقوق).
-// بخش تازه: window.siteMore.add({ id, icon, title, sub, open }) ؛ گزینه‌ها به همان ترتیب اضافه شدن می‌آیند.
+// بخش تازه: window.siteMore.add({ id, icon, title, sub, open, when? }) ؛ گزینه‌ها به همان ترتیب اضافه شدن می‌آیند.
 // اذان در همان خواننده متن چله‌ها باز می‌شود (window.chlRead در chelleh.js، متن chelleh/azan.json): عربی، ترجمه فارسی و زبان‌های دیگر، و صوت مؤذن‌های مختلف.
 // پیوند ?azan=1 هم اذان را باز می‌کند.
 (function () {
@@ -10,8 +10,10 @@
   window.siteMenu?.section({
     id: 'more', order: 99,
     render(box) {
-      if (!items.length) return;
-      box.innerHTML = '<h3>بیشتر</h3>' + items.map(it => `<button type="button" class="sm-item" data-more="${esc(it.id)}"><span class="sm-ic">${it.icon}</span><span>${esc(it.title)}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span><span class="sm-go">‹</span></button>`).join('');
+      // when(): گزینه‌ای که به یک امکان (features.js) بسته است فقط وقتی دیده می‌شود که آن امکان روشن باشد.
+      const list = items.filter(it => !it.when || it.when());
+      if (!list.length) { box.innerHTML = ''; return; }
+      box.innerHTML = '<h3>بیشتر</h3>' + list.map(it => `<button type="button" class="sm-item" data-more="${esc(it.id)}"><span class="sm-ic">${it.icon}</span><span>${esc(it.title)}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span><span class="sm-go">‹</span></button>`).join('');
       box.querySelectorAll('[data-more]').forEach(b => b.onclick = () => { const it = items.find(x => x.id === b.dataset.more); window.siteMenu.close(); if (it) setTimeout(it.open, 280); });
     }
   });
