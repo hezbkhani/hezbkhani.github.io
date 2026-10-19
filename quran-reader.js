@@ -526,7 +526,7 @@ body.qr-lock{overflow:hidden}
     try { it = await getJson(`quran/intro/${s}.json`); } catch {}
     if (req !== tafsirReq) return;
     if (!it) { box.innerHTML = '<div class="qr-state">معرفی این سوره بارگذاری نشد. اینترنت را بررسی کنید.</div>'; return; }
-    $('qrTfsTitle').innerHTML = `معرفی سوره ${esc(FA_NAME[s] || toFa(s))}<small>${esc(it.place)} · ${toFa(it.ayat)} آیه${it.order ? ` · ترتیب نزول: ${toFa(it.order)}` : ''}</small>`;
+    $('qrTfsTitle').innerHTML = `معرفی سوره ${esc(FA_NAME[s] || toFa(s))}<small>${esc(it.place)} · ${esc(toFa(it.ayat))} آیه${it.order ? ` · ترتیب نزول: ${esc(toFa(it.order))}` : ''}</small>`;
     box.innerHTML = `<h4>محتوای سوره</h4>${tafsirHtml(it.about)}${it.virtue ? `<h4>فضیلت سوره</h4>${tafsirHtml(it.virtue)}` : ''}<p class="qr-tfs-src">منبع: ${esc(it.src)}</p>`;
     box.scrollTop = 0;
   }
