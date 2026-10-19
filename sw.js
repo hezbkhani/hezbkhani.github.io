@@ -1,6 +1,6 @@
 // سرویس‌ورکر: اعلان‌های سایت (سهم امروز، برنامه چله، یادآوری‌ها و خبرها)، و نسخه آفلاین برای حالت «برنامه» (نصب‌شده).
 // صفحه و داده‌ها را همیشه اول از اینترنت می‌خواند تا تغییرات سایت فوراً دیده شود؛ فقط اگر اینترنت نبود از نسخه ذخیره‌شده استفاده می‌کند.
-// قلم‌ها، تصویرها و فایل‌های نسخه‌دار (?v=) از نسخه ذخیره‌شده باز می‌شوند و در پس‌زمینه تازه می‌شوند.
+// قلم‌ها، تصویرها، فایل‌های نسخه‌دار (?v=) و متن‌های ثابت (قرآن، کتاب‌ها، چله‌ها) از نسخه ذخیره‌شده باز می‌شوند و در پس‌زمینه تازه می‌شوند.
 self.window = self; importScripts('config.js');
 const cfg = self.APP_CONFIG || {};
 
@@ -29,6 +29,10 @@ self.addEventListener('activate', e => e.waitUntil(
 // پس اگر نسخه ذخیره‌شده‌شان هست فوراً از همان باز می‌شوند (حتی با اینترنت ضعیف) و چند ثانیه بعد، وقتی صفحه باز شد،
 // بی‌صدا از اینترنت تازه می‌شوند تا اگر فایلی بدون عوض شدن شماره‌اش تغییر کرد، از بار بعد درست دیده شود.
 const STATIC = /\.(woff2|ttf|webp|jpe?g|png|svg|gif|ico)$/i;
+// متن‌های ثابت سایت (قرآن و ترجمه‌ها و تفسیرها، کتاب‌ها، متن پیش‌فرض چله‌ها، portions.json) هم همین‌طور: اگر یک بار گرفته شده‌اند
+// فوراً از نسخه ذخیره‌شده باز می‌شوند و در پس‌زمینه تازه می‌شوند؛ پس اصلاح یک متن از بار بعدِ باز کردن دیده می‌شود.
+// با اینترنت کند، باز شدن سهم امروز، قرآن و کتاب‌ها دیگر منتظر جواب سرور نمی‌ماند. داده‌های پایگاه داده (Supabase) دست‌نخورده‌اند.
+const TEXTS = /\/(quran|books|chelleh)\/.+\.json$|\/portions\.json$/;
 
 async function save(req, url, res) {
   const c = await caches.open(CACHE);
@@ -46,7 +50,7 @@ self.addEventListener('fetch', e => {
     return res;
   });
   const offline = () => caches.match(req).then(r => r || caches.match(req, { ignoreSearch: true })).then(r => r || (req.mode === 'navigate' ? caches.match('./') : Response.error()));
-  if (url.searchParams.has('v') || STATIC.test(url.pathname)) {
+  if (url.searchParams.has('v') || STATIC.test(url.pathname) || TEXTS.test(url.pathname)) {
     e.respondWith(caches.match(req).then(hit => {
       if (!hit) return net().catch(offline);
       e.waitUntil(new Promise(r => setTimeout(r, 5000)).then(net).catch(() => {}));
