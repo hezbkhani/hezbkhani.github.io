@@ -174,7 +174,7 @@ ${list.length ? list.map(k => `<button type="button" class="kh-li" data-kh-id="$
     box.innerHTML = `<button type="button" class="kh-x" data-kh="close" aria-label="بستن">✕</button><button type="button" class="kh-back" data-kh="list">‹ همه ختم‌ها</button>
 <h2>${esc(cur.title)}</h2>${cur.niyyat ? `<p class="kh-niy">${esc(cur.niyyat)}</p>` : ''}
 ${made ? `<div class="kh-card"><h3>ختم ساخته شد</h3><p>پیوند آن را برای خانواده و دوستان بفرستید تا هر کس یک جزء بردارد. این ختم فقط با همین پیوند باز می‌شود.</p><div class="kh-row"><button type="button" data-kh="share">📤 فرستادن پیوند</button></div></div>` : ''}
-${full ? `<div class="kh-card kh-done"><h3>الحمدلله، ختم قرآن کامل شد</h3><p>هر ۳۰ جزء خوانده شد. قبول باشد؛ از همه کسانی که همراهی کردند سپاس.</p></div>` : ''}
+${full ? `<div class="kh-card kh-done"><h3>الحمدلله، ختم قرآن کامل شد</h3><p>هر ۳۰ جزء خوانده شد. قبول باشد؛ از همه کسانی که همراهی کردند سپاس.</p>${window.contentPlus?.shown('khatmdua') ? '<div class="kh-row"><button type="button" data-kh="dua">📖 دعای ختم قرآن (صحیفه سجادیه)</button></div>' : ''}</div>` : ''}
 ${closed ? '<p class="kh-msg">این ختم بسته شده است؛ فقط می‌توانید جزءهای خودتان را بخوانید.</p>' : ''}
 <div class="kh-bar" role="img" aria-label="${fa(done)} از ۳۰ جزء خوانده شد"><i class="d" style="width:${done / 30 * 100}%"></i><i class="t" style="width:${taken / 30 * 100}%"></i></div>
 <div class="kh-stat"><span><b>${fa(done)}</b> خوانده شد</span><span><b>${fa(taken)}</b> در دست خواندن</span><span><b>${fa(free)}</b> باز</span></div>
@@ -278,6 +278,7 @@ ${sel ? panel(sel) : ''}`;
     else if (k === 'retry') load(b.dataset.id);
     else if (k === 'unsel') { sel = 0; paint(); }
     else if (k === 'read') read();
+    else if (k === 'dua') window.contentPlus?.khatmDua(); // دعای ۴۲ صحیفه (content-plus.js)
     else if (k === 'share') share();
     else if (k === 'close-khatm') setOpen(false);
     else if (k === 'reopen') setOpen(true);

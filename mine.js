@@ -74,7 +74,7 @@
   // ---------- باز کردن برگه (بار شدن تنبل mine-sheet.js) ----------
   let loading = null;
   const load = () => loading || (loading = new Promise((ok, no) => {
-    const s = document.createElement('script'); s.src = 'mine-sheet.js?v=1';
+    const s = document.createElement('script'); s.src = 'mine-sheet.js?v=2';
     s.onload = ok; s.onerror = () => { loading = null; no(); };
     document.head.appendChild(s);
   }));
