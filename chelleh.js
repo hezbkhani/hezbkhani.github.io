@@ -849,6 +849,8 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
     reader.querySelector('.cr-title small').textContent = member && state(member) === 'run' ? `${member.title}، روز ${fa(dayNo(member))} از ${fa(member.days)}` : '';
     renderReader();
     reader.scrollTop = 0;
+    // برای ابزارهای خواننده (reader-tools.js: منتخب‌ها، ادامه از جای قبلی و …)
+    document.dispatchEvent(new CustomEvent('chlread:open', { detail: { key, title: t.title, el: reader } }));
   }
   function renderReader() {
     const t = current.text, c = counts(), m = current.member;
@@ -905,6 +907,7 @@ ${s !== 'end' ? `<div class="chl-small"><span class="hint">کد چله: <b dir="
   }
   function closeReader(fromHistory) {
     reader.classList.remove('show');
+    document.dispatchEvent(new CustomEvent('chlread:close', { detail: { key: current?.key, el: reader } }));
     try { reader.querySelector('.cr-aud audio').pause(); } catch {}
     if (!sheet?.classList.contains('show')) document.body.classList.remove('chl-lock');
     reader.querySelector('.cr-menu').classList.remove('show');

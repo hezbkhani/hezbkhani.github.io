@@ -23,8 +23,32 @@
     ['calendar', '📅', 'تقویم مناسبت‌ها', 'تقویم ماه با مناسبت‌ها و اعمال هر روز'],
     ['qibla', '🧭', 'قبله‌نما', 'جهت قبله با قطب‌نمای گوشی یا روی نقشه'],
     ['dashboard', '📊', 'نمودارهای مدیریت', 'آمار گزارش‌ها و اعضا در بخش مدیریت'],
-    ['tour', '💡', 'راهنمای سایت', 'آشنایی قدم‌به‌قدم با بخش‌ها؛ بار اول خودش باز می‌شود', true]
+    ['tour', '💡', 'راهنمای سایت', 'آشنایی قدم‌به‌قدم با بخش‌ها؛ بار اول خودش باز می‌شود', true],
+    // دور سوم (reader-tools.js، daily-words.js و daily.js)
+    ['ayahday', '📖', 'آیه روز', 'هر روز یک آیه کوتاه با ترجمه، با دکمه خواندن در قرآن، تصویر و کپی'],
+    ['hadithday', '💬', 'سخن روز', 'هر روز سخنی کوتاه از امیرالمؤمنین (ع) از غررالحکم، با ترجمه'],
+    ['weekday', '🤲', 'دعا و زیارت هر روز هفته', 'دعای روز و زیارت معصوم همان روز از مفاتیح‌الجنان'],
+    ['duafav', '⭐', 'دعاهای منتخب', 'نشان کردن دعا و زیارت‌های محبوب تا همیشه دم دست باشند'],
+    ['resume', '📍', 'ادامه دعا از جای قبلی', 'دعای بلند را از همان جایی ادامه دهید که رها کرده بودید'],
+    ['autoscroll', '⬇️', 'حرکت خودکار متن', 'متن دعا یا کتاب آرام و خودکار بالا می‌رود؛ سرعتش با − و + عوض می‌شود'],
+    ['awake', '🔆', 'روشن ماندن صفحه', 'تا قرآن یا دعا باز است، صفحه گوشی خاموش نمی‌شود'],
+    ['copy', '📋', 'کپی متن', 'کپی هر فراز دعا با ترجمه و نام دعا، برای فرستادن در پیام‌رسان‌ها'],
+    ['print', '🖨️', 'چاپ دعا', 'چاپ متن دعا و ترجمه، یا ذخیره آن به شکل PDF برای جلسه‌ها'],
+    ['keys', '⌨️', 'میان‌برهای صفحه‌کلید', 'روی رایانه: فاصله برای پخش، جهت‌ها برای صفحه بعد و قبل، + و − برای اندازه متن']
   ];
+  // «کجا پیدا می‌شود»: زیر توضیح هر امکان در کارت مدیریت و برگه «نمایش امکانات»
+  const WHERE = {
+    ayahday: 'صفحه اول، زیر کارت «امروز»',
+    hadithday: 'صفحه اول، زیر کارت «امروز»',
+    weekday: 'صفحه اول، در کارت «امروز»',
+    duafav: 'دکمه ☆ بالای هر دعا؛ فهرست در مفاتیح‌الجنان و منوی ☰ › ادعیه',
+    resume: 'با باز کردن دوباره هر دعا، نوار «ادامه از جایی که ماندید» پایین صفحه',
+    autoscroll: 'دکمه دو پیکان رو به پایین، بالای صفحه دعا و کتاب‌ها',
+    awake: 'خودکار، در قرآن‌خوان و خواننده دعا و کتاب‌ها',
+    copy: 'دکمه کپی کنار هر فراز دعا، و در کارت آیه و سخن روز',
+    print: 'خواننده دعا یا کتاب › ⚙ › «چاپ متن»',
+    keys: 'روی رایانه در همه خواننده‌ها؛ کلید ? فهرست میان‌برها را نشان می‌دهد'
+  };
   const HIDE = 'featHide';
   const admin = () => location.hash === '#admin';
   const conf = () => window.siteSettings?.features || {};
@@ -93,6 +117,7 @@
 .ft-sw:checked{background:var(--emerald)}
 .ft-sw:checked::after{right:22px}
 .ft-sw:focus-visible{outline:2px solid var(--deep);outline-offset:2px}
+.ft-row small.ft-where{color:var(--deep);opacity:.85}
 .ft-empty{text-align:center;color:var(--muted);padding:16px 0}
 .ft-adm .ft-row{padding:8px 0}
 .ft-box h3{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--line);font-size:16px;color:var(--deep)}
@@ -103,7 +128,7 @@
 .ft-toast{position:fixed;z-index:70;left:16px;right:16px;width:fit-content;margin:0 auto;bottom:calc(24px + env(safe-area-inset-bottom));padding:10px 18px;border-radius:999px;background:var(--deep);color:#fff;font-size:15px;box-shadow:0 6px 20px #0005;text-align:center}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
   const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const row = ([id, ic, t, d], checked, attr) => `<label class="ft-row"><span class="ft-ic">${ic}</span><span>${esc(t)}<small>${esc(d)}</small></span><input type="checkbox" class="ft-sw" ${attr}="${id}"${checked ? ' checked' : ''} aria-label="${esc(t)}"></label>`;
+  const row = ([id, ic, t, d], checked, attr) => `<label class="ft-row"><span class="ft-ic">${ic}</span><span>${esc(t)}<small>${esc(d)}</small>${WHERE[id] ? `<small class="ft-where">📍 ${esc(WHERE[id])}</small>` : ''}</span><input type="checkbox" class="ft-sw" ${attr}="${id}"${checked ? ' checked' : ''} aria-label="${esc(t)}"></label>`;
 
   // ---------- برگه «نمایش امکانات» برای هر بازدیدکننده ----------
   let shade = null;

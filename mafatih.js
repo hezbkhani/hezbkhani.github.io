@@ -89,6 +89,7 @@ body.mf-lock{overflow:hidden}`;
     box.innerHTML = `<button type="button" class="mf-x" data-mf="close" aria-label="بستن">✕</button>
 <h2>مفاتیح‌الجنان</h2><p class="mf-sub">دعاها، زیارات، مناجات‌ها و اعمال سال، با متن عربی، ترجمه فارسی و صوت</p>
 ${last ? `<div class="mf-card mf-resume"><h3>آخرین متنی که باز کردید</h3>${itemBtn(last.it, last.where)}</div>` : ''}
+${window.duaFav?.card() || ''}
 <div class="mf-card"><input id="mfQ" type="search" autocomplete="off" placeholder="جستجوی نام دعا یا زیارت، مثلاً ندبه، عرفه، جامعه" aria-label="جستجو در مفاتیح‌الجنان"><div class="mf-res" id="mfRes"></div></div>
 ${book.chapters.map(c => `<details class="mf-ch"><summary><b>${esc(c.title)}</b><small>${toFa(c.parts.reduce((n, p) => n + p.items.length, 0))}</small><i>▾</i></summary>
 ${c.parts.map(p => `<div class="mf-part">${p.title ? `<h4>${esc(p.title)}</h4>` : ''}${p.items.map(it => itemBtn(it)).join('')}</div>`).join('')}</details>`).join('')}
@@ -135,7 +136,7 @@ ${c.parts.map(p => `<div class="mf-part">${p.title ? `<h4>${esc(p.title)}</h4>` 
   function menuItem() {
     if (window.features && !window.features.shown('mafatih')) return '';
     const last = readLast();
-    return `<button type="button" class="sm-item" data-mf-open><span class="sm-ic">📚</span><span>مفاتیح‌الجنان<small>${last ? `آخرین: ${esc(last.title)}` : 'همه دعاها، زیارات، مناجات‌ها و اعمال'}</small></span><span class="sm-go">‹</span></button>`;
+    return `<button type="button" class="sm-item" data-mf-open><span class="sm-ic">📚</span><span>مفاتیح‌الجنان<small>${last ? `آخرین: ${esc(last.title)}` : 'همه دعاها، زیارات، مناجات‌ها و اعمال'}</small></span><span class="sm-go">‹</span></button>` + (window.duaFav?.menuItem() || ''); // «دعاهای منتخب من» (reader-tools.js) درست زیر مفاتیح
   }
   window.siteMenu?.section({
     id: 'mafatih', order: 6.5,
