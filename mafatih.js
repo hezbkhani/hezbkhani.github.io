@@ -48,7 +48,7 @@
 body.mf-lock{overflow:hidden}`;
   { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
 
-  const itemBtn = (it, where) => `<button type="button" class="mf-it" data-mf-key="${esc(it.key || '')}" data-mf-ref="${esc(it.ref || '')}" data-mf-surah="${it.surah || ''}" data-mf-title="${esc(it.title)}"><span>${esc(it.title)}${where ? `<small>${esc(where)}</small>` : ''}</span>${it.audio || it.ref ? '<em title="صوت دارد" aria-label="صوت دارد">🎧</em>' : it.surah ? '<em aria-hidden="true">📖</em>' : ''}</button>`;
+  const itemBtn = (it, where) => `<button type="button" class="mf-it" data-mf-key="${esc(it.key || '')}" data-mf-ref="${esc(it.ref || '')}" data-mf-surah="${esc(it.surah || '')}" data-mf-title="${esc(it.title)}"><span>${esc(it.title)}${where ? `<small>${esc(where)}</small>` : ''}</span>${it.audio || it.ref ? '<em title="صوت دارد" aria-label="صوت دارد">🎧</em>' : it.surah ? '<em aria-hidden="true">📖</em>' : ''}</button>`;
 
   let shade = null, thenAfter = null;
   async function openSheet() {
