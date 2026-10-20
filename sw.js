@@ -21,9 +21,11 @@ self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(precache().catch(() => {}));
 });
-self.addEventListener('activate', e => e.waitUntil(
+// «پیش‌بارگیری صفحه»: درخواست خود صفحه هم‌زمان با بیدار شدن سرویس‌ورکر فرستاده می‌شود، نه بعد از آن؛ باز شدن سایت روی گوشی کمی زودتر می‌شود.
+self.addEventListener('activate', e => e.waitUntil(Promise.all([
+  self.registration.navigationPreload?.enable().catch(() => {}),
   caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('hezb-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())
-));
+])));
 
 // قلم‌ها، تصویرها و فایل‌هایی که شماره نسخه در آدرسشان دارند (مثل app.js?v=7) زیر همان آدرس عوض نمی‌شوند؛
 // پس اگر نسخه ذخیره‌شده‌شان هست فوراً از همان باز می‌شوند (حتی با اینترنت ضعیف) و چند ثانیه بعد، وقتی صفحه باز شد،
@@ -45,10 +47,11 @@ self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
   // فقط فایل‌های خود سایت؛ درخواست‌های پایگاه داده و سایت‌های دیگر دست‌نخورده می‌مانند.
   if (req.method !== 'GET' || url.origin !== self.location.origin || req.headers.has('range')) return;
-  const net = () => fetch(req).then(res => {
+  const keep = res => {
     if (res.status === 200 && res.type === 'basic') e.waitUntil(save(req, url, res.clone()).catch(() => {}));
     return res;
-  });
+  };
+  const net = () => fetch(req).then(keep);
   const offline = () => caches.match(req).then(r => r || caches.match(req, { ignoreSearch: true })).then(r => r || (req.mode === 'navigate' ? caches.match('./') : Response.error()));
   if (url.searchParams.has('v') || STATIC.test(url.pathname) || TEXTS.test(url.pathname)) {
     e.respondWith(caches.match(req).then(hit => {
@@ -60,7 +63,7 @@ self.addEventListener('fetch', e => {
   }
   // خود صفحه: اگر اینترنت کند است (بیش از ۳ ثانیه)، نسخه ذخیره‌شده فوراً باز می‌شود و نسخه تازه برای بار بعد ذخیره می‌شود.
   if (req.mode === 'navigate') {
-    const n = net();
+    const n = Promise.resolve(e.preloadResponse).catch(() => null).then(r => r ? keep(r) : net());
     const late = new Promise(r => setTimeout(r, 3000)).then(() => caches.match(req, { ignoreSearch: true })).then(r => r || caches.match('./')).then(r => r || n);
     e.respondWith(Promise.race([n, late]).catch(offline));
     return;
