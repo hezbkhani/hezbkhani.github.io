@@ -16,7 +16,7 @@
     let img = cur ? { url: cur.url, size: cur.size } : null;
     box.innerHTML = `<div class="bga-form" style="padding:0 16px 10px">
 <p class="hint" style="margin:6px 0">تصویری که این‌جا می‌گذارید فقط روی همین گوشی و فقط برای خودتان نشان داده می‌شود.</p>
-<label>تصویر (ایستاده، مثل صفحه گوشی)</label><input type="file" accept="image/*" data-f="file">
+<label>تصویر (ایستاده، مثل صفحه گوشی)</label><div class="reg-tools"><button type="button" class="reg-light" data-f="pick">انتخاب تصویر</button></div><input type="file" accept="image/*" data-f="file" aria-label="تصویر زمینه" hidden>
 <div data-f="edit"${img ? '' : ' hidden'}>
 <label>رنگ و نقش کادرها</label><select data-f="style">${STYLES.map(k => `<option value="${k}">${label(k)}</option>`).join('')}</select>
 <p class="hint" style="margin:6px 0">کادرها فقط داخل مستطیل خط‌چین دیده می‌شوند.</p>
@@ -40,6 +40,7 @@
       Object.assign(r.style, { top: q('t').value + '%', bottom: q('b').value + '%', left: q('s').value + '%', right: q('s').value + '%', borderColor: BOX[q('style').value] });
     }
     box.addEventListener('input', preview);
+    q('pick').onclick = () => q('file').click();
     q('file').onchange = async e => {
       const file = e.target.files[0]; if (!file) return;
       try {
