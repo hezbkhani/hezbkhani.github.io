@@ -343,8 +343,10 @@ body.zk-lock{overflow:hidden}
     }
   }
 
-  function open() {
+  // open('zahra'): با همان ذکر باز می‌شود (برای «تعقیبات» در کارت امروز، plus.js)
+  function open(pick) {
     if (!shown()) return;
+    if (typeof pick === 'string' && LIST.some(x => x.id === pick)) { S.sel = pick; saveS(); }
     if (!shade) {
       shade = document.createElement('div'); shade.className = 'zk-shade';
       shade.innerHTML = `<div class="zk-box" role="dialog" aria-modal="true" aria-label="ذکرشمار">

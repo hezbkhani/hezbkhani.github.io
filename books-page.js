@@ -229,6 +229,7 @@ ${ix.parts.length > 4 ? `<select class="bk-psel" aria-label="بخش">${ix.parts.
     }
     const p = partOf(ix, part);
     cur = { key, ix, part: p, n, item };
+    reader.dataset.book = key; // برای «فرستادن پیوند» (plus-reader.js)
     // اگر همین متن آخرین متنِ خوانده‌شده بود، از همان جایی که مانده بود ادامه می‌یابد.
     const all = read(LAST, {}), was = all[key], y = was && was.part === p.id && was.n === n ? was.y || 0 : 0;
     all[key] = { part: p.id, n }; write(LAST, all);
