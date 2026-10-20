@@ -18,7 +18,7 @@
   const LAST = 'bookLast'; // همان کلید books-page.js: جای آخرین خواندن هر کتاب
   let loading = null;
   const load = () => loading || (loading = new Promise((ok, bad) => {
-    const s = document.createElement('script'); s.src = 'books-page.js?v=2';
+    const s = document.createElement('script'); s.src = 'books-page.js?v=3';
     s.onload = ok; s.onerror = () => { loading = null; s.remove(); bad(); };
     document.head.appendChild(s);
   }));

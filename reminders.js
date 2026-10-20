@@ -361,8 +361,8 @@ ${rows ? `<h6>چه اعلان‌هایی بیاید</h6>${rows}` : ''}</section>
   window.siteMenu?.section({
     id: 'settings', order: 89,
     render(box) {
-      // «نمایش امکانات» (features.js)، «اندازه متن و حالت تاریک» (comfort.js) و «راهنمای سایت» (tour.js) هم در همین دسته است.
-      const ft = (window.features?.menuItem() || '') + (window.comfort?.menuItem() || '') + (window.tour?.menuItem() || '');
+      // «نمایش امکانات» (features.js)، «اندازه متن و حالت تاریک» (comfort.js)، «پشتیبان» و «حالت کم‌حجم» (plus.js) و «راهنمای سایت» (tour.js) هم در همین دسته است.
+      const ft = (window.features?.menuItem() || '') + (window.comfort?.menuItem() || '') + (window.plus?.menuItem() || '') + (window.tour?.menuItem() || '');
       if ((!enabled() || desktopApp) && !ft) return;
       const parts = [(store.get(LS) || arr('regCodes').length) && 'حزب‌خوانی', arr('chlCodes').length && 'چله‌ها و دوره‌ها', 'اعمال و ختم‌ها'].filter(Boolean);
       box.innerHTML = '<h3>تنظیمات</h3>' + (!enabled() || desktopApp ? '' : `<button type="button" class="sm-item" data-ns-menu><span class="sm-ic">⚙️</span><span>تنظیم اعلان‌ها<small>چه اعلانی و چه ساعتی: ${parts.join('، ')}</small></span><span class="sm-go">‹</span></button>`) + ft;
