@@ -202,7 +202,7 @@
 .ft-sw:checked{background:var(--emerald)}
 .ft-sw:checked::after{right:22px}
 .ft-sw:focus-visible{outline:2px solid var(--deep);outline-offset:2px}
-.ft-row small.ft-where{color:var(--deep);opacity:.85}
+.ft-row small.ft-where{color:var(--deep)}
 .ft-empty{text-align:center;color:var(--muted);padding:16px 0}
 .ft-adm .ft-row{padding:8px 0}
 .ft-adm h4.ft-grp{margin:14px 0 0;padding:8px 10px;background:var(--mint);border-radius:var(--r);color:var(--deep);font-size:15px}
