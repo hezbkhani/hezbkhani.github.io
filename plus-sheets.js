@@ -408,7 +408,7 @@ ${mfBtn('442', '🧎', 'نماز برای والدین و اموات', 'مفات
       body.innerHTML = `<div class="pxs-card"><h3>💾 ذخیره فایل پشتیبان</h3><p class="pxs-note">نشانه‌ها و یادداشت‌های قرآن، دعاهای منتخب، ذکرها، ختم‌ها و برنامه‌ها، کدهای ثبت‌نام و چله، شهر اوقات شرعی و تنظیمات نمایش در یک فایل کوچک ذخیره می‌شوند (${toFa(have().length)} مورد). رمز حساب کاربری در فایل نیست.</p>
 <div class="pxs-row"><button type="button" class="pxs-btn" data-b-save style="flex:1">ذخیره فایل</button>${navigator.canShare ? '<button type="button" class="pxs-btn pxs-btn2" data-b-share style="flex:1">فرستادن به خودم</button>' : ''}</div></div>
 <div class="pxs-card"><h3>📥 بازگرداندن از فایل</h3><p class="pxs-note">فایل پشتیبان نوران را انتخاب کنید. داده‌های همین گوشی با محتوای فایل جایگزین می‌شوند و صفحه از نو باز می‌شود.</p>
-<div class="pxs-row"><input type="file" accept=".json,application/json" data-b-file aria-label="فایل پشتیبان"></div><div data-b-ask></div></div>
+<div class="pxs-row"><button type="button" class="pxs-btn pxs-btn2" data-b-pick style="flex:1">انتخاب فایل پشتیبان</button><input type="file" accept=".json,application/json" data-b-file aria-label="فایل پشتیبان" hidden></div><div data-b-ask></div></div>
 <p class="pxs-msg${bad ? ' bad' : ''}" role="status">${esc(msg || '')}</p>`;
     }
     const file = () => {
@@ -423,6 +423,7 @@ ${mfBtn('442', '🧎', 'نماز برای والدین و اموات', 'مفات
         document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
         return paint('فایل ذخیره شد؛ آن را در جای امنی نگه دارید.');
       }
+      if (e.target.closest('[data-b-pick]')) return body.querySelector('[data-b-file]').click();
       if (e.target.closest('[data-b-share]')) { const f = file(); try { if (navigator.canShare({ files: [f] })) await navigator.share({ files: [f], title: 'پشتیبان نوران' }); else paint('این گوشی فرستادن فایل را پشتیبانی نمی‌کند؛ «ذخیره فایل» را بزنید.', 1); } catch {} return; }
       if (e.target.closest('[data-b-yes]') && pending) {
         Object.entries(pending).forEach(([k, v]) => { try { localStorage.setItem(k, v); } catch {} });

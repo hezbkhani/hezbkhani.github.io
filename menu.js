@@ -149,10 +149,12 @@ body.sm-lock{overflow:hidden}
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
   const dots = {};
+  // تا وقتی کسی وسط ساختن «زمینه من» است (تصویر انتخاب کرده یا در حال انتخاب است)، منو از نو ساخته نمی‌شود تا کارش پاک نشود؛ بار بعدِ باز کردن منو تازه می‌شود.
+  const busy = () => !!body.querySelector('.bgp-mine > *');
   window.siteMenu = {
-    section(s) { const i = sections.findIndex(x => x.id === s.id); if (i >= 0) sections[i] = s; else sections.push(s); if (nav.classList.contains('show')) render(); },
+    section(s) { const i = sections.findIndex(x => x.id === s.id); if (i >= 0) sections[i] = s; else sections.push(s); if (nav.classList.contains('show') && !busy()) render(); },
     open, close,
-    refresh() { if (nav.classList.contains('show')) render(); },
+    refresh() { if (nav.classList.contains('show') && !busy()) render(); },
     // برای جستجو (search.js): همه گزینه‌های منو، ساخته‌شده در همان جای خودشان (بی‌آنکه منو باز شود)، تا با زدن دقیقاً همان کار را بکنند.
     items() { if (!nav.classList.contains('show')) render(); return body; },
     // نقطه طلایی روی دکمه منو؛ هر بخش با کلید خودش (مثلاً 'fb' برای پاسخ تازه به پیشنهاد) روشن یا خاموشش می‌کند.
