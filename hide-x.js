@@ -11,6 +11,7 @@
 .hx-host{position:relative}
 /* !important: سبک عمومی دکمه‌های کادر (backdrop.css) رنگ زمینه سبز می‌دهد */
 .hx-x{position:absolute;z-index:3;top:9px;left:9px;width:36px;height:36px;min-height:0;padding:0;display:flex;align-items:center;justify-content:center;background:transparent!important;color:var(--t-ink2,var(--muted))!important;filter:none!important;border:0;border-radius:50%;font-size:16px;line-height:1;opacity:.6;cursor:pointer;box-shadow:none}
+.hx-x::after{content:"";position:absolute;inset:-4px;border-radius:50%}
 .hx-x:hover,.hx-x:focus-visible{opacity:1;background:#0000000f!important}
 .hx-x:focus-visible{outline:2px solid var(--deep);outline-offset:1px}
 .hx-wrap>.hx-x{left:33px}
