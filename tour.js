@@ -21,7 +21,7 @@
 .tr-card p{margin:0}
 .tr-btns{display:flex;align-items:center;gap:8px;margin-top:12px}
 .tr-btns button{height:auto;min-height:42px;padding:0 16px;font-size:15px}
-.tr-btns .tr-next{background:var(--t-frame,var(--emerald))!important;color:#fff!important;border-color:var(--t-gold,var(--gold))}
+.tr-btns .tr-next{background:var(--deep)!important;color:#fff!important;border-color:var(--t-gold,var(--gold))}
 .tr-btns .tr-back{background:transparent!important;color:var(--t-head,var(--deep))!important;border-color:var(--t-line,var(--line))}
 .tr-btns .tr-skip{margin-inline-start:auto;padding:0 6px;background:transparent!important;color:var(--t-ink2,var(--muted))!important;border:0;font-weight:500;text-decoration:underline}
 .tr-arrow{position:absolute;width:14px;height:14px;background:inherit;border:1px solid var(--t-gold,var(--gold));transform:rotate(45deg)}

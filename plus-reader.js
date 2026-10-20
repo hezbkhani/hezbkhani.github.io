@@ -17,7 +17,7 @@
 .px-find button{flex:none;width:40px;height:40px;padding:0;background:transparent;border:0;color:inherit;font-size:18px}
 ::highlight(px-hit){background:#ffe08a;color:#2b241a}
 ::highlight(px-cur){background:#f0a33a;color:#1b140c}
-.cr-head .px-min{display:block;margin-top:2px;font-size:13.5px;opacity:.75}
+.cr-head .px-min{display:block;margin-top:2px;font-size:13.5px}
 .px-left{position:absolute;bottom:4px;left:8px;font-size:11.5px;line-height:1;opacity:.8;pointer-events:none}
 </style>`);
   // نویسه‌ها برای مقایسه: بی‌اعراب، یکسان‌شدن شکل‌ها؛ و نقشه هر نویسه به جای اصلی‌اش در متن
