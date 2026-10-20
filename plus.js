@@ -224,7 +224,7 @@ html[data-theme=dark] #dlCard .px-mh{background:#16110f}
   let rd = null;
   const wantReader = () => shown('find') || shown('progress') || shown('sharelink');
   const loadReader = () => rd || (rd = new Promise((ok, bad) => {
-    const s = document.createElement('script'); s.src = 'plus-reader.js?v=1';
+    const s = document.createElement('script'); s.src = 'plus-reader.js?v=2';
     s.onload = ok; s.onerror = () => { rd = null; s.remove(); bad(); };
     document.head.appendChild(s);
   }));
