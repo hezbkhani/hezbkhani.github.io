@@ -61,8 +61,12 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
     not_admin: 'این حساب دسترسی مدیر ندارد. اگر ایمیل مدیر دیگری است، از «تنظیمات › مدیران» اضافه‌اش کنید.'
   });
   const SETUP = 'این بخش هنوز در Supabase راه‌اندازی نشده است: فایل backend/supabase/registration.sql را در SQL Editor اجرا کنید.';
+  const recent = new Map(), forget = () => { recent.clear(); inflight.clear(); recent.gen = (recent.gen || 0) + 1; };
   async function sbApi(path, { method = 'GET', body, auth = false, prefer, timeout = 15000 } = {}) {
     if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) throw Error('اتصال به سرور تنظیم نشده است.');
+    // هر تغییری (ثبت‌نام، ویرایش مدیر و …) فهرست‌های عمومیِ تازه‌گرفته را کنار می‌گذارد تا بار بعد از سرور خوانده شوند.
+    const writes = method !== 'GET' && !/^rpc\/(reg_rounds|chl_types)$/.test(path);
+    if (writes) forget();
     if (auth) await session.fresh();
     const token = auth ? adminToken : '';
     const headers = { apikey: cfg.SUPABASE_ANON_KEY, Authorization: `Bearer ${token || cfg.SUPABASE_ANON_KEY}` };
@@ -72,7 +76,7 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
     let r;
     try { r = await fetch(`${cfg.SUPABASE_URL}/rest/v1/${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store', signal: ac.signal }); }
     catch { throw Error('ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید.'); }
-    finally { clearTimeout(t); }
+    finally { clearTimeout(t); if (writes) forget(); }
     const text = await r.text();
     let data = null; try { data = text ? JSON.parse(text) : null; } catch {}
     if (!r.ok) {
@@ -86,12 +90,15 @@ ${quick ? '<div class="jd-quick"><button type="button" data-q="0">امروز</bu
     return data;
   }
   window.sbApi = sbApi;
-  // دو فهرست عمومی که چند بخش هم‌زمان می‌خواهند (ثبت‌نام و چله‌ها): تا جواب نیامده، همان یک درخواست به همه می‌رسد.
+  // دو فهرست عمومی که چند بخش هم‌زمان می‌خواهند (ثبت‌نام و چله‌ها): تا جواب نیامده، همان یک درخواست به همه می‌رسد،
+  // و جواب تا ۲۰ ثانیه برای بخش‌های دیگر هم به کار می‌رود (موقع باز شدن صفحه، ثبت‌نام و چله‌ها پشت سر هم همین فهرست را می‌خواهند).
   const SHARED = new Set(['reg_rounds', 'chl_types']), inflight = new Map();
   window.sbRpc = (fn, args, auth) => {
     const k = SHARED.has(fn) && !auth && !(args && Object.keys(args).length) ? fn : '';
     if (!k) return sbApi(`rpc/${fn}`, { method: 'POST', body: args || {}, auth });
-    if (!inflight.has(k)) inflight.set(k, sbApi(`rpc/${fn}`, { method: 'POST', body: {} }).finally(() => inflight.delete(k)));
+    const hit = recent.get(k);
+    if (hit && Date.now() - hit.at < 20000) return Promise.resolve(structuredClone(hit.data));
+    if (!inflight.has(k)) { const g = recent.gen, q = sbApi(`rpc/${fn}`, { method: 'POST', body: {} }).then(data => { if (recent.gen === g) recent.set(k, { data, at: Date.now() }); return data; }).finally(() => { if (inflight.get(k) === q) inflight.delete(k); }); inflight.set(k, q); }
     return inflight.get(k).then(r => structuredClone(r));
   };
 
