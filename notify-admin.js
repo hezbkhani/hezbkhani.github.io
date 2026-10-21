@@ -138,7 +138,7 @@ ${t.time ? `<span>ساعت <input type="time" data-f="time" step="300"></span>` 
     await window.saveSiteSetting('notify', collect());
   }
 
-  // ختم یاسین از نزدیک‌ترین پنجشنبه به نیمه ماه قمری شروع می‌شود؛ مدیر اگر تاریخ قمری سایت با تقویم رسمی فرق داشت اصلاحش می‌کند.
+  // ختم یاسین از نزدیک‌ترین پنجشنبه پیش از نیمه ماه قمری شروع می‌شود؛ مدیر اگر تاریخ قمری سایت با تقویم رسمی فرق داشت اصلاحش می‌کند.
   function hijriInfo() {
     const ib = window.ibadat, el = $('ntfHijri'), out = $('ntfHijriInfo');
     if (!ib || !el || !out) return;
