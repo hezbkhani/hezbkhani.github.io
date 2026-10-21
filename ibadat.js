@@ -68,8 +68,8 @@ body.ib-lock{overflow:hidden}`;
   }
   const hijriDay = (s, off) => hijri(s, off).d;
   const hijriLabel = (s, off = offset()) => { const h = hijri(s, off); return h ? `${toFa(h.d)} ${HM[h.m - 1]} ${toFa(h.y)}` : ''; };
-  // آیا این پنجشنبه شب اول ختم است؟ (نیمه ماه قمری حداکثر ۳ روز با نزدیک‌ترین پنجشنبه فاصله دارد.)
-  const isStart = (s, off) => { for (let j = -3; j <= 3; j++) if (hijriDay(iso(ms(s) + j * DAY), off) === 15) return true; return false; };
+  // آیا این پنجشنبه شب اول ختم است؟ نزدیک‌ترین پنجشنبه پیش از نیمه ماه قمری: پنجشنبه‌ای که ۱۵ام در همان روز یا ۶ روز بعد از آن است (روز ۹ تا ۱۵ ماه).
+  const isStart = (s, off) => { for (let j = 0; j <= 6; j++) if (hijriDay(iso(ms(s) + j * DAY), off) === 15) return true; return false; };
   // چهار شب ختمی که امروز در آن است، یا ختم بعدی. خروجی: [تاریخ شب اول تا چهارم].
   function khatm(off = offset(), today = tehranToday()) {
     if (!HD) return null;
@@ -140,7 +140,7 @@ ${await notifyHtml('javad_wed', 'هر چهارشنبه با اذان ظهر')}`;
 <p class="ib-note">ختم این ماه از ${dateFa(k[0])} (${hijriLabel(k[0])}) شروع ${k[0] <= today ? 'شده است' : 'می‌شود'}.</p>`;
     } else rows = `<ul class="ib-steps">${NIGHTS.map((x, i) => `<li>هفته ${x}: ${task(i + 1)}</li>`).join('')}</ul>`;
     return `<h2>ختم سوره یاسین حضرت ام‌البنین (س)</h2><p class="ib-sub">برای حاجات مهم، توسل به حضرت ابوالفضل العباس (ع) و مادرشان</p>
-<div class="ib-card"><p style="margin:0 0 8px">در هر ماه قمری، از نزدیک‌ترین پنجشنبه به نیمه ماه، ختم سوره یاسین هدیه به حضرت ام‌البنین (س) شروع می‌شود و چهار هفته، هر پنجشنبه شب (شب جمعه) ادامه دارد:</p>${rows}
+<div class="ib-card"><p style="margin:0 0 8px">در هر ماه قمری، از نزدیک‌ترین پنجشنبه پیش از نیمه ماه، ختم سوره یاسین هدیه به حضرت ام‌البنین (س) شروع می‌شود و چهار هفته، هر پنجشنبه شب (شب جمعه) ادامه دارد:</p>${rows}
 <div class="ib-tools"><button type="button" data-ib="yasin">📖 خواندن سوره یاسین</button></div></div>
 <div class="ib-card"><h3>توسل به حضرت ام‌البنین (س)</h3><audio controls preload="none" src="audio/tavasol-ommolbanin.mp3"></audio>${window.audioOpt.bar()}</div>
 ${await notifyHtml('ommolbanin', 'شب‌های ختم با اذان مغرب')}`;
