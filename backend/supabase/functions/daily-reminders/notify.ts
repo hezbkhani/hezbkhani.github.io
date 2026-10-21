@@ -164,14 +164,14 @@ export function hijriDay(iso: string, offset = 0): number {
   return g('day')
 }
 
-// ختم یاسین: در هر ماه قمری از نزدیک‌ترین پنجشنبه به نیمه ماه (۱۵ام) شروع می‌شود و ۴ پنجشنبه شب ادامه دارد.
-// خروجی: این پنجشنبه شبِ چندم ختم است (۱ تا ۴)، یا ۰ اگر شب ختم نیست. نیمه ماه حداکثر ۳ روز با نزدیک‌ترین پنجشنبه فاصله دارد.
+// ختم یاسین: در هر ماه قمری از نزدیک‌ترین پنجشنبه پیش از نیمه ماه (۱۵ام) شروع می‌شود و ۴ پنجشنبه شب ادامه دارد.
+// خروجی: این پنجشنبه شبِ چندم ختم است (۱ تا ۴)، یا ۰ اگر شب ختم نیست. ۱۵ام همان پنجشنبه شروع یا حداکثر ۶ روز بعد از آن است (روز ۹ تا ۱۵ ماه).
 export function khatmNight(iso: string, offset = 0): number {
   const t = isoToUtcMs(iso)
   if (new Date(t).getUTCDay() !== 4) return 0
   for (let k = 0; k < 4; k++) {
     const start = t - k * 7 * 864e5
-    for (let j = -3; j <= 3; j++) if (hijriDay(isoOf(start + j * 864e5), offset) === 15) return k + 1
+    for (let j = 0; j <= 6; j++) if (hijriDay(isoOf(start + j * 864e5), offset) === 15) return k + 1
   }
   return 0
 }
