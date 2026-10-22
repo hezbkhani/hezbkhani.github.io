@@ -162,7 +162,7 @@ jobs:
           make_latest: true
           files: out/*
           body: |
-            نسخه‌های برنامه نوران. همه فقط سایت https://hezbkhani.github.io/ را باز می‌کنند.
+            نسخه‌های برنامه نوران. همه فقط سایت https://nooranquran.github.io/ را باز می‌کنند.
             - اندروید: Hezbkhani.apk
             - ویندوز: Hezbkhani-Setup.exe
             - مک: Hezbkhani.dmg

@@ -103,7 +103,7 @@
     الف) فایل accounts.sql را در SQL Editor اجرا کنید (پس از registration.sql و chelleh.sql). اجرای دوباره بی‌خطر است.
     ب) Authentication → Sign In / Providers: «Allow new users to sign up» را روشن کنید. «Confirm email» روشن بماند (لازم است: ایمیل‌ها با لینک تأیید می‌شوند،
        و فقط ایمیلِ تأییدشده چله‌های قدیمی را به حساب می‌آورد یا مدیر می‌شود). در Email، «Minimum password length» را ۸ بگذارید.
-    ج) Authentication → URL Configuration: Site URL را https://hezbkhani.github.io بگذارید و در Redirect URLs نشانی https://hezbkhani.github.io/** را اضافه کنید.
+    ج) Authentication → URL Configuration: Site URL را https://nooranquran.github.io بگذارید و در Redirect URLs نشانی https://nooranquran.github.io/** را اضافه کنید.
     د) ایمیل‌فرستِ پیش‌فرض Supabase فقط به ایمیل اعضای تیم پروژه می‌فرستد. برای ایمیل تأیید و فراموشی رمز، در Authentication → Emails → SMTP Settings
        «Enable custom SMTP» را روشن کنید. ساده‌ترین راه Gmail است: Host = smtp.gmail.com، Port = 465، Username = نشانی Gmail، Password = «App password»
        (در حساب گوگل: Security → 2-Step Verification روشن، سپس App passwords)، Sender email = همان Gmail، Sender name = نوران.

@@ -4,13 +4,13 @@
   "version": "1.0.0",
   "identifier": "io.github.hezbkhani.app",
   "build": {
-    "frontendDist": "https://hezbkhani.github.io/?app=desktop"
+    "frontendDist": "https://nooranquran.github.io/?app=desktop"
   },
   "app": {
     "windows": [
       {
         "title": "نوران",
-        "url": "https://hezbkhani.github.io/?app=desktop",
+        "url": "https://nooranquran.github.io/?app=desktop",
         "width": 820,
         "height": 900,
         "minWidth": 360,
