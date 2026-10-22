@@ -6,7 +6,7 @@
 // اعلان اذان شخصی (push_azan، azan.ts): با slot=auto، و با slot=azan (زمان‌بندی سبک هر دقیقه، فقط همین) دقیق‌تر.
 // slot=test: «ارسال آزمایشی» از سایت؛ برنامه امروزِ همان یک دستگاه (endpoint در بدنه) را همین حالا می‌فرستد.
 // slot=sample و slot=broadcast: فقط مدیر (با توکن ورود مدیر): نمونه یک نوع اعلان به گوشی خودش، یا پیام همگانی.
-// Secrets لازم: VAPID_PUBLIC_KEY، VAPID_PRIVATE_KEY، CRON_SECRET. اختیاری: SITE_URL (پیش‌فرض https://hezbkhani.github.io).
+// Secrets لازم: VAPID_PUBLIC_KEY، VAPID_PRIVATE_KEY، CRON_SECRET. اختیاری: SITE_URL (پیش‌فرض https://nooranquran.github.io).
 // SUPABASE_URL، SUPABASE_ANON_KEY و SUPABASE_SERVICE_ROLE_KEY را خود Supabase می‌گذارد.
 // این تابع باید با JWT verification خاموش deploy شود؛ اجازه با x-cron-secret یا توکن مدیر بررسی می‌شود.
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -16,7 +16,7 @@ import { type AzanRow, LATE_MIN, azanMsg, azanPersonalDue } from './azan.ts'
 import { type Item, type Loc, type Msg, type Prefs, type Settings, azanDue, compose, dueTypes, forDevice, mergeSettings, tehranMinutes } from './notify.ts'
 
 const env = (k: string) => Deno.env.get(k) || ''
-const SITE_URL = (env('SITE_URL') || 'https://hezbkhani.github.io').replace(/\/$/, '')
+const SITE_URL = (env('SITE_URL') || 'https://nooranquran.github.io').replace(/\/$/, '')
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS' }
 const json = (x: unknown, status = 200) => new Response(JSON.stringify(x), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
@@ -122,7 +122,7 @@ async function handle(req: Request): Promise<Response> {
   if (['auto', 'azan', 'morning', 'evening'].includes(slot) && (!env('CRON_SECRET') || req.headers.get('x-cron-secret') !== env('CRON_SECRET'))) return json({ error: 'unauthorized' }, 401)
   if (['sample', 'broadcast'].includes(slot) && !(await isAdmin(req))) return json({ error: 'not_admin' }, 403)
 
-  webpush.setVapidDetails('https://hezbkhani.github.io', env('VAPID_PUBLIC_KEY'), env('VAPID_PRIVATE_KEY'))
+  webpush.setVapidDetails('https://nooranquran.github.io', env('VAPID_PUBLIC_KEY'), env('VAPID_PRIVATE_KEY'))
   const db = makeDb()
   const stats: Stats = { slot, sent: 0, removed: 0, failed: 0 }
   // ---------- اذان شخصی: فقط همین، بی‌نیاز به تنظیمات و بقیه اعلان‌ها ----------
