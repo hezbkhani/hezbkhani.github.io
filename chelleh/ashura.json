@@ -45,7 +45,7 @@
     { "note": "پس از زیارت، خواندن دو رکعت نماز زیارت و دعای علقمه سفارش شده است." }
   ],
   "audio": [
-    {"name": "علی فانی", "url": "https://hezbkhani.github.io/audio/ashura-ali-fani.mp3"},
+    {"name": "علی فانی", "url": "audio/ashura-ali-fani.mp3"},
     {"name": "صادق آهنگران", "url": "https://cdnaudio.hussainiat.com/hussaudio/ziaraat/ziaraat/ziaraat_e_masomeen(a.s.)/ziarat_e_aashura_recitor_sadiq_ahangran.mp3"},
     {"name": "مجموعه صوتی حج WF (قاری نامشخص)", "url": "https://assets.world-federation.org/audiovisual/Hajj1428/66-Ziyarat_Ashura_.mp3"}
   ]
