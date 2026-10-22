@@ -49,7 +49,7 @@
     { "ar": "إِلَهَ الْحَقِّ آمِينَ، يَا ذَا الْجَلَالِ وَالْإِكْرَامِ، يَا أَرْحَمَ الرَّاحِمِينَ.", "fa": "ای معبود حق، آمین؛ ای صاحب شکوه و بزرگواری، ای مهربان‌ترین مهربانان." }
   ],
   "audio": [
-    {"name": "علی فانی", "url": "https://hezbkhani.github.io/audio/alyasin-ali-fani.mp3"},
+    {"name": "علی فانی", "url": "audio/alyasin-ali-fani.mp3"},
     {"name": "اباذر حلواجی", "url": "https://cdnmp3.hussainiat.com/hussvideo/Ziyarat-e-Ale-Yasin--7bafc5.mp3"}
   ]
 }
