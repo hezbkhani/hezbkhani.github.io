@@ -1,6 +1,6 @@
 # App versions
 
-All versions open the live site (https://hezbkhani.github.io/), so a change to the site shows up in every app without rebuilding.
+All versions open the live site (https://nooranquran.github.io/), so a change to the site shows up in every app without rebuilding.
 
 | Platform | How | Source |
 | --- | --- | --- |

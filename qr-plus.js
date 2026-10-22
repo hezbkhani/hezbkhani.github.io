@@ -566,7 +566,7 @@ ${groups.length ? groups.map(g => `<h3>سوره ${esc(sname(g.s))}</h3>${g.list.
 
   // ================= اشتراک تصویری =================
   const SIZES = { square: [1080, 1080], story: [1080, 1920] };
-  const SITE = /^(localhost|127\.|0\.0\.0\.0|\[)/.test(location.hostname) || !location.hostname ? 'hezbkhani.github.io' : location.hostname;
+  const SITE = /^(localhost|127\.|0\.0\.0\.0|\[)/.test(location.hostname) || !location.hostname ? 'nooranquran.github.io' : location.hostname;
   const timeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
   async function fontsReady(c) {
     if (!document.fonts) return;

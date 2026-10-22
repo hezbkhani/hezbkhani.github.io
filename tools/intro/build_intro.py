@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 CACHE = sys.argv[1]
 os.makedirs(CACHE, exist_ok=True)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'quran', 'intro')
-UA = 'hezbkhani-intro-builder/1.0 (static Quran site; contact via github.com/hezbkhani)'
+UA = 'hezbkhani-intro-builder/1.0 (static Quran site; contact via github.com/nooranquran)'
 
 # نام صفحه در ویکی‌شیعه (و نام‌های جایگزین)؛ به ترتیب سوره‌ها.
 NAMES = [
