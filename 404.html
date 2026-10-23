@@ -1,9 +1,11 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="theme-color" content="#006b50"><link rel="icon" type="image/png" href="/icon-192.png"><link rel="canonical" href="https://nooranquran.github.io/"><title>نوران به نشانی تازه رفت</title>
+<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="theme-color" content="#006b50"><link rel="icon" type="image/png" href="/icon-192.png"><link rel="canonical" href="https://nooranquran.github.io/"><title>نوران به نشانی تازه رفت</title>
 <script>
 /* نوران به https://nooranquran.github.io منتقل شد. این صفحه بازدیدکننده را به همان‌جا می‌برد و داده‌های ذخیره‌شدهٔ
    مرورگر (ورود، تنظیمات، پیشرفت خواندن و…) را در #nqmigrate=… با خود می‌برد؛ index.html نشانی تازه آن‌ها را وارد می‌کند. */
 (function () {
   var T = 'https://nooranquran.github.io', path = location.pathname, h = location.hash;
+  // نشانی تازه فقط به داده‌هایی که از همین صفحه می‌آیند اعتماد می‌کند؛ پس #nqmigrate ساختگیِ یک پیوند هرگز جلو فرستاده نمی‌شود.
+  if (/nqmigrate|nqhash/.test(h)) h = '';
   var root = path === '/' || path === '/index.html';
   var target = T + (root ? '/' : path) + location.search;
   function go(oldPush) {
